@@ -22,6 +22,11 @@ uv run main.py --sync-stocks
 uv run main.py --enrich-metadata
 ```
 
+同步 A 股全量财务报表（三大表）：
+```bash
+uv run main.py --sync-fin
+```
+
 ## 项目结构
 请参阅 `docs/architecture.md` 了解架构详情。
 详细命令说明请参阅 `docs/usage.md`。

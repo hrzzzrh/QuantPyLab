@@ -22,3 +22,20 @@
     - **行业**：通过东财原生批量接口（Native API）高效同步。
     - **地域/上市日期**：通过雪球个股接口（XQ）与东财个股接口（EM）混合增量补全。
 - **写入规范**：基础同步必须先 `DELETE` 后 `append`；增强同步使用 `UPDATE`。严禁使用 `to_sql(replace)`。
+
+## DuckDB 分析数据库 (analysis.duckdb)
+
+### 1. 财务报表 (fin_balance_sheet, fin_income_statement, fin_cashflow_statement)
+存储 A 股三大财务报表的原始数据。
+
+**核心共有字段**：
+- `symbol`: 股票代码 (6位)
+- `report_date`: 报告期 (YYYYMMDD)
+- `ann_date`: 公告日期
+- `is_audited`: 是否审计
+- (其他字段): 对应新浪财经原始中文指标名
+
+**特征**：
+- **宽表存储**：采用动态列扩展模式，不同行业的特有指标会自动增加为新列。
+- **数据类型**：指标列统一为 `DOUBLE`，元数据列为 `VARCHAR`。
+- **唯一性**：通过逻辑层确保 `(symbol, report_date)` 唯一。
