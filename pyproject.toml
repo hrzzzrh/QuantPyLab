@@ -1,0 +1,11 @@
+[project]
+name = "quantpylab"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "akshare>=1.18.22",
+    "duckdb>=1.4.4",
+    "pandas>=3.0.0",
+]
