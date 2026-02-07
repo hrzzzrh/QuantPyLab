@@ -18,7 +18,6 @@ class FinancialCollector:
     def fetch_statement(self, code: str, stat_type: str) -> pd.DataFrame:
         """
         抓取指定股票的某类报表全量历史数据。
-        stat_type: 'balance', 'profit', 'cashflow'
         """
         stat_name = self.STATEMENTS.get(stat_type)
         if not stat_name:
@@ -26,23 +25,16 @@ class FinancialCollector:
 
         try:
             logger.debug(f"正在从新浪抓取 {code} 的 {stat_name}...")
-            # 新浪接口返回的是 DataFrame，列名为中文
             df = ak.stock_financial_report_sina(stock=code, symbol=stat_name)
             
             if df.empty:
                 return pd.DataFrame()
 
             # 基础清洗
-            # 1. 统一 symbol 字段
-            # 我们在 stocks 表里存的是 6 位 code 或 symbol，这里统一加上市场前缀
-            # 注意：新浪接口输入是 6 位 code
-            df['symbol'] = code # 暂时存 6 位，写入时可对齐
-            
-            # 2. 格式化报告日 (新浪返回 20240331)
+            df['symbol'] = code 
             if '报告日' in df.columns:
                 df.rename(columns={'报告日': 'report_date'}, inplace=True)
             
-            # 3. 排序 (按日期从小到大，方便后续分析)
             if 'report_date' in df.columns:
                 df = df.sort_values('report_date')
 
@@ -51,3 +43,27 @@ class FinancialCollector:
         except Exception as e:
             logger.error(f"抓取 {code} {stat_name} 失败: {e}")
             return pd.DataFrame()
+
+    def get_disclosure_plans(self, date: str) -> pd.DataFrame:
+        """
+        获取指定报告期的全市场披露计划 (包含沪深京)。
+        date: 格式如 '20251231'
+        """
+        all_plans = []
+        # 组合查询：沪深A股 + 京市A股
+        for sym in ['沪深A股', '京市A股']:
+            try:
+                logger.info(f"正在获取 {sym} 的 {date} 披露计划...")
+                df = ak.stock_yysj_em(symbol=sym, date=date)
+                if not df.empty:
+                    all_plans.append(df)
+            except Exception as e:
+                logger.warning(f"获取 {sym} 披露计划失败: {e}")
+        
+        if not all_plans:
+            return pd.DataFrame()
+            
+        df_combined = pd.concat(all_plans, ignore_index=True)
+        # 统一列名
+        df_combined.rename(columns={'股票代码': 'code', '实际披露时间': 'actual_date'}, inplace=True)
+        return df_combined

@@ -46,6 +46,25 @@ class FinancialStore:
         res = self.conn.execute(f"SELECT count(*) FROM information_schema.tables WHERE table_name = '{table_name}'").fetchone()
         return res[0] > 0
 
+    def get_existing_report_dates(self, table_name: str) -> set:
+        """获取数据库中已有的 {symbol}_{report_date} 集合"""
+        if not self._check_table_exists(table_name):
+            return set()
+        res = self.conn.execute(f"SELECT symbol || '_' || report_date FROM {table_name}").fetchall()
+        return set([row[0] for row in res])
+
+    def get_stocks_without_financials(self, all_codes: list) -> list:
+        """从全量列表中筛选出在数据库中完全没有任何财报记录的股票"""
+        table_name = "fin_balance_sheet"
+        if not self._check_table_exists(table_name):
+            return all_codes
+        
+        # 查找有记录的 code
+        existing_codes = self.conn.execute(f"SELECT DISTINCT symbol FROM {table_name}").fetchall()
+        existing_codes_set = set([row[0] for row in existing_codes])
+        
+        return [c for c in all_codes if c not in existing_codes_set]
+
     def _validate_schema(self, df: pd.DataFrame, table_name: str):
         """
         列扩展模式：对比新旧列名，发现新列则自动执行 ALTER TABLE。

@@ -1,6 +1,8 @@
 import argparse
 import time
 import random
+import pandas as pd
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from utils.logger import logger
 from storage.database.manager import db_manager
@@ -45,26 +47,82 @@ def enrich_stock_metadata(limit=None):
         except Exception as e: logger.error(f"处理 {symbol} 失败: {e}")
     conn.commit()
 
-def sync_financials(limit=None):
-    """同步财务报表 (Phase 2)"""
+def get_target_report_dates():
+    """计算最近 4 个报告期"""
+    today = datetime.now()
+    dates = []
+    # 财务报告固定在 3, 6, 9, 12 月底
+    year = today.year
+    for i in range(4):
+        month = ((today.month - 1) // 3 - i) * 3
+        curr_year = year
+        while month <= 0:
+            month += 12
+            curr_year -= 1
+        day = 31 if month in [3, 12] else 30
+        dates.append(f"{curr_year}{month:02d}{day}")
+    return dates
+
+def sync_financials(limit=None, force_all=False):
+    """
+    同步财务报表 (Phase 2: Smart Version)
+    """
+    store = FinancialStore()
+    collector = FinancialCollector()
     conn_sqlite = db_manager.get_sqlite_conn()
-    cursor = conn_sqlite.cursor()
-    # 按照代码获取待同步列表
-    cursor.execute("SELECT code, name FROM stocks" + (f" LIMIT {limit}" if limit else ""))
-    stocks = cursor.fetchall()
     
-    if not stocks:
-        logger.warning("没有发现可同步的股票")
+    target_codes = set() # 最终待同步的代码集合
+
+    if force_all:
+        logger.info("强制全量模式：将扫描所有股票...")
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code FROM stocks" + (f" LIMIT {limit}" if limit else ""))
+        target_codes = {row[0] for row in cursor.fetchall()}
+    else:
+        # --- 路径 1: 披露日历驱动 (Smart Sync) ---
+        report_dates = get_target_report_dates()
+        existing_records = store.get_existing_report_dates("fin_balance_sheet")
+        
+        logger.info(f"智能增量模式：检查最近报告期 {report_dates}...")
+        for r_date in report_dates:
+            df_plans = collector.get_disclosure_plans(r_date)
+            if not df_plans.empty:
+                # 筛选：实际已披露 且 数据库中没有
+                df_plans['actual_date'] = pd.to_datetime(df_plans['actual_date'], errors='coerce')
+                disclosed = df_plans[df_plans['actual_date'].notna()]
+                
+                for _, row in disclosed.iterrows():
+                    key = f"{row['code']}_{r_date}"
+                    if key not in existing_records:
+                        target_codes.add(row['code'])
+        
+        logger.info(f"日历驱动发现 {len(target_codes)} 只股票需要同步。")
+
+        # --- 路径 2: 漏检补偿 (扫除孤儿股) ---
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code FROM stocks")
+        all_codes = [row[0] for row in cursor.fetchall()]
+        orphans = store.get_stocks_without_financials(all_codes)
+        
+        if orphans:
+            logger.info(f"漏检扫描发现 {len(orphans)} 只孤儿股（从未同步过），加入队列。")
+            target_codes.update(orphans[:100] if not limit else orphans[:limit]) # 每次补偿 100 只
+
+    if not target_codes:
+        logger.info("所有财务数据已是最新。")
         return
 
-    logger.info(f"开始同步 {len(stocks)} 只股票的财务报表...")
-    collector = FinancialCollector()
-    store = FinancialStore()
+    # 限制处理数量 (用于测试)
+    final_list = list(target_codes)
+    if limit and len(final_list) > limit:
+        final_list = final_list[:limit]
+
+    logger.info(f"最终待同步任务数: {len(final_list)}")
     
-    # 内部处理函数
-    def process_stock(code, name):
+    # 串行执行 (为了 DuckDB ALTER TABLE 安全)
+    count = 0
+    for code in final_list:
         try:
-            # 三大表
             for stat_type, table_name in [
                 ("balance", "fin_balance_sheet"),
                 ("profit", "fin_income_statement"),
@@ -74,27 +132,24 @@ def sync_financials(limit=None):
                 if not df.empty:
                     store.save_statement(df, table_name)
             
-            logger.info(f"[{code}] {name} 财务同步完成")
+            count += 1
+            logger.info(f"[{count}/{len(final_list)}] {code} 同步完成")
             time.sleep(random.uniform(0.2, 0.5))
         except Exception as e:
-            logger.error(f"[{code}] {name} 同步失败: {e}")
-
-    # 使用单线程同步财务数据，防止 DuckDB 在 ALTER TABLE 时产生事务冲突
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        for code, name in stocks:
-            executor.submit(process_stock, code, name)
+            logger.error(f"{code} 同步失败: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="QuantPyLab 实验室入口")
     parser.add_argument("--sync-stocks", action="store_true", help="同步股票列表")
     parser.add_argument("--enrich-metadata", action="store_true", help="补全元数据")
-    parser.add_argument("--sync-fin", action="store_true", help="同步财务报表")
+    parser.add_argument("--sync-fin", action="store_true", help="同步财务报表 (智能增量)")
+    parser.add_argument("--force-all", action="store_true", help="配合 --sync-fin，强制全量扫描所有股票")
     parser.add_argument("--limit", type=int, help="限制处理数量")
     
     args = parser.parse_args()
     if args.sync_stocks: sync_stock_list()
     elif args.enrich_metadata: enrich_stock_metadata(limit=args.limit)
-    elif args.sync_fin: sync_financials(limit=args.limit)
+    elif args.sync_fin: sync_financials(limit=args.limit, force_all=args.force_all)
     else: parser.print_help()
 
 if __name__ == "__main__":
