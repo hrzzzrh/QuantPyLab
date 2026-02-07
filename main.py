@@ -131,18 +131,55 @@ def sync_financials(limit=None, force_all=False):
                 df = collector.fetch_statement(code, stat_type)
                 if not df.empty:
                     store.save_statement(df, table_name)
+                time.sleep(random.uniform(1, 2))
             
             count += 1
             logger.info(f"[{count}/{len(final_list)}] {code} 同步完成")
-            time.sleep(random.uniform(0.2, 0.5))
         except Exception as e:
             logger.error(f"{code} 同步失败: {e}")
+
+def sync_indicators(limit=None, symbol=None):
+    """
+    同步财务指标 (Phase 2.5)
+    """
+    collector = FinancialCollector()
+    conn_sqlite = db_manager.get_sqlite_conn()
+    
+    if symbol:
+        # 单只同步模式
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code, symbol FROM stocks WHERE code = ? OR symbol = ?", (symbol, symbol))
+        row = cursor.fetchone()
+        if row:
+            collector.collect_indicators(row[0], row[1].upper() if '.' in row[1] else row[1])
+        else:
+            logger.error(f"找不到代码: {symbol}")
+        return
+
+    # 自动补全模式
+    cursor = conn_sqlite.cursor()
+    cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1" + (f" LIMIT {limit}" if limit else ""))
+    stocks = cursor.fetchall()
+    
+    for code, m_symbol in stocks:
+        fmt_symbol = m_symbol.upper()
+        if not ('.' in fmt_symbol):
+             # 简单转换 sh600000 -> 600000.SH
+             if fmt_symbol.startswith(('SH', 'SZ', 'BJ')):
+                 pre = fmt_symbol[:2]
+                 suf = fmt_symbol[2:]
+                 fmt_symbol = f"{suf}.{pre}"
+        
+        collector.collect_indicators(code, fmt_symbol)
+        time.sleep(random.uniform(0.2, 0.4))
 
 def main():
     parser = argparse.ArgumentParser(description="QuantPyLab 实验室入口")
     parser.add_argument("--sync-stocks", action="store_true", help="同步股票列表")
     parser.add_argument("--enrich-metadata", action="store_true", help="补全元数据")
     parser.add_argument("--sync-fin", action="store_true", help="同步财务报表 (智能增量)")
+    parser.add_argument("--sync-indicators", action="store_true", help="同步财务指标 (东财)")
+    parser.add_argument("--symbol", type=str, help="指定同步单只股票指标")
     parser.add_argument("--force-all", action="store_true", help="配合 --sync-fin，强制全量扫描所有股票")
     parser.add_argument("--limit", type=int, help="限制处理数量")
     
@@ -150,6 +187,7 @@ def main():
     if args.sync_stocks: sync_stock_list()
     elif args.enrich_metadata: enrich_stock_metadata(limit=args.limit)
     elif args.sync_fin: sync_financials(limit=args.limit, force_all=args.force_all)
+    elif args.sync_indicators: sync_indicators(limit=args.limit, symbol=args.symbol)
     else: parser.print_help()
 
 if __name__ == "__main__":

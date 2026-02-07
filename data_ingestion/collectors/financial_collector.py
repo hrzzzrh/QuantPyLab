@@ -2,11 +2,13 @@ import akshare as ak
 import pandas as pd
 import time
 import random
+import os
 from utils.logger import logger
+from storage.database.indicator_store import IndicatorStore
 
 class FinancialCollector:
     """
-    财务报表采集器：从新浪获取三大报表原始数据。
+    财务数据采集器：负责三大报表及财务指标的抓取。
     """
     
     STATEMENTS = {
@@ -15,9 +17,32 @@ class FinancialCollector:
         "cashflow": "现金流量表"
     }
 
+    def __init__(self):
+        self.indicator_store = IndicatorStore()
+        self.indicator_map = self._load_indicator_map()
+
+    def _load_indicator_map(self) -> dict:
+        """加载东财指标中英文映射字典"""
+        # 优先查找 workspace，后续可迁移至 config
+        paths = ["workspace/em_indicator_dict.csv", "config/em_indicator_dict.csv"]
+        mapping = {}
+        
+        for p in paths:
+            if os.path.exists(p):
+                try:
+                    df = pd.read_csv(p)
+                    # key -> name_cn
+                    mapping = dict(zip(df['indicator_key'], df['name_cn']))
+                    logger.info(f"成功加载指标字典: {len(mapping)} 条")
+                    break
+                except Exception as e:
+                    logger.warning(f"加载字典 {p} 失败: {e}")
+        
+        return mapping
+
     def fetch_statement(self, code: str, stat_type: str) -> pd.DataFrame:
         """
-        抓取指定股票的某类报表全量历史数据。
+        抓取指定股票的某类报表全量历史数据 (新浪源)。
         """
         stat_name = self.STATEMENTS.get(stat_type)
         if not stat_name:
@@ -43,6 +68,75 @@ class FinancialCollector:
         except Exception as e:
             logger.error(f"抓取 {code} {stat_name} 失败: {e}")
             return pd.DataFrame()
+
+    def collect_indicators(self, symbol: str, market_symbol: str = None):
+        """
+        抓取并存储财务指标 (东财源)。
+        :param symbol: 纯数字代码 (如 600004)
+        :param market_symbol: 带后缀代码 (支持 sz300274 或 300274.SZ)
+        """
+        if not market_symbol:
+            market_symbol = f"{symbol}.SH" if symbol.startswith('6') else f"{symbol}.SZ"
+
+        # 格式标准化：统一转为 300274.SZ 这种东财标准格式
+        if market_symbol.startswith(('sz', 'sh', 'bj', 'SZ', 'SH', 'BJ')):
+            pre = market_symbol[:2].upper()
+            suf = market_symbol[2:]
+            market_symbol = f"{suf}.{pre}"
+        else:
+            market_symbol = market_symbol.upper()
+
+        try:
+            logger.info(f"正在从东财抓取指标: {market_symbol}")
+            
+            # 1. 调用东财接口
+            df = ak.stock_financial_analysis_indicator_em(symbol=market_symbol, indicator="按报告期")
+            
+            if df is None or df.empty:
+                logger.warning(f"{market_symbol} 接口返回为空，跳过")
+                return
+
+            # 2. 列名翻译 (English -> Chinese)
+            new_cols = {}
+            # 确保关键列存在，防止映射失败
+            if 'REPORT_DATE' not in df.columns and '报告期' not in df.columns:
+                logger.warning(f"{market_symbol} 数据格式异常，缺少报告期列")
+                return
+
+            for col in df.columns:
+                if col in self.indicator_map:
+                    cn_name = self.indicator_map[col]
+                    # 1. 移除纯单位后缀
+                    cn_name = cn_name.replace("(%)", "").replace("(元)", "").replace("(次)", "").replace("(天)", "")
+                    # 2. 将剩余的括号转为下划线 (例如: 净资产收益率(加权) -> 净资产收益率_加权)
+                    cn_name = cn_name.replace("(", "_").replace(")", "").replace("（", "_").replace("）", "")
+                    new_cols[col] = cn_name.strip()
+            
+            df.rename(columns=new_cols, inplace=True)
+            
+            # 3. 核心字段清洗与精简
+            df['symbol'] = symbol 
+            
+            # 报告期标准化
+            if '报告期' in df.columns:
+                df['report_date'] = pd.to_datetime(df['报告期']).dt.strftime('%Y%m%d')
+            elif 'REPORT_DATE' in df.columns:
+                 df['report_date'] = pd.to_datetime(df['REPORT_DATE']).dt.strftime('%Y%m%d')
+            
+            # 剔除冗余元数据 (东财自带的各种代码)
+            cols_to_drop = [
+                '证券代码', '股票代码', '股票简称', '机构代码', '机构类型', 
+                '证券类型代码', '报告期名称', 'REPORT_DATE', '报告期', '更新日期'
+            ]
+            df.drop(columns=[c for c in cols_to_drop if c in df.columns], inplace=True)
+            
+            # 4. 入库
+            self.indicator_store.save_indicators(df)
+
+        except Exception as e:
+            logger.error(f"同步指标 {symbol} ({market_symbol}) 失败: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
 
     def get_disclosure_plans(self, date: str) -> pd.DataFrame:
         """
