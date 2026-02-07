@@ -36,13 +36,17 @@
 
 ### 财务指标同步 (Quant Indicators)
 同步专业机构计算好的 140+ 个财务指标（如 ROE、毛利率、增长率等）。
-- **命令**: `uv run main.py --sync-indicators [--limit N] [--symbol CODE]`
+- **命令**: `uv run main.py --sync-indicators [--limit N] [--symbol CODE] [--force-all]`
 - **逻辑**: 
     1. **数据源**: 东方财富 (EM)。
     2. **存储规范**: 采用纯中文列名存储（基于 `em_indicator_dict.csv` 映射），列名经过规范化处理（去除单位、括号转下划线）。
-    3. **更新策略**: 通过 `--symbol` 可同步指定单只股票；默认模式下会扫描全量股票进行补全。
+    3. **智能增量模式 (默认)**: 与财报同步一致，通过披露日历识别最新发布的指标。
+    4. **漏检补偿**: 自动扫描并补全从未同步过指标的股票。
+    5. **手动模式**: 
+       - `--symbol`: 强制同步单只。
+       - `--force-all`: 全量扫描所有股票的指标缺失情况。
 - **价值**: 为量化因子分析提供现成的、高阶的盈利与成长性数据，无需手动计算 YoY/QoQ。
-- **建议频率**: 在完成 `sync-fin` 之后执行，或者每月执行一次。
+- **建议频率**: 每周执行一次 `uv run main.py --sync-indicators`。
 
 ## 2. 环境维护
 - **刷新 AI 上下文**: 在 Gemini CLI 中执行 `/memory refresh` 以加载最新的 `.gemini/GEMINI.md` 指令。

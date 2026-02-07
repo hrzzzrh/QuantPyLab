@@ -24,12 +24,20 @@ uv run main.py --enrich-metadata
 
 同步 A 股全量财务报表（三大表）：
 ```bash
+# 智能增量同步 (披露驱动)
 uv run main.py --sync-fin
+
+# 强制全量扫描
+uv run main.py --sync-fin --force-all
 ```
 
 同步 A 股财务指标（ROE、增长率、周转率等）：
 ```bash
+# 智能增量同步 (披露驱动)
 uv run main.py --sync-indicators
+
+# 指定同步单只股票
+uv run main.py --sync-indicators --symbol 300274
 ```
 
 ## 项目结构

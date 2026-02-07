@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from utils.logger import logger
 from storage.database.manager import db_manager
 from storage.database.financial_store import FinancialStore
+from storage.database.indicator_store import IndicatorStore
 from data_ingestion.collectors.stock_list import StockListCollector, StockDetailCollector
 from data_ingestion.collectors.industry_collector import HighSpeedIndustryCollector
 from data_ingestion.collectors.financial_collector import FinancialCollector
@@ -138,40 +139,98 @@ def sync_financials(limit=None, force_all=False):
         except Exception as e:
             logger.error(f"{code} 同步失败: {e}")
 
-def sync_indicators(limit=None, symbol=None):
+def sync_indicators(limit=None, symbol=None, force_all=False):
     """
-    同步财务指标 (Phase 2.5)
+    同步财务指标 (Phase 2.5: Smart Version)
     """
+    store = IndicatorStore()
     collector = FinancialCollector()
     conn_sqlite = db_manager.get_sqlite_conn()
     
+    target_tasks = [] # 最终待同步任务列表 [(code, m_symbol)]
+
     if symbol:
-        # 单只同步模式
+        # 路径 0: 单只强制同步
         cursor = conn_sqlite.cursor()
         cursor.execute("SELECT code, symbol FROM stocks WHERE code = ? OR symbol = ?", (symbol, symbol))
         row = cursor.fetchone()
         if row:
-            collector.collect_indicators(row[0], row[1].upper() if '.' in row[1] else row[1])
+            target_tasks.append((row[0], row[1]))
         else:
             logger.error(f"找不到代码: {symbol}")
+            return
+    elif force_all:
+        logger.info("强制全量模式：扫描所有活跃股票...")
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1" + (f" LIMIT {limit}" if limit else ""))
+        target_tasks = cursor.fetchall()
+    else:
+        # --- 路径 1: 披露日历驱动 (Smart Sync) ---
+        report_dates = get_target_report_dates()
+        existing_records = store.get_existing_report_dates()
+        
+        target_codes = set()
+        logger.info(f"智能增量模式：检查最近报告期 {report_dates}...")
+        for r_date in report_dates:
+            df_plans = collector.get_disclosure_plans(r_date)
+            if not df_plans.empty:
+                # 筛选：实际已披露 且 数据库中没有
+                df_plans['actual_date'] = pd.to_datetime(df_plans['actual_date'], errors='coerce')
+                disclosed = df_plans[df_plans['actual_date'].notna()]
+                
+                for _, row in disclosed.iterrows():
+                    key = f"{row['code']}_{r_date}"
+                    if key not in existing_records:
+                        target_codes.add(row['code'])
+        
+        logger.info(f"日历驱动发现 {len(target_codes)} 只股票需要同步指标。")
+
+        # --- 路径 2: 漏检补偿 (扫除孤儿股) ---
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1")
+        all_stocks = cursor.fetchall() # [(code, m_symbol), ...]
+        all_codes = [s[0] for s in all_stocks]
+        
+        orphans_codes = store.get_stocks_without_indicators(all_codes)
+        if orphans_codes:
+            logger.info(f"漏检扫描发现 {len(orphans_codes)} 只孤儿股（从未同步过指标），加入队列。")
+            orphans_codes_set = set(orphans_codes[:100] if not limit else orphans_codes[:limit])
+            target_codes.update(orphans_codes_set)
+
+        # 构建最终任务列表
+        code_to_m_symbol = {s[0]: s[1] for s in all_stocks}
+        for c in target_codes:
+            if c in code_to_m_symbol:
+                target_tasks.append((c, code_to_m_symbol[c]))
+
+    if not target_tasks:
+        logger.info("所有财务指标已是最新。")
         return
 
-    # 自动补全模式
-    cursor = conn_sqlite.cursor()
-    cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1" + (f" LIMIT {limit}" if limit else ""))
-    stocks = cursor.fetchall()
+    # 限制处理数量 (用于测试)
+    if limit and len(target_tasks) > limit:
+        target_tasks = target_tasks[:limit]
+
+    logger.info(f"最终待同步任务数: {len(target_tasks)}")
     
-    for code, m_symbol in stocks:
-        fmt_symbol = m_symbol.upper()
-        if not ('.' in fmt_symbol):
-             # 简单转换 sh600000 -> 600000.SH
-             if fmt_symbol.startswith(('SH', 'SZ', 'BJ')):
-                 pre = fmt_symbol[:2]
-                 suf = fmt_symbol[2:]
-                 fmt_symbol = f"{suf}.{pre}"
-        
-        collector.collect_indicators(code, fmt_symbol)
-        time.sleep(random.uniform(0.2, 0.4))
+    count = 0
+    for code, m_symbol in target_tasks:
+        try:
+            fmt_symbol = m_symbol.upper()
+            if not ('.' in fmt_symbol):
+                 if fmt_symbol.startswith(('SH', 'SZ', 'BJ')):
+                     pre = fmt_symbol[:2]
+                     suf = fmt_symbol[2:]
+                     fmt_symbol = f"{suf}.{pre}"
+            
+            collector.collect_indicators(code, fmt_symbol)
+            count += 1
+            if count % 10 == 0:
+                logger.info(f"已进度: [{count}/{len(target_tasks)}]")
+            
+            time.sleep(random.uniform(0.5, 1.0))
+        except Exception as e:
+            logger.error(f"{code} 同步指标失败: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="QuantPyLab 实验室入口")
@@ -187,7 +246,7 @@ def main():
     if args.sync_stocks: sync_stock_list()
     elif args.enrich_metadata: enrich_stock_metadata(limit=args.limit)
     elif args.sync_fin: sync_financials(limit=args.limit, force_all=args.force_all)
-    elif args.sync_indicators: sync_indicators(limit=args.limit, symbol=args.symbol)
+    elif args.sync_indicators: sync_indicators(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
     else: parser.print_help()
 
 if __name__ == "__main__":
