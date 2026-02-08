@@ -32,7 +32,7 @@ class IndicatorStore:
                 existing_df = pd.read_parquet(target_file)
                 # 合并并去重，以 report_date 为准
                 combined_df = pd.concat([existing_df, df.drop(columns=['symbol'], errors='ignore')], ignore_index=True)
-                df = combined_df.drop_duplicates(subset=['report_date'], keep='last')
+                df = combined_df.drop_duplicates(subset=['report_date'], keep='last').copy()
             
             df['symbol'] = symbol
             self.parquet_store.save_partition(df, self.category, symbol)
@@ -48,7 +48,7 @@ class IndicatorStore:
         if not any(Path(WAREHOUSE_DIR).glob(f"{self.category}/*/data.parquet")):
             return set()
             
-        res = self.conn.execute(f"SELECT symbol || '_' || report_date FROM read_parquet('{path}', hive_partitioning=1)").fetchall()
+        res = self.conn.execute(f"SELECT symbol || '_' || report_date FROM read_parquet('{path}', hive_partitioning=1, union_by_name=1)").fetchall()
         return set([row[0] for row in res])
 
     def get_stocks_without_indicators(self, all_codes: list) -> list:
@@ -57,7 +57,7 @@ class IndicatorStore:
         if not any(Path(WAREHOUSE_DIR).glob(f"{self.category}/*/data.parquet")):
             return all_codes
         
-        existing_symbols = self.conn.execute(f"SELECT DISTINCT symbol FROM read_parquet('{path}', hive_partitioning=1)").fetchall()
+        existing_symbols = self.conn.execute(f"SELECT DISTINCT symbol FROM read_parquet('{path}', hive_partitioning=1, union_by_name=1)").fetchall()
         existing_symbols_set = set([row[0] for row in existing_symbols])
         
         return [c for c in all_codes if c not in existing_symbols_set]

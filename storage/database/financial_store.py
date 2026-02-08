@@ -46,7 +46,7 @@ class FinancialStore:
                 # 直接用 pandas 读，需要补回 symbol 列或按 report_date 合并
                 combined_df = pd.concat([existing_df, df.drop(columns=['symbol'], errors='ignore')], ignore_index=True)
                 # 以 report_date 为准去重，保留最新的
-                df = combined_df.drop_duplicates(subset=['report_date'], keep='last')
+                df = combined_df.drop_duplicates(subset=['report_date'], keep='last').copy()
             
             # 重新补上 symbol 供存储逻辑识别（虽然存储时会再删掉，但为了逻辑统一）
             df['symbol'] = symbol
@@ -65,7 +65,7 @@ class FinancialStore:
                 return set()
             
             # 使用 DuckDB 扫描 Parquet 极其高效
-            res = self.conn.execute(f"SELECT symbol || '_' || report_date FROM read_parquet('{path}', hive_partitioning=1)").fetchall()
+            res = self.conn.execute(f"SELECT symbol || '_' || report_date FROM read_parquet('{path}', hive_partitioning=1, union_by_name=1)").fetchall()
             sets.append(set([row[0] for row in res]))
         
         return set.intersection(*sets) if sets else set()
@@ -79,7 +79,7 @@ class FinancialStore:
             if not any(Path(WAREHOUSE_DIR).glob(f"{category}/*/data.parquet")):
                 return all_codes
             
-            existing_codes = self.conn.execute(f"SELECT DISTINCT symbol FROM read_parquet('{path}', hive_partitioning=1)").fetchall()
+            existing_codes = self.conn.execute(f"SELECT DISTINCT symbol FROM read_parquet('{path}', hive_partitioning=1, union_by_name=1)").fetchall()
             existing_codes_set = set([row[0] for row in existing_codes])
             
             for c in all_codes:
