@@ -1,7 +1,8 @@
 import sqlite3
 import duckdb
 import os
-from config.settings import SQLITE_DB_PATH, DUCKDB_PATH
+from pathlib import Path
+from config.settings import SQLITE_DB_PATH, WAREHOUSE_DIR
 from typing import Optional
 
 class DBManager:
@@ -12,7 +13,6 @@ class DBManager:
     
     def __init__(self):
         self.sqlite_path = SQLITE_DB_PATH
-        self.duckdb_path = DUCKDB_PATH
         
         self._sqlite_conn: Optional[sqlite3.Connection] = None
         self._duckdb_conn: Optional[duckdb.DuckDBPyConnection] = None
@@ -46,10 +46,31 @@ class DBManager:
         return self._sqlite_conn
 
     def get_duckdb_conn(self) -> duckdb.DuckDBPyConnection:
-        """获取 DuckDB 连接 (分析数据)"""
+        """获取 DuckDB 连接 (作为瞬态计算引擎)"""
         if self._duckdb_conn is None:
-            self._duckdb_conn = duckdb.connect(str(self.duckdb_path))
+            # 彻底放弃物理文件，使用内存模式以实现完美的并发性
+            self._duckdb_conn = duckdb.connect(":memory:")
+            # 自动挂载 Parquet 数据湖中的视图
+            self.init_warehouse_views(self._duckdb_conn)
         return self._duckdb_conn
+
+    def init_warehouse_views(self, conn: duckdb.DuckDBPyConnection):
+        """将 Parquet 目录映射为 DuckDB 视图，方便直接 SQL 查询"""
+        view_map = {
+            "fin_balance_sheet": "financial_statements/type=balance",
+            "fin_income_statement": "financial_statements/type=income",
+            "fin_cashflow_statement": "financial_statements/type=cashflow",
+            "fin_indicator": "indicators"
+        }
+        
+        for view_name, sub_dir in view_map.items():
+            path = Path(WAREHOUSE_DIR) / sub_dir / "*/*.parquet"
+            # 检查是否有文件存在，否则创建视图会报错
+            if any(Path(WAREHOUSE_DIR).glob(f"{sub_dir}/*/data.parquet")):
+                conn.execute(f"""
+                    CREATE OR REPLACE VIEW {view_name} AS 
+                    SELECT * FROM read_parquet('{path}', hive_partitioning=1)
+                """)
 
     def close_all(self):
         """关闭所有数据库连接"""

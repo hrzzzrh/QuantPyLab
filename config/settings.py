@@ -10,7 +10,10 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # 数据库路径
 SQLITE_DB_PATH = DATA_DIR / "metadata.db"
-DUCKDB_PATH = DATA_DIR / "analysis.duckdb"
+
+# Parquet 数据仓路径
+WAREHOUSE_DIR = DATA_DIR / "warehouse"
+WAREHOUSE_DIR.mkdir(parents=True, exist_ok=True)
 
 # 日志配置
 LOG_DIR = BASE_DIR / "logs"

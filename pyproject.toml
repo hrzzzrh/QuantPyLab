@@ -8,4 +8,5 @@ dependencies = [
     "akshare>=1.18.22",
     "duckdb>=1.4.4",
     "pandas>=3.0.0",
+    "pyarrow>=23.0.0",
 ]

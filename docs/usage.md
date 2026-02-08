@@ -48,6 +48,33 @@
 - **价值**: 为量化因子分析提供现成的、高阶的盈利与成长性数据，无需手动计算 YoY/QoQ。
 - **建议频率**: 每周执行一次 `uv run main.py --sync-indicators`。
 
-## 2. 环境维护
+### 2. 数据分析与查询 (Analysis)
+
+本项目采用 **Parquet Data Lake** 架构，数据以物理分片形式存储在 `data/warehouse/` 下。
+
+#### 2.1 Python 接入 (推荐)
+通过 `db_manager` 获取 DuckDB 连接，它会自动将所有 Parquet 文件映射为视图：
+```python
+from storage.database.manager import db_manager
+
+# 获取连接 (瞬态内存模式)
+conn = db_manager.get_duckdb_conn()
+
+# 直接查询视图，操作体验与原物理表一致
+df = conn.execute("SELECT * FROM fin_indicator WHERE symbol = '600519'").df()
+print(df.head())
+```
+
+#### 2.2 外部工具接入 (DBeaver / DuckDB CLI)
+由于没有物理 `.duckdb` 文件，在外部工具中请直接使用 `read_parquet` 函数查询目录：
+```sql
+-- 查询全量财务指标
+SELECT * FROM read_parquet('data/warehouse/indicators/*/*.parquet', hive_partitioning=1);
+
+-- 查询特定股票资产负债表
+SELECT * FROM read_parquet('data/warehouse/financial_statements/type=balance/symbol=600519/*.parquet');
+```
+
+### 3. 环境维护
 - **刷新 AI 上下文**: 在 Gemini CLI 中执行 `/memory refresh` 以加载最新的 `.gemini/GEMINI.md` 指令。
 - **清理缓存**: (待添加)
