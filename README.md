@@ -43,3 +43,4 @@ uv run main.py --sync-indicators --symbol 300274
 ## 项目结构
 请参阅 `docs/architecture.md` 了解架构详情。
 详细命令说明请参阅 `docs/usage.md`。
+数据字典与指标定义请参阅 `docs/data_catalog.md`。

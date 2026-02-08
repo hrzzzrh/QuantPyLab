@@ -82,7 +82,7 @@ def sync_financials(limit=None, force_all=False):
     else:
         # --- 路径 1: 披露日历驱动 (Smart Sync) ---
         report_dates = get_target_report_dates()
-        existing_records = store.get_existing_report_dates("fin_balance_sheet")
+        existing_records = store.get_existing_report_dates()
         
         logger.info(f"智能增量模式：检查最近报告期 {report_dates}...")
         for r_date in report_dates:
@@ -132,12 +132,13 @@ def sync_financials(limit=None, force_all=False):
                 df = collector.fetch_statement(code, stat_type)
                 if not df.empty:
                     store.save_statement(df, table_name)
-                time.sleep(random.uniform(1, 2))
+                time.sleep(random.uniform(2, 3))
             
             count += 1
             logger.info(f"[{count}/{len(final_list)}] {code} 同步完成")
         except Exception as e:
             logger.error(f"{code} 同步失败: {e}")
+            return
 
 def sync_indicators(limit=None, symbol=None, force_all=False):
     """

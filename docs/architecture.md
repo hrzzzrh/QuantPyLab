@@ -9,6 +9,15 @@
     - **文件系统**：Parquet 格式 (存储日线/分钟线 K 线，可被 DuckDB 直接读取)
 - **分析工具**：Pandas, NumPy, Matplotlib/Plotly
 
+## 数据源策略 (Data Sovereignty)
+为确保数据的一致性与稳定性，系统实施严格的数据源分层策略：
+
+| 数据层级 | 核心数据表 | 指定数据源 | 理由 |
+| :--- | :--- | :--- | :--- |
+| **原始报表层** | `fin_balance_sheet`, `fin_income_statement`, `fin_cashflow_statement` | **新浪财经 (Sina)** | 历史数据最全，包含账龄、附注等细节科目。 |
+| **衍生指标层** | `fin_indicator` | **东方财富 (EastMoney)** | 计算标准统一，提供 YoY, QoQ, ROIC 等现成的高阶量化因子。**严禁与新浪指标混合**，以防计算口径冲突。 |
+| **元数据层** | `stocks`, `industries` | **混合 (Mix)** | 东财提供行业分类，雪球提供实时行情状态。 |
+
 ## 目录架构说明
 - `config/`: 存放股票列表、数据库路径、API 阈值等配置。
 - `data_ingestion/`: 数据采集层。包含按类别划分的 `collectors` 和处理“历史+增量”逻辑的 `incremental.py`。
@@ -20,7 +29,19 @@
 - `utils/`: 工具函数（日志、时间处理、网络请求装饰器）。
 - `data/`: 本地物理存储目录。
 
-## 开发原则
+## 4. 标准扩展模式 (Extension Patterns)
+新增数据功能时，必须遵循以下标准模式：
+
+### 4.1 新增数据采集
+1.  **Collector**: 在 `data_ingestion/collectors/` 新建类，负责 API 调用与清洗。
+2.  **Store**: 在 `storage/database/` 新建存储类，负责 DuckDB/SQLite 写入（必须支持动态列扩展）。
+3.  **Metadata**: 必须同步更新 `docs/data_catalog.md`，定义新字段的单位与含义。
+4.  **Entry**: 在 `main.py` 注册相应的 `--sync-xxx` 命令。
+
+### 4.2 开发生命周期
+`docs/ (查阅现状)` -> `workspace/ (设计与Demo)` -> `Code (实现)` -> `docs/ (更新文档)`
+
+## 5. 开发原则
 1. **增量更新**：每次运行采集前先检查本地最新数据日期，仅抓取缺失部分。
 2. **读写分离**：统一通过 `storage/manager.py` 接口读写数据，不直接在业务层操作 SQL/文件。
 3. **分析优先**：利用 DuckDB 的列式存储特性，大规模筛选（如选股、因子计算）应尽可能在 SQL 层完成。

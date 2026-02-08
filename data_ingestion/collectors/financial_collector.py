@@ -60,6 +60,18 @@ class FinancialCollector:
             if '报告日' in df.columns:
                 df.rename(columns={'报告日': 'report_date'}, inplace=True)
             
+            # 剔除新浪报表中的总分项前缀 (如 "其中:", "加:", "减:")
+            # 新浪报表接口返回时，指标通常在第一列
+            indicator_col = df.columns[0]
+            if indicator_col not in ['symbol', 'report_date']:
+                def clean_prefix(name):
+                    if not isinstance(name, str): return name
+                    import re
+                    # 匹配 开头的 "其中[:：]", "加[:：]", "减[:：]"
+                    return re.sub(r'^(其中|加|减)[:：]', '', name).strip()
+                
+                df[indicator_col] = df[indicator_col].apply(clean_prefix)
+
             if 'report_date' in df.columns:
                 df = df.sort_values('report_date')
 
