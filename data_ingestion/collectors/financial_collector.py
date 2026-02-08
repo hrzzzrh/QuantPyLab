@@ -23,8 +23,8 @@ class FinancialCollector:
 
     def _load_indicator_map(self) -> dict:
         """加载东财指标中英文映射字典"""
-        # 优先查找 workspace，后续可迁移至 config
-        paths = ["workspace/em_indicator_dict.csv", "config/em_indicator_dict.csv"]
+        # 优先查找 docs，后续可迁移至 config
+        paths = ["docs/em_indicator_dict.csv", "workspace/em_indicator_dict.csv", "config/em_indicator_dict.csv"]
         mapping = {}
         
         for p in paths:
@@ -112,41 +112,40 @@ class FinancialCollector:
                 logger.warning(f"{market_symbol} 接口返回为空，跳过")
                 return
 
-            # 2. 列名翻译 (English -> Chinese)
+            # 2. 列名处理与翻译
+            # 我们只保留在字典中定义了映射的列，以及必要的 symbol/report_date
             new_cols = {}
-            # 确保关键列存在，防止映射失败
-            if 'REPORT_DATE' not in df.columns and '报告期' not in df.columns:
+            keep_raw_cols = []
+            
+            # 报告期标准化前置处理
+            report_date_col = '报告期' if '报告期' in df.columns else 'REPORT_DATE'
+            if report_date_col in df.columns:
+                df['report_date'] = pd.to_datetime(df[report_date_col]).dt.strftime('%Y%m%d')
+                keep_raw_cols.append('report_date')
+            else:
                 logger.warning(f"{market_symbol} 数据格式异常，缺少报告期列")
                 return
 
+            # 映射中文列名
             for col in df.columns:
                 if col in self.indicator_map:
                     cn_name = self.indicator_map[col]
                     # 1. 移除纯单位后缀
                     cn_name = cn_name.replace("(%)", "").replace("(元)", "").replace("(次)", "").replace("(天)", "")
-                    # 2. 将剩余的括号转为下划线 (例如: 净资产收益率(加权) -> 净资产收益率_加权)
+                    # 2. 将剩余的括号转为下划线
                     cn_name = cn_name.replace("(", "_").replace(")", "").replace("（", "_").replace("）", "")
-                    new_cols[col] = cn_name.strip()
+                    cn_name = cn_name.strip() # 彻底去除空格
+                    new_cols[col] = cn_name
+                    keep_raw_cols.append(col)
             
+            # 3. 彻底剔除不需要的原始英文列 (只保留在 keep_raw_cols 里的)
+            df = df[keep_raw_cols].copy()
             df.rename(columns=new_cols, inplace=True)
             
-            # 3. 核心字段清洗与精简
+            # 4. 补充 symbol
             df['symbol'] = symbol 
             
-            # 报告期标准化
-            if '报告期' in df.columns:
-                df['report_date'] = pd.to_datetime(df['报告期']).dt.strftime('%Y%m%d')
-            elif 'REPORT_DATE' in df.columns:
-                 df['report_date'] = pd.to_datetime(df['REPORT_DATE']).dt.strftime('%Y%m%d')
-            
-            # 剔除冗余元数据 (东财自带的各种代码)
-            cols_to_drop = [
-                '证券代码', '股票代码', '股票简称', '机构代码', '机构类型', 
-                '证券类型代码', '报告期名称', 'REPORT_DATE', '报告期', '更新日期'
-            ]
-            df.drop(columns=[c for c in cols_to_drop if c in df.columns], inplace=True)
-            
-            # 4. 入库
+            # 5. 入库
             self.indicator_store.save_indicators(df)
 
         except Exception as e:
