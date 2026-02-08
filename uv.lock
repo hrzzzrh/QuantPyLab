@@ -588,6 +588,7 @@ dependencies = [
     { name = "duckdb" },
     { name = "pandas" },
     { name = "pyarrow" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -596,6 +597,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.4.4" },
     { name = "pandas", specifier = ">=3.0.0" },
     { name = "pyarrow", specifier = ">=23.0.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [[package]]

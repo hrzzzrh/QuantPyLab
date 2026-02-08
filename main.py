@@ -4,6 +4,7 @@ import random
 import pandas as pd
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
 from utils.logger import logger
 from storage.database.manager import db_manager
 from storage.database.financial_store import FinancialStore
@@ -24,29 +25,47 @@ def sync_stock_list():
     conn.commit()
     logger.info(f"成功同步 {len(df)} 条记录到 stocks 表")
 
-def enrich_stock_metadata(limit=None):
+def enrich_stock_metadata(limit=None, run_industry=True, run_list_info=True):
     """补全股票元数据 (Phase 1.5)"""
     conn = db_manager.get_sqlite_conn()
-    industry_collector = HighSpeedIndustryCollector()
-    industry_collector.sync_industries(conn)
     
-    cursor = conn.cursor()
-    cursor.execute("SELECT symbol, code FROM stocks WHERE area IS NULL OR list_date IS NULL" + (f" LIMIT {limit}" if limit else ""))
-    pending = cursor.fetchall()
-    if not pending: return
+    if run_industry:
+        logger.info("--- Stage 1: 同步行业信息 (批量模式) ---")
+        industry_collector = HighSpeedIndustryCollector()
+        industry_collector.sync_industries(conn)
     
-    detail_collector = StockDetailCollector()
-    for symbol, code in pending:
-        try:
-            info = detail_collector.fetch_from_xueqiu(symbol) if symbol.startswith(('sh', 'sz')) else {}
-            if not info.get('list_date'):
-                em_info = detail_collector.fetch_from_eastmoney(code)
-                info['list_date'] = em_info.get('list_date')
-            if info:
-                cursor.execute("UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?", (info.get('area'), info.get('list_date'), symbol))
-            time.sleep(random.uniform(0.3, 0.6))
-        except Exception as e: logger.error(f"处理 {symbol} 失败: {e}")
-    conn.commit()
+    if run_list_info:
+        logger.info("--- Stage 2: 补全地域与上市日期 (增量模式) ---")
+        cursor = conn.cursor()
+        cursor.execute("SELECT symbol, code FROM stocks WHERE area IS NULL OR list_date IS NULL" + (f" LIMIT {limit}" if limit else ""))
+        pending = cursor.fetchall()
+        if not pending:
+            logger.info("没有待补全的地域或上市日期信息。")
+            return
+        
+        logger.info(f"发现 {len(pending)} 只股票待补全详细信息...")
+        detail_collector = StockDetailCollector()
+        
+        pbar = tqdm(pending, desc="补全个股详情", unit="只")
+        for symbol, code in pbar:
+            try:
+                pbar.set_postfix({"当前": symbol})
+                info = detail_collector.fetch_from_xueqiu(symbol) if symbol.startswith(('sh', 'sz')) else {}
+                if not info.get('list_date'):
+                    em_info = detail_collector.fetch_from_eastmoney(code)
+                    info['list_date'] = em_info.get('list_date')
+                if info:
+                    cursor.execute("UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?", (info.get('area'), info.get('list_date'), symbol))
+                time.sleep(random.uniform(0.2, 0.4))
+            except Exception as e: 
+                logger.debug(f"处理 {symbol} 失败: {e}")
+                
+            # 批量提交以提高效率
+            if pbar.n % 20 == 0:
+                conn.commit()
+                
+        conn.commit()
+    logger.info("元数据补全任务结束。")
 
 def get_target_report_dates():
     """计算最近 4 个报告期"""
@@ -237,6 +256,8 @@ def main():
     parser = argparse.ArgumentParser(description="QuantPyLab 实验室入口")
     parser.add_argument("--sync-stocks", action="store_true", help="同步股票列表")
     parser.add_argument("--enrich-metadata", action="store_true", help="补全元数据")
+    parser.add_argument("--industry", action="store_true", help="配合 --enrich-metadata，仅同步行业信息")
+    parser.add_argument("--list-info", action="store_true", help="配合 --enrich-metadata，仅同步地域与上市日期")
     parser.add_argument("--sync-fin", action="store_true", help="同步财务报表 (智能增量)")
     parser.add_argument("--sync-indicators", action="store_true", help="同步财务指标 (东财)")
     parser.add_argument("--symbol", type=str, help="指定同步单只股票指标")
@@ -244,11 +265,22 @@ def main():
     parser.add_argument("--limit", type=int, help="限制处理数量")
     
     args = parser.parse_args()
-    if args.sync_stocks: sync_stock_list()
-    elif args.enrich_metadata: enrich_stock_metadata(limit=args.limit)
-    elif args.sync_fin: sync_financials(limit=args.limit, force_all=args.force_all)
-    elif args.sync_indicators: sync_indicators(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
-    else: parser.print_help()
+    if args.sync_stocks: 
+        sync_stock_list()
+    elif args.enrich_metadata:
+        # 如果不传具体子项，默认执行全部
+        run_all = not args.industry and not args.list_info
+        enrich_stock_metadata(
+            limit=args.limit, 
+            run_industry=run_all or args.industry, 
+            run_list_info=run_all or args.list_info
+        )
+    elif args.sync_fin: 
+        sync_financials(limit=args.limit, force_all=args.force_all)
+    elif args.sync_indicators: 
+        sync_indicators(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
+    else: 
+        parser.print_help()
 
 if __name__ == "__main__":
     try: main()

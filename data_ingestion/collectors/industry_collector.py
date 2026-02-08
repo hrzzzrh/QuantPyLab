@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import random
+from tqdm import tqdm
 from utils.logger import logger
 from .headers import EM_HEADERS, EM_PARAMS_COMMON
 
@@ -28,14 +29,15 @@ class HighSpeedIndustryCollector:
             total_updated = 0
             
             # 2. 遍历每个行业
-            for idx, ind in enumerate(industries):
+            pbar = tqdm(industries, desc="同步行业成份股", unit="行业")
+            for idx, ind in enumerate(pbar):
                 bk_code = ind.get('f12')  # 板块ID，如 BK0475
                 bk_name = ind.get('f14')  # 板块名称，如 银行
                 
                 if not bk_code:
                     continue
                     
-                logger.debug(f"正在同步行业: {bk_name} ({bk_code}) ...")
+                pbar.set_postfix({"当前": bk_name})
                 stocks = self._fetch_constituents(bk_code)
                 
                 if not stocks:
@@ -53,7 +55,7 @@ class HighSpeedIndustryCollector:
                 if idx % 5 == 0:
                     db_conn.commit()
                 
-                time.sleep(random.uniform(0.5, 1.0)) # 保持温和
+                time.sleep(random.uniform(0.3, 0.5)) # 保持温和
                 
             db_conn.commit()
             logger.info(f"行业同步完成！累计更新了 {total_updated} 条记录的行业信息。")

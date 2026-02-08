@@ -16,7 +16,11 @@
 
 #### 股票元数据补全 (Enrichment)
 补全行业、地域、上市日期。
-- **命令**: `uv run main.py --enrich-metadata [--limit N]`
+- **命令**: `uv run main.py --enrich-metadata [--industry] [--list-info] [--limit N]`
+- **参数说明**:
+    - `(无子参数)`: 默认执行 Stage 1 和 Stage 2。
+    - `--industry`: 仅执行 Stage 1 (行业信息同步)。
+    - `--list-info`: 仅执行 Stage 2 (地域与上市日期补全)。
 - **策略**: 
     1. **Stage 1 (高速)**: 利用东财原生接口批量刷新行业信息。
     2. **Stage 2 (增量)**: 利用雪球和东财个股接口补全地域与上市日期。

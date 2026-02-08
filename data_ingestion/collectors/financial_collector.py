@@ -61,16 +61,20 @@ class FinancialCollector:
                 df.rename(columns={'报告日': 'report_date'}, inplace=True)
             
             # 剔除新浪报表中的总分项前缀 (如 "其中:", "加:", "减:")
-            # 新浪报表接口返回时，指标通常在第一列
-            indicator_col = df.columns[0]
-            if indicator_col not in ['symbol', 'report_date']:
-                def clean_prefix(name):
-                    if not isinstance(name, str): return name
-                    import re
+            # 新浪报表接口返回的是宽表，列名即为财务指标名称
+            clean_map = {}
+            import re
+            for col in df.columns:
+                if isinstance(col, str):
                     # 匹配 开头的 "其中[:：]", "加[:：]", "减[:：]"
-                    return re.sub(r'^(其中|加|减)[:：]', '', name).strip()
-                
-                df[indicator_col] = df[indicator_col].apply(clean_prefix)
+                    new_col = re.sub(r'^(其中|加|减)[:：]', '', col).strip()
+                    if new_col != col:
+                        clean_map[col] = new_col
+            
+            if clean_map:
+                df.rename(columns=clean_map, inplace=True)
+                # 清洗后若产生重名列 (如 "现金" 和 "其中:现金" -> "现金"), 保留第一个
+                df = df.loc[:, ~df.columns.duplicated()]
 
             if 'report_date' in df.columns:
                 df = df.sort_values('report_date')

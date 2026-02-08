@@ -69,7 +69,7 @@ class DBManager:
             if any(Path(WAREHOUSE_DIR).glob(f"{sub_dir}/*/data.parquet")):
                 conn.execute(f"""
                     CREATE OR REPLACE VIEW {view_name} AS 
-                    SELECT * FROM read_parquet('{path}', hive_partitioning=1)
+                    SELECT * FROM read_parquet('{path}', hive_partitioning=1, union_by_name=1)
                 """)
 
     def close_all(self):
