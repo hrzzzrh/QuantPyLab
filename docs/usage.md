@@ -52,6 +52,24 @@
 - **价值**: 为量化因子分析提供现成的、高阶的盈利与成长性数据，无需手动计算 YoY/QoQ。
 - **建议频率**: 每周执行一次 `uv run main.py --sync-indicators`。
 
+### 财务 TTM 指标计算
+基于原始利润表与现金流量表，自主计算滚动十二个月 (Trailing Twelve Months) 指标。
+- **命令**: `uv run main.py --calc-ttm [--limit N] [--symbol CODE] [--force-all]`
+- **参数说明**:
+    - `(无子参数)`: **智能增量模式 (默认)**。自动对比源报表与现有 TTM 库，识别新披露的报告期并触发补算，避免重复计算。
+    - `--symbol`: 强制重新计算指定个股的所有历史 TTM。
+    - `--force-all`: 强制全量扫描所有活跃股票并重新计算 TTM。
+- **逻辑**: 
+    1. **计算公式**: `TTM = 本期累计 + (上年年报 - 上年同期累计)`。
+    2. **支持指标**: 
+       - 归母净利润 TTM (`net_profit_ttm`)
+       - 扣非净利润 TTM (`deduct_net_profit_ttm`)
+       - 营业总收入 TTM (`revenue_ttm`)
+       - 经营活动现金流 TTM (`ocf_ttm`)
+    3. **时序安全**: 输出结果包含 `pub_date` (披露日)，确保在后续估值计算中无未来函数。
+- **价值**: 为 PE (TTM)、PS (TTM) 等估值指标提供精准的分母数据。
+- **建议频率**: 每次执行完 `--sync-fin` 或 `--sync-indicators` 后执行一次。
+
 ### 2. 数据分析与查询 (Analysis)
 
 本项目采用 **Parquet Data Lake** 架构，数据以物理分片形式存储在 `data/warehouse/` 下。

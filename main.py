@@ -2,10 +2,12 @@ import argparse
 import time
 import random
 import pandas as pd
+from pathlib import Path
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from utils.logger import logger
+from config.settings import WAREHOUSE_DIR
 from storage.database.manager import db_manager
 from storage.database.financial_store import FinancialStore
 from storage.database.indicator_store import IndicatorStore
@@ -252,6 +254,90 @@ def sync_indicators(limit=None, symbol=None, force_all=False):
         except Exception as e:
             logger.error(f"{code} 同步指标失败: {e}")
 
+def run_ttm_calculation(limit=None, symbol=None, force_all=False):
+    """计算 TTM 财务指标 (支持全量、增量、指定个股)"""
+    from analysis.processors.ttm_calculator import TTMCalculator
+    
+    calculator = TTMCalculator()
+    conn_sqlite = db_manager.get_sqlite_conn()
+    
+    target_symbols = []
+
+    if symbol:
+        # 指定单只
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code FROM stocks WHERE code = ? OR symbol = ?", (symbol, symbol))
+        row = cursor.fetchone()
+        if row:
+            target_symbols = [row[0]]
+        else:
+            logger.error(f"找不到股票: {symbol}")
+            return
+    elif force_all:
+        # 全量模式
+        logger.info("强制全量模式：将为所有活跃股票重新计算 TTM...")
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT code FROM stocks WHERE is_active = 1")
+        target_symbols = [row[0] for row in cursor.fetchall()]
+    else:
+        # 增量模式 (披露驱动)
+        logger.info("智能增量模式：检查新披露的财报数据...")
+        
+        # 定义需要检查的源
+        sources = [
+            "financial_statements/type=income",
+            "financial_statements/type=cashflow",
+            "indicators"
+        ]
+        
+        pending_symbols = set()
+        duckdb_conn = db_manager.get_duckdb_conn()
+        ttm_category = 'financial/ttm'
+        has_ttm = any(Path(WAREHOUSE_DIR).glob(f"{ttm_category}/*/data.parquet"))
+
+        for src in sources:
+            src_path = f"{WAREHOUSE_DIR}/{src}/*/data.parquet"
+            if not any(Path(WAREHOUSE_DIR).glob(f"{src}/*/data.parquet")):
+                continue
+            
+            if not has_ttm:
+                # 如果没有 TTM 数据，所有源中的 symbol 都要算
+                query = f"SELECT DISTINCT symbol FROM read_parquet('{src_path}', hive_partitioning=1, union_by_name=1)"
+            else:
+                # 找出源中有但 TTM 中没有的 (symbol, report_date) 对应的 symbol
+                # 我们使用子查询来对比
+                query = f"""
+                    SELECT DISTINCT symbol 
+                    FROM read_parquet('{src_path}', hive_partitioning=1, union_by_name=1)
+                    WHERE symbol || '_' || report_date NOT IN (
+                        SELECT symbol || '_' || report_date 
+                        FROM read_parquet('{WAREHOUSE_DIR}/{ttm_category}/**/*.parquet', hive_partitioning=1, union_by_name=1)
+                    )
+                """
+            
+            try:
+                res = duckdb_conn.execute(query).fetchall()
+                pending_symbols.update([row[0] for row in res])
+            except Exception as e:
+                logger.debug(f"检查源 {src} 增量失败: {e}")
+        
+        target_symbols = list(pending_symbols)
+        logger.info(f"增量扫描完成，发现 {len(target_symbols)} 只股票有新数据需要计算 TTM。")
+
+    if not target_symbols:
+        logger.info("所有 TTM 数据已是最新。")
+        return
+
+    if limit and len(target_symbols) > limit:
+        target_symbols = target_symbols[:limit]
+
+    logger.info(f"开始为 {len(target_symbols)} 只股票计算 TTM...")
+    for code in tqdm(target_symbols, desc="TTM 计算"):
+        try:
+            calculator.calculate_for_symbol(code)
+        except Exception as e:
+            logger.error(f"{code} TTM 计算失败: {e}")
+
 def main():
     parser = argparse.ArgumentParser(description="QuantPyLab 实验室入口")
     parser.add_argument("--sync-stocks", action="store_true", help="同步股票列表")
@@ -260,8 +346,9 @@ def main():
     parser.add_argument("--list-info", action="store_true", help="配合 --enrich-metadata，仅同步地域与上市日期")
     parser.add_argument("--sync-fin", action="store_true", help="同步财务报表 (智能增量)")
     parser.add_argument("--sync-indicators", action="store_true", help="同步财务指标 (东财)")
-    parser.add_argument("--symbol", type=str, help="指定同步单只股票指标")
-    parser.add_argument("--force-all", action="store_true", help="配合 --sync-fin，强制全量扫描所有股票")
+    parser.add_argument("--calc-ttm", action="store_true", help="计算 TTM 财务指标")
+    parser.add_argument("--symbol", type=str, help="指定单只股票 (配合 --sync-indicators 或 --calc-ttm)")
+    parser.add_argument("--force-all", action="store_true", help="强制全量扫描 (配合 --sync-fin 或 --calc-ttm)")
     parser.add_argument("--limit", type=int, help="限制处理数量")
     
     args = parser.parse_args()
@@ -279,6 +366,8 @@ def main():
         sync_financials(limit=args.limit, force_all=args.force_all)
     elif args.sync_indicators: 
         sync_indicators(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
+    elif args.calc_ttm:
+        run_ttm_calculation(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
     else: 
         parser.print_help()
 

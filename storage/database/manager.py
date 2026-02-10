@@ -60,7 +60,8 @@ class DBManager:
             "fin_balance_sheet": "financial_statements/type=balance",
             "fin_income_statement": "financial_statements/type=income",
             "fin_cashflow_statement": "financial_statements/type=cashflow",
-            "fin_indicator": "indicators"
+            "fin_indicator": "indicators",
+            "fin_ttm": "financial/ttm"
         }
         
         for view_name, sub_dir in view_map.items():
