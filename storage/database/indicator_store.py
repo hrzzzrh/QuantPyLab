@@ -16,6 +16,35 @@ class IndicatorStore:
         self.parquet_store = ParquetStore()
         self.category = "indicators"
 
+    def _enforce_schema(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        强制 Schema 一致性：
+        1. 元数据列强制为 VARCHAR (str)
+        2. 指标列强制为 DOUBLE (float64)
+        """
+        if df.empty:
+            return df
+            
+        # 定义元数据列 (需保持为字符串)
+        meta_cols = {
+            'report_date', '证券代码', '股票代码', '股票简称', 
+            '机构代码', '机构类型', '报告类型', '报告期名称', 
+            '证券类型代码', '公告日期', '更新日期', '币种', 
+            '其他_REPORT_YEAR', 'symbol'
+        }
+        
+        df = df.copy()
+        for col in df.columns:
+            if col in meta_cols:
+                # 转换为字符串，并将空值替换为空字符串，避免 Pandas 存为 object/NaN 导致的混乱
+                df[col] = df[col].astype(str).replace(['nan', 'None', 'NaT', '<NA>'], '')
+            else:
+                # 所有的财务指标列，强制转换为数值型 (float64)
+                # errors='coerce' 会将无法转换的(如空字符串)转为 NaN
+                df[col] = pd.to_numeric(df[col], errors='coerce').astype(float)
+        
+        return df
+
     def save_indicators(self, df: pd.DataFrame):
         """
         保存指标数据到 Parquet。
@@ -35,6 +64,10 @@ class IndicatorStore:
                 df = combined_df.drop_duplicates(subset=['report_date'], keep='last').copy()
             
             df['symbol'] = symbol
+            
+            # 【核心修复】写入前强制执行 Schema 一致性
+            df = self._enforce_schema(df)
+            
             self.parquet_store.save_partition(df, self.category, symbol)
             logger.info(f"成功入库 {symbol}: {len(df)} 条指标记录 (Parquet)")
             
