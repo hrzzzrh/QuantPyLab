@@ -2,11 +2,13 @@ import argparse
 import time
 import random
 import pandas as pd
+import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from utils.logger import logger
+from utils.financial import get_consecutive_reports
 from config.settings import WAREHOUSE_DIR
 from storage.database.manager import db_manager
 from storage.database.financial_store import FinancialStore
@@ -15,8 +17,31 @@ from data_ingestion.collectors.stock_list import StockListCollector, StockDetail
 from data_ingestion.collectors.industry_collector import HighSpeedIndustryCollector
 from data_ingestion.collectors.financial_collector import FinancialCollector
 
+# --- 辅助函数 ---
+
+def get_active_stocks():
+    """获取所有活跃股票的 (code, symbol)"""
+    conn = db_manager.get_sqlite_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1")
+    return cursor.fetchall()
+
+def get_orphan_codes(category: str, all_codes: list) -> list:
+    """获取尚未同步过特定类别数据的股票代码"""
+    if category == "financial":
+        from storage.database.financial_store import FinancialStore
+        orphans = FinancialStore().get_stocks_without_financials(all_codes)
+    elif category == "indicators":
+        from storage.database.indicator_store import IndicatorStore
+        orphans = IndicatorStore().get_stocks_without_indicators(all_codes)
+    else:
+        return []
+    return orphans
+
+# --- 业务逻辑函数 ---
+
 def sync_stock_list():
-    """同步基础股票列表 (Phase 1)"""
+    """同步基础股票列表 (stocks 表)"""
     collector = StockListCollector()
     df = collector.fetch_all_stocks()
     if df.empty: return
@@ -27,348 +52,291 @@ def sync_stock_list():
     conn.commit()
     logger.info(f"成功同步 {len(df)} 条记录到 stocks 表")
 
-def enrich_stock_metadata(limit=None, run_industry=True, run_list_info=True):
-    """补全股票元数据 (Phase 1.5)"""
+def sync_stock_metadata(run_industry=True, run_list_info=True):
+    """补全股票元数据 (行业、上市日期等)"""
     conn = db_manager.get_sqlite_conn()
-    
     if run_industry:
-        logger.info("--- Stage 1: 同步行业信息 (批量模式) ---")
-        industry_collector = HighSpeedIndustryCollector()
-        industry_collector.sync_industries(conn)
+        logger.info("--- 正在批量同步行业信息 ---")
+        HighSpeedIndustryCollector().sync_industries(conn)
     
     if run_list_info:
-        logger.info("--- Stage 2: 补全地域与上市日期 (增量模式) ---")
+        logger.info("--- 正在补全个股上市详情 (地域、日期) ---")
         cursor = conn.cursor()
-        cursor.execute("SELECT symbol, code FROM stocks WHERE area IS NULL OR list_date IS NULL" + (f" LIMIT {limit}" if limit else ""))
+        cursor.execute("SELECT symbol, code FROM stocks WHERE area IS NULL OR list_date IS NULL")
         pending = cursor.fetchall()
-        if not pending:
-            logger.info("没有待补全的地域或上市日期信息。")
-            return
+        if not pending: return
         
-        logger.info(f"发现 {len(pending)} 只股票待补全详细信息...")
         detail_collector = StockDetailCollector()
-        
-        pbar = tqdm(pending, desc="补全个股详情", unit="只")
-        for symbol, code in pbar:
+        for symbol, code in tqdm(pending, desc="补全详情"):
             try:
-                pbar.set_postfix({"当前": symbol})
                 info = detail_collector.fetch_from_xueqiu(symbol) if symbol.startswith(('sh', 'sz')) else {}
                 if not info.get('list_date'):
-                    em_info = detail_collector.fetch_from_eastmoney(code)
-                    info['list_date'] = em_info.get('list_date')
+                    info['list_date'] = detail_collector.fetch_from_eastmoney(code).get('list_date')
                 if info:
                     cursor.execute("UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?", (info.get('area'), info.get('list_date'), symbol))
                 time.sleep(random.uniform(0.2, 0.4))
-            except Exception as e: 
-                logger.debug(f"处理 {symbol} 失败: {e}")
-                
-            # 批量提交以提高效率
-            if pbar.n % 20 == 0:
-                conn.commit()
-                
+            except Exception: pass
+            if tqdm.get_lock().locks: conn.commit()
         conn.commit()
-    logger.info("元数据补全任务结束。")
 
 def get_target_report_dates():
-    """计算最近 4 个报告期"""
     today = datetime.now()
     dates = []
-    # 财务报告固定在 3, 6, 9, 12 月底
-    year = today.year
     for i in range(4):
         month = ((today.month - 1) // 3 - i) * 3
-        curr_year = year
-        while month <= 0:
-            month += 12
-            curr_year -= 1
-        day = 31 if month in [3, 12] else 30
-        dates.append(f"{curr_year}{month:02d}{day}")
+        curr_year = today.year
+        while month <= 0: month += 12; curr_year -= 1
+        dates.append(f"{curr_year}{month:02d}{31 if month in [3, 12] else 30}")
     return dates
 
-def sync_financials(limit=None, force_all=False):
-    """
-    同步财务报表 (Phase 2: Smart Version)
-    """
+def sync_financial_statements(symbol=None, force_all=False):
+    """同步财务三大报表"""
     store = FinancialStore()
     collector = FinancialCollector()
-    conn_sqlite = db_manager.get_sqlite_conn()
-    
-    target_codes = set() # 最终待同步的代码集合
+    all_active = get_active_stocks()
+    all_codes = [s[0] for s in all_active]
+    target_codes = set()
 
-    if force_all:
-        logger.info("强制全量模式：将扫描所有股票...")
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code FROM stocks" + (f" LIMIT {limit}" if limit else ""))
-        target_codes = {row[0] for row in cursor.fetchall()}
+    if symbol:
+        target_codes = {symbol}
+    elif force_all:
+        logger.info("强制全量模式：扫描所有活跃股...")
+        target_codes = set(all_codes)
     else:
-        # --- 路径 1: 披露日历驱动 (Smart Sync) ---
         report_dates = get_target_report_dates()
-        existing_records = store.get_existing_report_dates()
-        
-        logger.info(f"智能增量模式：检查最近报告期 {report_dates}...")
+        existing = store.get_existing_report_dates()
         for r_date in report_dates:
-            df_plans = collector.get_disclosure_plans(r_date)
-            if not df_plans.empty:
-                # 筛选：实际已披露 且 数据库中没有
-                df_plans['actual_date'] = pd.to_datetime(df_plans['actual_date'], errors='coerce')
-                disclosed = df_plans[df_plans['actual_date'].notna()]
-                
-                for _, row in disclosed.iterrows():
-                    key = f"{row['code']}_{r_date}"
-                    if key not in existing_records:
-                        target_codes.add(row['code'])
-        
-        logger.info(f"日历驱动发现 {len(target_codes)} 只股票需要同步。")
-
-        # --- 路径 2: 漏检补偿 (扫除孤儿股) ---
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code FROM stocks")
-        all_codes = [row[0] for row in cursor.fetchall()]
-        orphans = store.get_stocks_without_financials(all_codes)
-        
-        if orphans:
-            logger.info(f"漏检扫描发现 {len(orphans)} 只孤儿股（从未同步过），加入队列。")
-            target_codes.update(orphans[:100] if not limit else orphans[:limit]) # 每次补偿 100 只
+            df = collector.get_disclosure_plans(r_date)
+            if not df.empty:
+                df['actual_date'] = pd.to_datetime(df['actual_date'], errors='coerce')
+                for code in df[df['actual_date'].notna()]['code']:
+                    if f"{code}_{r_date}" not in existing: target_codes.add(code)
+        target_codes.update(get_orphan_codes("financial", all_codes))
 
     if not target_codes:
-        logger.info("所有财务数据已是最新。")
+        logger.info("财务报表数据已是最新。")
         return
 
-    # 限制处理数量 (用于测试)
-    final_list = list(target_codes)
-    if limit and len(final_list) > limit:
-        final_list = final_list[:limit]
-
-    logger.info(f"最终待同步任务数: {len(final_list)}")
-    
-    # 串行执行 (为了 DuckDB ALTER TABLE 安全)
-    count = 0
-    for code in final_list:
+    for code in tqdm(list(target_codes), desc="报表同步"):
         try:
-            for stat_type, table_name in [
-                ("balance", "fin_balance_sheet"),
-                ("profit", "fin_income_statement"),
-                ("cashflow", "fin_cashflow_statement")
-            ]:
-                df = collector.fetch_statement(code, stat_type)
-                if not df.empty:
-                    store.save_statement(df, table_name)
-                time.sleep(random.uniform(2, 3))
-            
-            count += 1
-            logger.info(f"[{count}/{len(final_list)}] {code} 同步完成")
-        except Exception as e:
-            logger.error(f"{code} 同步失败: {e}")
-            return
+            stat_map = {"balance": "fin_balance_sheet", "profit": "fin_income_statement", "cashflow": "fin_cashflow_statement"}
+            for st, table_name in stat_map.items():
+                df = collector.fetch_statement(code, st)
+                if not df.empty: store.save_statement(df, table_name)
+                time.sleep(random.uniform(1.0, 2.0))
+        except Exception as e: logger.error(f"{code} 失败: {e}")
 
-def sync_indicators(limit=None, symbol=None, force_all=False):
-    """
-    同步财务指标 (Phase 2.5: Smart Version)
-    """
+def sync_financial_indicators(symbol=None, force_all=False):
+    """同步东财财务指标"""
     store = IndicatorStore()
     collector = FinancialCollector()
-    conn_sqlite = db_manager.get_sqlite_conn()
-    
-    target_tasks = [] # 最终待同步任务列表 [(code, m_symbol)]
+    all_active = get_active_stocks()
+    target_tasks = []
 
     if symbol:
-        # 路径 0: 单只强制同步
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code, symbol FROM stocks WHERE code = ? OR symbol = ?", (symbol, symbol))
-        row = cursor.fetchone()
-        if row:
-            target_tasks.append((row[0], row[1]))
-        else:
-            logger.error(f"找不到代码: {symbol}")
-            return
+        target_tasks = [(s[0], s[1]) for s in all_active if s[0] == symbol or s[1] == symbol]
     elif force_all:
-        logger.info("强制全量模式：扫描所有活跃股票...")
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1" + (f" LIMIT {limit}" if limit else ""))
-        target_tasks = cursor.fetchall()
+        target_tasks = all_active
     else:
-        # --- 路径 1: 披露日历驱动 (Smart Sync) ---
         report_dates = get_target_report_dates()
-        existing_records = store.get_existing_report_dates()
-        
+        existing = store.get_existing_report_dates()
         target_codes = set()
-        logger.info(f"智能增量模式：检查最近报告期 {report_dates}...")
         for r_date in report_dates:
-            df_plans = collector.get_disclosure_plans(r_date)
-            if not df_plans.empty:
-                # 筛选：实际已披露 且 数据库中没有
-                df_plans['actual_date'] = pd.to_datetime(df_plans['actual_date'], errors='coerce')
-                disclosed = df_plans[df_plans['actual_date'].notna()]
-                
-                for _, row in disclosed.iterrows():
-                    key = f"{row['code']}_{r_date}"
-                    if key not in existing_records:
-                        target_codes.add(row['code'])
-        
-        logger.info(f"日历驱动发现 {len(target_codes)} 只股票需要同步指标。")
-
-        # --- 路径 2: 漏检补偿 (扫除孤儿股) ---
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1")
-        all_stocks = cursor.fetchall() # [(code, m_symbol), ...]
-        all_codes = [s[0] for s in all_stocks]
-        
-        orphans_codes = store.get_stocks_without_indicators(all_codes)
-        if orphans_codes:
-            logger.info(f"漏检扫描发现 {len(orphans_codes)} 只孤儿股（从未同步过指标），加入队列。")
-            orphans_codes_set = set(orphans_codes[:100] if not limit else orphans_codes[:limit])
-            target_codes.update(orphans_codes_set)
-
-        # 构建最终任务列表
-        code_to_m_symbol = {s[0]: s[1] for s in all_stocks}
-        for c in target_codes:
-            if c in code_to_m_symbol:
-                target_tasks.append((c, code_to_m_symbol[c]))
+            df = collector.get_disclosure_plans(r_date)
+            if not df.empty:
+                df['actual_date'] = pd.to_datetime(df['actual_date'], errors='coerce')
+                for code in df[df['actual_date'].notna()]['code']:
+                    if f"{code}_{r_date}" not in existing: target_codes.add(code)
+        target_codes.update(get_orphan_codes("indicators", [s[0] for s in all_active]))
+        code_map = {s[0]: s[1] for s in all_active}
+        target_tasks = [(c, code_map[c]) for c in target_codes if c in code_map]
 
     if not target_tasks:
-        logger.info("所有财务指标已是最新。")
+        logger.info("指标数据已是最新。")
         return
 
-    # 限制处理数量 (用于测试)
-    if limit and len(target_tasks) > limit:
-        target_tasks = target_tasks[:limit]
-
-    logger.info(f"最终待同步任务数: {len(target_tasks)}")
-    
-    count = 0
-    for code, m_symbol in target_tasks:
+    for code, m_symbol in tqdm(target_tasks, desc="指标同步"):
         try:
             fmt_symbol = m_symbol.upper()
-            if not ('.' in fmt_symbol):
-                 if fmt_symbol.startswith(('SH', 'SZ', 'BJ')):
-                     pre = fmt_symbol[:2]
-                     suf = fmt_symbol[2:]
-                     fmt_symbol = f"{suf}.{pre}"
-            
+            if '.' not in fmt_symbol and fmt_symbol.startswith(('SH', 'SZ', 'BJ')):
+                fmt_symbol = f"{fmt_symbol[2:]}.{fmt_symbol[:2]}"
             collector.collect_indicators(code, fmt_symbol)
-            count += 1
-            if count % 10 == 0:
-                logger.info(f"已进度: [{count}/{len(target_tasks)}]")
-            
             time.sleep(random.uniform(0.5, 1.0))
-        except Exception as e:
-            logger.error(f"{code} 同步指标失败: {e}")
+        except Exception: pass
 
-def run_ttm_calculation(limit=None, symbol=None, force_all=False):
-    """计算 TTM 财务指标 (支持全量、增量、指定个股)"""
+def calculate_ttm_metrics(symbol=None, force_all=False):
+    """计算滚动十二个月 (TTM) 财务指标"""
     from analysis.processors.ttm_calculator import TTMCalculator
-    
     calculator = TTMCalculator()
-    conn_sqlite = db_manager.get_sqlite_conn()
+    all_active = get_active_stocks()
     
-    target_symbols = []
+    candidates = [] # 存储 (symbol, max_src_date)
 
     if symbol:
-        # 指定单只
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code FROM stocks WHERE code = ? OR symbol = ?", (symbol, symbol))
-        row = cursor.fetchone()
-        if row:
-            target_symbols = [row[0]]
-        else:
-            logger.error(f"找不到股票: {symbol}")
-            return
-    elif force_all:
-        # 全量模式
-        logger.info("强制全量模式：将为所有活跃股票重新计算 TTM...")
-        cursor = conn_sqlite.cursor()
-        cursor.execute("SELECT code FROM stocks WHERE is_active = 1")
-        target_symbols = [row[0] for row in cursor.fetchall()]
+        logger.info(f"单只同步模式: {symbol}")
+        target_symbols = [s[0] for s in all_active if s[0] == symbol or s[1] == symbol]
+        for code in target_symbols:
+            calculator.calculate_for_symbol(code)
+        return
+
+    duckdb_conn = db_manager.get_duckdb_conn()
+    available_views = db_manager.list_available_views()
+    
+    if force_all:
+        logger.info("强制全量模式...")
+        query = "SELECT symbol, '20991231' as max_src FROM stocks WHERE is_active = 1"
+        candidates = duckdb_conn.execute(query).fetchall()
     else:
-        # 增量模式 (披露驱动)
-        logger.info("智能增量模式：检查新披露的财报数据...")
-        
-        # 定义需要检查的源
-        sources = [
-            "financial_statements/type=income",
-            "financial_statements/type=cashflow",
-            "indicators"
-        ]
-        
-        pending_symbols = set()
-        duckdb_conn = db_manager.get_duckdb_conn()
-        ttm_category = 'financial/ttm'
-        has_ttm = any(Path(WAREHOUSE_DIR).glob(f"{ttm_category}/*/data.parquet"))
+        logger.info("智能增量模式：正在进行数据完整性自检...")
+        if "fin_ttm" not in available_views:
+            query = "SELECT symbol, MAX(report_date) FROM fin_income_statement GROUP BY symbol"
+            candidates = duckdb_conn.execute(query).fetchall()
+        else:
+            sql = """
+                SELECT src.symbol, src.max_src 
+                FROM (SELECT symbol, MAX(report_date) as max_src FROM fin_income_statement GROUP BY symbol) src
+                LEFT JOIN (SELECT symbol, MAX(report_date) as max_ttm FROM fin_ttm GROUP BY symbol) ttm
+                  ON src.symbol = ttm.symbol
+                WHERE ttm.max_ttm IS NULL OR src.max_src > ttm.max_ttm
+            """
+            candidates = duckdb_conn.execute(sql).fetchall()
 
-        for src in sources:
-            src_path = f"{WAREHOUSE_DIR}/{src}/*/data.parquet"
-            if not any(Path(WAREHOUSE_DIR).glob(f"{src}/*/data.parquet")):
-                continue
-            
-            if not has_ttm:
-                # 如果没有 TTM 数据，所有源中的 symbol 都要算
-                query = f"SELECT DISTINCT symbol FROM read_parquet('{src_path}', hive_partitioning=1, union_by_name=1)"
-            else:
-                # 找出源中有但 TTM 中没有的 (symbol, report_date) 对应的 symbol
-                # 我们使用子查询来对比
-                query = f"""
-                    SELECT DISTINCT symbol 
-                    FROM read_parquet('{src_path}', hive_partitioning=1, union_by_name=1)
-                    WHERE symbol || '_' || report_date NOT IN (
-                        SELECT symbol || '_' || report_date 
-                        FROM read_parquet('{WAREHOUSE_DIR}/{ttm_category}/**/*.parquet', hive_partitioning=1, union_by_name=1)
-                    )
-                """
-            
-            try:
-                res = duckdb_conn.execute(query).fetchall()
-                pending_symbols.update([row[0] for row in res])
-            except Exception as e:
-                logger.debug(f"检查源 {src} 增量失败: {e}")
-        
-        target_symbols = list(pending_symbols)
-        logger.info(f"增量扫描完成，发现 {len(target_symbols)} 只股票有新数据需要计算 TTM。")
-
-    if not target_symbols:
+    if not candidates:
         logger.info("所有 TTM 数据已是最新。")
         return
 
-    if limit and len(target_symbols) > limit:
-        target_symbols = target_symbols[:limit]
+    target_symbols = []
+    for code, max_date in candidates:
+        if force_all:
+            target_symbols.append(code)
+            continue
+        required_reports = get_consecutive_reports(max_date, 5)
+        check_sql = f"SELECT COUNT(DISTINCT report_date) FROM fin_income_statement WHERE symbol = '{code}' AND report_date IN {tuple(required_reports)}"
+        count = duckdb_conn.execute(check_sql).fetchone()[0]
+        if count == 5:
+            target_symbols.append(code)
+        else:
+            logger.debug(f"跳过数据不全股票 {code}: 最新 {max_date} 往前 5 季仅有 {count} 季数据")
 
-    logger.info(f"开始为 {len(target_symbols)} 只股票计算 TTM...")
+    if not target_symbols:
+        logger.info("数据完整性未达标，无需计算。")
+        return
+
+    logger.info(f"开始为 {len(target_symbols)} 只股票同步 TTM 指标...")
     for code in tqdm(target_symbols, desc="TTM 计算"):
-        try:
-            calculator.calculate_for_symbol(code)
-        except Exception as e:
-            logger.error(f"{code} TTM 计算失败: {e}")
+        try: calculator.calculate_for_symbol(code)
+        except Exception: pass
+
+def sync_share_capital(symbol=None, force_all=False, start_date=None):
+    """同步股本变动记录"""
+    from data_ingestion.collectors.share_collector import ShareCollector
+    collector = ShareCollector()
+    all_active = get_active_stocks()
+    target_codes = [s[0] for s in all_active if s[0] == symbol or s[1] == symbol] if symbol else [s[0] for s in all_active]
+    
+    logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动...")
+    for code in tqdm(target_codes, desc="股本同步"):
+        collector.collect_share_capital(code, start_date=start_date)
+        time.sleep(random.uniform(0.1, 0.3))
+
+def sync_daily_kline(symbol=None, force_all=False, start_date=None):
+    """同步日线行情数据"""
+    from data_ingestion.collectors.kline_collector import DailyKlineCollector
+    collector = DailyKlineCollector()
+    all_active = get_active_stocks()
+    target_codes = [s[0] for s in all_active if s[0] == symbol or s[1] == symbol] if symbol else [s[0] for s in all_active]
+    
+    logger.info(f"开始同步 {len(target_codes)} 只股票的日线行情...")
+    for code in tqdm(target_codes, desc="K线同步"):
+        collector.collect_kline(code, start_date=start_date)
+
+def sync_all_data_flow(symbol=None, force_all=False):
+    """执行全量数据同步流水线 (除元数据外)"""
+    logger.info(">>> 开始执行一键数据同步流水线 <<<")
+    sync_financial_statements(symbol=symbol, force_all=force_all)
+    sync_financial_indicators(symbol=symbol, force_all=force_all)
+    calculate_ttm_metrics(symbol=symbol, force_all=force_all)
+    sync_share_capital(symbol=symbol, force_all=force_all)
+    sync_daily_kline(symbol=symbol, force_all=force_all)
+    logger.info(">>> 数据同步流水线执行完成 <<<")
+
+def export_duckdb_views(output_path: str):
+    """导出 DuckDB 视图的 SQL 定义"""
+    sql = db_manager.generate_full_sql()
+    Path(output_path).write_text(sql, encoding='utf-8')
+    logger.info(f"视图脚本已导出至: {output_path}")
+
+# --- CLI 定义 ---
 
 def main():
-    parser = argparse.ArgumentParser(description="QuantPyLab 实验室入口")
-    parser.add_argument("--sync-stocks", action="store_true", help="同步股票列表")
-    parser.add_argument("--enrich-metadata", action="store_true", help="补全元数据")
-    parser.add_argument("--industry", action="store_true", help="配合 --enrich-metadata，仅同步行业信息")
-    parser.add_argument("--list-info", action="store_true", help="配合 --enrich-metadata，仅同步地域与上市日期")
-    parser.add_argument("--sync-fin", action="store_true", help="同步财务报表 (智能增量)")
-    parser.add_argument("--sync-indicators", action="store_true", help="同步财务指标 (东财)")
-    parser.add_argument("--calc-ttm", action="store_true", help="计算 TTM 财务指标")
-    parser.add_argument("--symbol", type=str, help="指定单只股票 (配合 --sync-indicators 或 --calc-ttm)")
-    parser.add_argument("--force-all", action="store_true", help="强制全量扫描 (配合 --sync-fin 或 --calc-ttm)")
-    parser.add_argument("--limit", type=int, help="限制处理数量")
-    
+    parser = argparse.ArgumentParser(description="QuantPyLab 实验室统一入口", formatter_class=argparse.RawTextHelpFormatter)
+    subparsers = parser.add_subparsers(dest="command", help="子命令集")
+
+    # 1. sync-stocks
+    subparsers.add_parser("sync-stocks", help="同步 A 股全量股票代码与名称 (stocks表)")
+
+    # 2. sync-metadata
+    meta_p = subparsers.add_parser("sync-metadata", help="同步股票行业、地域、上市日期等元数据")
+    meta_p.add_argument("--industry", action="store_true", help="仅同步行业")
+    meta_p.add_argument("--list-info", action="store_true", help="仅同步上市详情")
+
+    # 3. sync-financial
+    fin_p = subparsers.add_parser("sync-financial", help="同步历史财务报表")
+    fin_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    fin_p.add_argument("--force-all", action="store_true", help="全量扫描所有股票")
+
+    # 4. sync-indicators
+    ind_p = subparsers.add_parser("sync-indicators", help="同步东方财富 140+ 项财务指标")
+    ind_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    ind_p.add_argument("--force-all", action="store_true", help="全量扫描所有股票")
+
+    # 5. calc-ttm
+    ttm_p = subparsers.add_parser("calc-ttm", help="计算滚动财务 (TTM) 指标")
+    ttm_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    ttm_p.add_argument("--force-all", action="store_true", help="全量重新计算所有股票")
+
+    # 6. sync-share
+    share_p = subparsers.add_parser("sync-share", help="同步股本变动记录")
+    share_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    share_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
+    share_p.add_argument("--force-all", action="store_true", help="扫描所有活跃股票")
+
+    # 7. sync-kline
+    kline_p = subparsers.add_parser("sync-kline", help="同步日线行情数据")
+    kline_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    kline_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
+    kline_p.add_argument("--force-all", action="store_true", help="扫描所有活跃股票")
+
+    # 8. sync-all
+    all_p = subparsers.add_parser("sync-all", help="一键同步全流程数据 (除元数据)")
+    all_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    all_p.add_argument("--force-all", action="store_true", help="全量强制同步")
+
+    # 9. export-views
+    exp_p = subparsers.add_parser("export-views", help="导出 DuckDB 视图的 SQL 定义脚本")
+    exp_p.add_argument("output", type=str, help="输出文件路径")
+
     args = parser.parse_args()
-    if args.sync_stocks: 
+
+    if args.command == "sync-stocks":
         sync_stock_list()
-    elif args.enrich_metadata:
-        # 如果不传具体子项，默认执行全部
-        run_all = not args.industry and not args.list_info
-        enrich_stock_metadata(
-            limit=args.limit, 
-            run_industry=run_all or args.industry, 
-            run_list_info=run_all or args.list_info
-        )
-    elif args.sync_fin: 
-        sync_financials(limit=args.limit, force_all=args.force_all)
-    elif args.sync_indicators: 
-        sync_indicators(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
-    elif args.calc_ttm:
-        run_ttm_calculation(limit=args.limit, symbol=args.symbol, force_all=args.force_all)
-    else: 
+    elif args.command == "sync-metadata":
+        sync_stock_metadata(run_industry=not args.list_info, run_list_info=not args.industry)
+    elif args.command == "sync-financial":
+        sync_financial_statements(symbol=args.symbol, force_all=args.force_all)
+    elif args.command == "sync-indicators":
+        sync_financial_indicators(symbol=args.symbol, force_all=args.force_all)
+    elif args.command == "calc-ttm":
+        calculate_ttm_metrics(symbol=args.symbol, force_all=args.force_all)
+    elif args.command == "sync-share":
+        sync_share_capital(symbol=args.symbol, force_all=args.force_all, start_date=args.start_date)
+    elif args.command == "sync-kline":
+        sync_daily_kline(symbol=args.symbol, force_all=args.force_all, start_date=args.start_date)
+    elif args.command == "sync-all":
+        sync_all_data_flow(symbol=args.symbol, force_all=args.force_all)
+    elif args.command == "export-views":
+        export_duckdb_views(args.output)
+    else:
         parser.print_help()
 
 if __name__ == "__main__":

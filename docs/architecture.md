@@ -26,7 +26,7 @@
     - `file_store/`: Parquet 文件读写逻辑封装。
 - `analysis/`: 策略与指标。包含自定义因子和技术指标计算。
 - `backtest/`: 回测引擎。
-- `utils/`: 工具函数（日志、时间处理、网络请求装饰器）。
+- `utils/`: **[工具函数库](utilities.md)**（包含交易日历、日志等通用工具）。
 - `data/`: 本地物理存储目录。
 
 ## 4. 标准扩展模式 (Extension Patterns)

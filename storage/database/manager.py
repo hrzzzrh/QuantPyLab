@@ -1,6 +1,7 @@
 import sqlite3
 import duckdb
 import os
+from datetime import datetime
 from pathlib import Path
 from config.settings import SQLITE_DB_PATH, WAREHOUSE_DIR
 from typing import Optional, List
@@ -90,6 +91,30 @@ class DBManager:
         loader = ViewLoader(views_dir)
         loader.discover_views()
         return loader.generate_puml()
+
+    def generate_full_sql(self) -> str:
+        """生成包含所有视图定义的完整 SQL 脚本"""
+        views_dir = Path(__file__).parent / "views"
+        loader = ViewLoader(views_dir)
+        loader.discover_views()
+        sorted_views = loader.get_sorted_views()
+        
+        sql_blocks = [
+            "-- QuantPyLab 自动生成的视图脚本",
+            "-- 运行环境: DuckDB",
+            f"-- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "\n"
+        ]
+        
+        for view in sorted_views:
+            sql = view.get_sql(str(self.warehouse_dir)).strip()
+            if not sql.endswith(';'):
+                sql += ';'
+            sql_blocks.append(f"-- View: {view.name}")
+            sql_blocks.append(sql)
+            sql_blocks.append("")
+            
+        return "\n".join(sql_blocks)
 
     def list_available_views(self) -> List[str]:
         """获取当前 DuckDB 中可用的所有视图列表"""
