@@ -3,7 +3,8 @@ import duckdb
 import os
 from pathlib import Path
 from config.settings import SQLITE_DB_PATH, WAREHOUSE_DIR
-from typing import Optional
+from typing import Optional, List
+from .view_loader import ViewLoader
 
 class DBManager:
     """
@@ -13,6 +14,7 @@ class DBManager:
     
     def __init__(self):
         self.sqlite_path = SQLITE_DB_PATH
+        self.warehouse_dir = Path(WAREHOUSE_DIR)
         
         self._sqlite_conn: Optional[sqlite3.Connection] = None
         self._duckdb_conn: Optional[duckdb.DuckDBPyConnection] = None
@@ -48,107 +50,52 @@ class DBManager:
     def get_duckdb_conn(self) -> duckdb.DuckDBPyConnection:
         """获取 DuckDB 连接 (作为瞬态计算引擎)"""
         if self._duckdb_conn is None:
-            # 彻底放弃物理文件，使用内存模式以实现完美的并发性
+            # 使用内存模式
             self._duckdb_conn = duckdb.connect(":memory:")
             # 自动挂载 Parquet 数据湖中的视图
             self.init_warehouse_views(self._duckdb_conn)
         return self._duckdb_conn
 
     def init_warehouse_views(self, conn: duckdb.DuckDBPyConnection):
-        """将 Parquet 目录映射为 DuckDB 视图，方便直接 SQL 查询"""
-        view_map = {
-            "fin_balance_sheet": "financial_statements/type=balance",
-            "fin_income_statement": "financial_statements/type=income",
-            "fin_cashflow_statement": "financial_statements/type=cashflow",
-            "fin_indicator": "indicators",
-            "fin_ttm": "financial/ttm",
-            "daily_kline": "daily_kline",
-            "share_capital": "share_capital"
-        }
+        """扫描并加载所有视图，支持基于 DAG 的自动依赖处理"""
+        from utils.logger import logger
         
-        for view_name, sub_dir in view_map.items():
-            path = Path(WAREHOUSE_DIR) / sub_dir / "*/*.parquet"
-            # 检查是否有文件存在，否则创建视图会报错
-            if any(Path(WAREHOUSE_DIR).glob(f"{sub_dir}/*/data.parquet")):
-                conn.execute(f"""
-                    CREATE OR REPLACE VIEW {view_name} AS 
-                    SELECT * FROM read_parquet('{path}', hive_partitioning=1, union_by_name=1)
-                """)
-
-        # 注册动态估值视图 (ASOF JOIN 核心逻辑)
-        self._register_valuation_view(conn)
-
-    def _register_valuation_view(self, conn: duckdb.DuckDBPyConnection):
-        """
-        注册核心估值视图：v_daily_valuation
-        整合了：日线、复权因子、股本历史、财务 TTM、净资产。
-        """
-        # 检查依赖视图是否存在
-        required_views = ["daily_kline", "share_capital", "fin_ttm", "fin_balance_sheet"]
-        existing_views = [row[0] for row in conn.execute("SELECT table_name FROM information_schema.tables").fetchall()]
-        
-        if not all(v in existing_views for v in required_views):
+        views_dir = Path(__file__).parent / "views"
+        if not views_dir.exists():
             return
 
-        conn.execute("""
-            CREATE OR REPLACE VIEW v_daily_valuation AS
-            WITH 
-            -- 1. 准备基础行情
-            base_kline AS (
-                SELECT symbol, CAST(date AS DATE) as date, close, adj_factor 
-                FROM daily_kline
-            ),
-            -- 2. 准备股本历史
-            capital_hist AS (
-                SELECT symbol, CAST(change_date AS DATE) as change_date, total_shares 
-                FROM share_capital
-            ),
-            -- 3. 准备财务 TTM 历史
-            ttm_hist AS (
-                SELECT symbol, strptime(pub_date, '%Y%m%d')::DATE as pub_date, net_profit_ttm, deduct_net_profit_ttm, revenue_ttm, ocf_ttm
-                FROM fin_ttm
-            ),
-            -- 4. 准备净资产历史 (从资产负债表获取)
-            assets_hist AS (
-                SELECT 
-                    symbol, 
-                    -- 处理可能存在的多种日期格式 (YYYYMMDD 或 YYYY-MM-DD...)
-                    CASE 
-                        WHEN length(公告日期) = 8 THEN strptime(公告日期, '%Y%m%d')::DATE
-                        ELSE CAST(LEFT(公告日期, 10) AS DATE)
-                    END as pub_date,
-                    "归属于母公司股东权益合计" as net_assets
-                FROM fin_balance_sheet
-            )
+        loader = ViewLoader(views_dir)
+        
+        try:
+            # 1. 发现并排序
+            loader.discover_views()
+            sorted_views = loader.get_sorted_views()
+            
+            # 2. 按顺序执行 SQL
+            for view in sorted_views:
+                try:
+                    sql = view.get_sql(str(self.warehouse_dir))
+                    conn.execute(sql)
+                except Exception as e:
+                    logger.error(f"加载视图失败 {view.name}: {e}")
+                    
+            logger.info(f"成功加载 {len(sorted_views)} 个视图")
+            
+        except Exception as e:
+            logger.error(f"初始化视图层失败: {e}")
 
-            SELECT 
-                k.date,
-                k.symbol,
-                -- A. 价格指标
-                k.close AS raw_close,
-                (k.close * k.adj_factor) AS close_hfq, -- 后复权价格 (用于回测)
-                
-                -- B. 股本指标
-                s.total_shares,
-                
-                -- C. 核心估值 (当时的总市值)
-                (k.close * s.total_shares) AS market_cap,
-                
-                -- D. 估值比率 (ASOF JOIN 匹配当时已披露的数据)
-                (k.close * s.total_shares) / NULLIF(t.net_profit_ttm, 0) AS pe_ttm,
-                (k.close * s.total_shares) / NULLIF(t.deduct_net_profit_ttm, 0) AS pe_deduct_ttm,
-                (k.close * s.total_shares) / NULLIF(a.net_assets, 0) AS pb,
-                (k.close * s.total_shares) / NULLIF(t.revenue_ttm, 0) AS ps_ttm,
-                (k.close * s.total_shares) / NULLIF(t.ocf_ttm, 0) AS pcf_ttm
+    def get_view_relationships_puml(self) -> str:
+        """获取当前视图依赖关系的 PlantUML 源码"""
+        views_dir = Path(__file__).parent / "views"
+        loader = ViewLoader(views_dir)
+        loader.discover_views()
+        return loader.generate_puml()
 
-            FROM base_kline k
-            ASOF JOIN capital_hist s 
-                ON k.symbol = s.symbol AND k.date >= s.change_date
-            ASOF JOIN ttm_hist t 
-                ON k.symbol = t.symbol AND k.date >= t.pub_date
-            ASOF JOIN assets_hist a
-                ON k.symbol = a.symbol AND k.date >= a.pub_date;
-        """)
+    def list_available_views(self) -> List[str]:
+        """获取当前 DuckDB 中可用的所有视图列表"""
+        conn = self.get_duckdb_conn()
+        res = conn.execute("SELECT table_name FROM information_schema.tables WHERE table_type='VIEW'").fetchall()
+        return [row[0] for row in res]
 
     def close_all(self):
         """关闭所有数据库连接"""

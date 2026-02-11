@@ -5,7 +5,7 @@
 - **环境/依赖管理**：`uv`
 - **存储方案**：
     - **Parquet Data Lake** (核心存储：存储财务报表、指标数据，按 `symbol` 分片存储，支持非阻塞并发读写)
-    - **DuckDB** (计算引擎：通过 View 映射 Parquet 文件进行高性能列式查询)
+    - **DuckDB** (计算引擎：通过 **[统一视图架构](view_architecture.md)** 映射 Parquet 文件并实现高性能分析)
     - **SQLite** (元数据数据库：存储配置、股票列表元信息、任务日志等)
 - **分析工具**：Pandas, NumPy, Matplotlib/Plotly
 

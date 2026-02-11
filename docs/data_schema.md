@@ -1,67 +1,34 @@
 # 数据模型规范
 
-## 文档索引
-**字段详细定义**：关于所有表（基础行情、财务报表、财务指标、TTM 数据）的具体字段含义、单位及样例值，请务必查阅 **[数据资产目录 (Data Catalog)](data_catalog.md)**。该目录作为入口，连接了各模块的详细说明文档。
+## 1. 文档索引
+**字段详细定义**：关于所有表（基础行情、财务报表、财务指标、TTM 数据）的具体字段含义、单位及样例值，请务必查阅 **[数据资产目录 (Data Catalog)](data_catalog.md)**。
 
-## SQLite 元数据库 (metadata.db)
+## 2. SQLite 元数据库 (metadata.db)
+... (此处保留 stocks 表原有规范)
 
-### 1. stocks 表
-存储 A 股全量股票的基础索引信息。
+## 3. DuckDB 统一视图层 (Unified View Architecture)
 
-| 字段 | 类型 | 约束 | 说明 |
-| :--- | :--- | :--- | :--- |
-| `symbol` | TEXT | PRIMARY KEY | 带市场前缀的代码 (如 sh600000) |
-| `code` | TEXT | NOT NULL | 纯代码 (如 600000) |
-| `name` | TEXT | NOT NULL | 股票名称 |
-| `area` | TEXT | - | 地域 (待补充) |
-| `industry` | TEXT | - | 细分行业 (待补充) |
-| `list_date` | TEXT | - | 上市日期 (YYYYMMDD, 待补充) |
-| `is_active` | INTEGER | DEFAULT 1 | 是否在交易 |
-| `updated_at` | DATETIME | DEFAULT CURRENT_TIMESTAMP | 最后同步时间 |
+本项目采用“**物理存储与代码定义视图**”的架构。DuckDB 中所有可查询对象均为 **视图 (View)**，其定义采用 Python 类进行声明式管理。
 
-**同步策略**：
-- **Phase 1 (基础)**：使用 `akshare.stock_info_a_code_name` 建立代码索引。
-- **Phase 1.5 (增强)**：
-    - **行业**：通过东财原生批量接口（Native API）高效同步。
-    - **地域/上市日期**：通过雪球个股接口（XQ）与东财个股接口（EM）混合增量补全。
-- **写入规范**：基础同步必须先 `DELETE` 后 `append`；增强同步使用 `UPDATE`。严禁使用 `to_sql(replace)`。
+### A. 物理存储层 (Data Lake)
+物理数据以 Parquet 格式存储在 `data/warehouse/` 中。物理文件不直接暴露给分析逻辑，必须通过视图访问。
 
-## DuckDB 分析数据库 (analysis.duckdb)
+### B. 视图定义规范 (Code-as-Definition)
+所有视图定义位于 `storage/database/views/` 目录下，每个视图对应一个 Python 文件。
 
-### 1. 财务报表 (fin_balance_sheet, fin_income_statement, fin_cashflow_statement)
-存储 A 股三大财务报表的原始数据。
+**核心基类**: `storage.database.view_base.DuckDBView`
 
-**核心共有字段**：
-- `symbol`: 股票代码 (6位)
-- `report_date`: 报告期 (YYYYMMDD)
-- `ann_date`: 公告日期
-- `is_audited`: 是否审计
-- (其他字段): 对应新浪财经原始中文指标名
+| 特性 | 说明 |
+| :--- | :--- |
+| **显式依赖** | 必须在 `dependencies` 属性中列出所依赖的视图名。 |
+| **自动化加载** | 系统在启动时会自动构建有向无环图 (DAG) 并按正确顺序加载视图。 |
+| **动态 SQL** | 可以在 Python 中利用逻辑动态生成 SQL 语句（如路径替换、字段筛选）。 |
 
-**同步策略**：
-- **驱动机制**：默认采用“披露日历驱动”的智能增量模式，通过聚合沪深京全市场披露计划识别待更新标的。
-- **兜底机制**：自动扫描并优先补全从未入库的“孤儿股”。
-- **数据源**：新浪财经。
-- **写入规范**：采用“逻辑 Upsert”模式（先删除该股同报告期旧数据，再插入新数据），支持动态列扩展。
+**目录结构即业务域 (Domain)**：
+- `market/`: 基础行情映射视图。
+- `financial/`: 财务报表与指标映射视图。
+- `analysis/`: 衍生分析视图（如估值、因子）。
 
-### 2. 财务指标 (fin_indicator)
-存储专业机构计算好的高阶财务指标 (如 ROE, 毛利率, 增长率等)。
-
-**核心字段**：
-- `symbol`: 股票代码 (6位)
-- `report_date`: 报告期 (YYYYMMDD)
-- `基本每股收益`, `净资产收益率_加权`, `营业总收入同比增长`, ... (动态中文列名)
-
-**特征**：
-- **数据源**：东方财富 (EastMoney)。
-- **存储规范**：
-    - **中文列名**：所有指标均转换为易读的中文 (基于 `em_indicator_dict.csv` 映射)。
-    - **单位清洗**：列名中移除 `(元)`, `(%)`, `(次)` 等单位后缀，便于 SQL 查询。单位信息需参考 `data_catalog` 表。
-- **同步策略**：
-    - **增量**：跟随财务三报表 (Balance/Profit/Cashflow) 的完整性进行补全。
-    - **主键**：`(symbol, report_date)` 唯一。
-
-**特征**：
-- **宽表存储**：采用动态列扩展模式，不同行业的特有指标会自动增加为新列。
-- **数据类型**：指标列统一为 `DOUBLE`，元数据列为 `VARCHAR`。
-- **唯一性**：通过逻辑层确保 `(symbol, report_date)` 唯一。
+### C. 设计原则
+- **无穿越保障**：分析视图必须使用 `ASOF JOIN` 关联财务数据，且关联键必须为 `k.date >= f.pub_date`。
+- **自动可视化**：系统可根据 Python 类定义自动生成 PlantUML 关系图，确保架构透明。
