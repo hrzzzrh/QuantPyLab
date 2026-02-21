@@ -52,8 +52,8 @@ class FinancialStore:
             df['symbol'] = symbol
             self.parquet_store.save_partition(df, category, symbol)
             
-        except Exception as e:
-            logger.error(f"存储 {table_name} 失败: {e}")
+        except Exception:
+            logger.exception(f"存储 {table_name} 失败")
             raise
 
     def get_existing_report_dates(self) -> set:

@@ -45,8 +45,8 @@ class ParquetStore:
             # 3. 原子替换
             os.replace(temp_path, target_path)
             
-        except Exception as e:
-            logger.error(f"写入 Parquet 失败 [{symbol}]: {e}")
+        except Exception:
+            logger.exception(f"写入 Parquet 失败 [{symbol}]")
             if temp_path.exists():
                 temp_path.unlink()
             raise

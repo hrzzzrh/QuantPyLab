@@ -42,8 +42,8 @@ class StockListCollector:
             final_cols = ['symbol', 'code', 'name', 'area', 'industry', 'list_date', 'is_active', 'updated_at']
             return df_cleaned[final_cols]
 
-        except Exception as e:
-            logger.error(f"同步股票列表失败: {str(e)}")
+        except Exception:
+            logger.exception("同步股票列表失败")
             return pd.DataFrame()
 
     def _generate_symbol(self, code: str) -> str:

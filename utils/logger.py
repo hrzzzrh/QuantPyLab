@@ -14,7 +14,7 @@ def setup_logger(name: str = "QuantPyLab", log_file: str = "app.log", level=logg
     
     # 格式化
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        '%(asctime)s - %(name)s - [%(filename)s:%(lineno)d] - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
@@ -23,10 +23,16 @@ def setup_logger(name: str = "QuantPyLab", log_file: str = "app.log", level=logg
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # 输出到文件
+    # 输出到文件 (全量)
     file_handler = logging.FileHandler(LOG_DIR / log_file)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    
+    # 输出到文件 (仅 Error)
+    error_file_handler = logging.FileHandler(LOG_DIR / "error.log")
+    error_file_handler.setLevel(logging.ERROR)
+    error_file_handler.setFormatter(formatter)
+    logger.addHandler(error_file_handler)
     
     return logger
 

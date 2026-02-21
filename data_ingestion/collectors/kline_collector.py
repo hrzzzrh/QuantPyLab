@@ -100,10 +100,8 @@ class DailyKlineCollector:
             # 5. 存储 (增量合并逻辑)
             self._save_incremental(df_final, symbol)
 
-        except Exception as e:
-            logger.error(f"抓取行情 {symbol} 失败: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
+        except Exception:
+            logger.exception(f"抓取行情 {symbol} 失败")
 
     def _save_incremental(self, df_new: pd.DataFrame, symbol: str):
         """增量合并并保存"""

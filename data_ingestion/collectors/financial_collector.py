@@ -81,8 +81,8 @@ class FinancialCollector:
 
             return df
 
-        except Exception as e:
-            logger.error(f"抓取 {code} {stat_name} 失败: {e}")
+        except Exception:
+            logger.exception(f"抓取 {code} {stat_name} 失败")
             return pd.DataFrame()
 
     def collect_indicators(self, symbol: str, market_symbol: str = None):
@@ -148,10 +148,8 @@ class FinancialCollector:
             # 5. 入库
             self.indicator_store.save_indicators(df)
 
-        except Exception as e:
-            logger.error(f"同步指标 {symbol} ({market_symbol}) 失败: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
+        except Exception:
+            logger.exception(f"同步指标 {symbol} ({market_symbol}) 失败")
 
     def get_disclosure_plans(self, date: str) -> pd.DataFrame:
         """
@@ -166,8 +164,8 @@ class FinancialCollector:
                 df = ak.stock_yysj_em(symbol=sym, date=date)
                 if not df.empty:
                     all_plans.append(df)
-            except Exception as e:
-                logger.warning(f"获取 {sym} 披露计划失败: {e}")
+            except Exception:
+                logger.warning(f"获取 {sym} 披露计划失败", exc_info=True)
         
         if not all_plans:
             return pd.DataFrame()

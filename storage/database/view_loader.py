@@ -34,9 +34,9 @@ class ViewLoader:
                         if inspect.isclass(obj) and issubclass(obj, DuckDBView) and obj is not DuckDBView:
                             view_instance = obj()
                             self.view_classes[view_instance.name] = obj
-                except Exception as e:
+                except Exception:
                     from utils.logger import logger
-                    logger.warning("导入视图文件失败 %s: %s" % (py_file, e))
+                    logger.warning(f"导入视图文件失败 {py_file}", exc_info=True)
 
     def get_sorted_views(self) -> List[DuckDBView]:
         """使用拓扑排序获取创建顺序"""

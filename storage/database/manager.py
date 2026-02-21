@@ -77,13 +77,13 @@ class DBManager:
                 try:
                     sql = view.get_sql(str(self.warehouse_dir))
                     conn.execute(sql)
-                except Exception as e:
-                    logger.error(f"加载视图失败 {view.name}: {e}")
+                except Exception:
+                    logger.exception(f"加载视图失败 {view.name}")
                     
             logger.info(f"成功加载 {len(sorted_views)} 个视图")
             
-        except Exception as e:
-            logger.error(f"初始化视图层失败: {e}")
+        except Exception:
+            logger.exception("初始化视图层失败")
 
     def get_view_relationships_puml(self) -> str:
         """获取当前视图依赖关系的 PlantUML 源码"""

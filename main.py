@@ -75,7 +75,8 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                 if info:
                     cursor.execute("UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?", (info.get('area'), info.get('list_date'), symbol))
                 time.sleep(random.uniform(0.2, 0.4))
-            except Exception: pass
+            except Exception:
+                logger.debug(f"补全 {symbol} 详情失败", exc_info=True)
             if tqdm.get_lock().locks: conn.commit()
         conn.commit()
 
@@ -124,7 +125,8 @@ def sync_financial_statements(symbol=None, force_all=False):
                 df = collector.fetch_statement(code, st)
                 if not df.empty: store.save_statement(df, table_name)
                 time.sleep(random.uniform(1.0, 2.0))
-        except Exception as e: logger.error(f"{code} 失败: {e}")
+        except Exception:
+            logger.exception(f"{code} 报表同步失败")
 
 def sync_financial_indicators(symbol=None, force_all=False):
     """同步东财财务指标"""
@@ -162,7 +164,8 @@ def sync_financial_indicators(symbol=None, force_all=False):
                 fmt_symbol = f"{fmt_symbol[2:]}.{fmt_symbol[:2]}"
             collector.collect_indicators(code, fmt_symbol)
             time.sleep(random.uniform(0.5, 1.0))
-        except Exception: pass
+        except Exception:
+            logger.exception(f"{code} 指标同步失败")
 
 def calculate_ttm_metrics(symbol=None, force_all=False):
     """计算滚动十二个月 (TTM) 财务指标"""
@@ -225,7 +228,8 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
     logger.info(f"开始为 {len(target_symbols)} 只股票同步 TTM 指标...")
     for code in tqdm(target_symbols, desc="TTM 计算"):
         try: calculator.calculate_for_symbol(code)
-        except Exception: pass
+        except Exception:
+            logger.exception(f"{code} TTM 计算失败")
 
 def sync_share_capital(symbol=None, force_all=False, start_date=None):
     """同步股本变动记录"""
@@ -348,5 +352,9 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    try: main()
-    finally: db_manager.close_all()
+    try:
+        main()
+    except Exception:
+        logger.exception("主程序执行异常退出")
+    finally:
+        db_manager.close_all()

@@ -60,8 +60,8 @@ class HighSpeedIndustryCollector:
             db_conn.commit()
             logger.info(f"行业同步完成！累计更新了 {total_updated} 条记录的行业信息。")
             
-        except Exception as e:
-            logger.error(f"行业同步过程中断: {e}")
+        except Exception:
+            logger.exception("行业同步过程中断")
             if 'db_conn' in locals():
                 db_conn.rollback()
 
@@ -115,6 +115,6 @@ class HighSpeedIndustryCollector:
                 return data["data"]["diff"]
             return []
             
-        except Exception as e:
-            logger.warning(f"请求东财接口失败: {e}")
+        except Exception:
+            logger.warning("请求东财接口失败", exc_info=True)
             return []

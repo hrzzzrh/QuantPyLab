@@ -71,8 +71,8 @@ class IndicatorStore:
             self.parquet_store.save_partition(df, self.category, symbol)
             logger.info(f"成功入库 {symbol}: {len(df)} 条指标记录 (Parquet)")
             
-        except Exception as e:
-            logger.error(f"存储财务指标失败: {e}")
+        except Exception:
+            logger.exception("存储财务指标失败")
             raise
 
     def get_existing_report_dates(self) -> set:
