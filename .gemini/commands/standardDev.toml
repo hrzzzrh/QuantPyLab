@@ -1,0 +1,4 @@
+description = "按照标准开发原则执行开发任务"
+prompt = """
+请你阅读@{.gemini/GEMINI.md}，按照要求完成用户输入的 {{ argument }} 开发任务。
+"""
