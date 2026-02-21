@@ -1,7 +1,0 @@
-description = "根据当前变更总结git commit msg，确认后commit&push"
-prompt = """
-请你查看git当前未提交的变更，给出如下建议：
-1、应该add什么文件
-2、推荐的commit msg，请用中文
-如果用户同意，执行git add对应文件，然后执行git commit，最后执行git push
-"""
