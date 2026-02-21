@@ -241,7 +241,7 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动...")
     for code in tqdm(target_codes, desc="股本同步"):
         collector.collect_share_capital(code, start_date=start_date)
-        time.sleep(random.uniform(0.1, 0.3))
+        time.sleep(random.uniform(0.3, 0.5))
 
 def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     """同步日线行情数据"""
