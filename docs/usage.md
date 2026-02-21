@@ -30,9 +30,10 @@
 | `sync-kline` | 同步日线行情 | **自动续传**: 从本地最大日期+1同步 | `--start-date` |
 
 ### 2.3 开发工具命令
-| 子命令 | 说明 | 必填参数 |
+| 子命令 | 说明 | 参数 |
 | :--- | :--- | :--- |
-| `export-views` | 导出 DuckDB 视图 SQL 脚本 | `output_path` |
+| `export-views` | 导出 DuckDB 视图 SQL 脚本 | `[--output]` (默认: `docs/view_definition.sql`) |
+| `show-views` | 显示视图依赖拓扑图 | 无 |
 
 ---
 
@@ -46,8 +47,8 @@ df = conn.execute("SELECT * FROM v_daily_valuation WHERE symbol = '600519' LIMIT
 ```
 
 ### 3.2 外部工具 (DBeaver)
-1. 运行 `uv run main.py export-views ./init.sql`。
-2. 在 DBeaver (DuckDB) 中执行 `init.sql`（Database 建议设为 `:memory:`）。
+1. 运行 `uv run main.py export-views`。
+2. 在 DBeaver (DuckDB) 中执行 `docs/view_definition.sql`（Database 建议设为 `:memory:`）。
 3. 即可直接查询逻辑视图。
 
 ---

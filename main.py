@@ -314,7 +314,10 @@ def main():
 
     # 9. export-views
     exp_p = subparsers.add_parser("export-views", help="导出 DuckDB 视图的 SQL 定义脚本")
-    exp_p.add_argument("output", type=str, help="输出文件路径")
+    exp_p.add_argument("--output", "-o", type=str, default="docs/view_definition.sql", help="输出文件路径 (默认: docs/view_definition.sql)")
+
+    # 10. show-views
+    subparsers.add_parser("show-views", help="显示视图依赖关系图 (PlantUML)")
 
     args = parser.parse_args()
 
@@ -336,6 +339,11 @@ def main():
         sync_all_data_flow(symbol=args.symbol, force_all=args.force_all)
     elif args.command == "export-views":
         export_duckdb_views(args.output)
+    elif args.command == "show-views":
+        puml = db_manager.get_view_relationships_puml()
+        print("\n--- PlantUML Source ---")
+        print(puml)
+        print("\n(You can copy this source to https://www.plantuml.com/plantuml/ to view the graph)\n")
     else:
         parser.print_help()
 

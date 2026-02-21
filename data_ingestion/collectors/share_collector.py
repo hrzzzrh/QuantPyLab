@@ -54,10 +54,16 @@ class ShareCollector:
 
         try:
             logger.info(f"正在抓取股本变动: {symbol} ({start_date} -> {today})")
-            
+
             # 1. 调用 AkShare 接口 (巨潮资讯源)
-            df = ak.stock_share_change_cninfo(symbol=symbol, start_date=start_date, end_date=today)
-            
+            try:
+                df = ak.stock_share_change_cninfo(symbol=symbol, start_date=start_date, end_date=today)
+            except KeyError as ke:
+                if '公告日期' in str(ke):
+                    logger.debug(f"{symbol} 在此期间无股本变动 (触发 akshare KeyError)")
+                    return
+                raise ke
+
             if df is None or df.empty:
                 logger.debug(f"{symbol} 在此期间无股本变动")
                 return
