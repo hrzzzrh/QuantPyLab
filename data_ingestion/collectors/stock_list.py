@@ -47,15 +47,8 @@ class StockListCollector:
             return pd.DataFrame()
 
     def _generate_symbol(self, code: str) -> str:
-        """根据代码首位生成带前缀的 symbol"""
-        if code.startswith('6'):
-            return f"sh{code}"
-        elif code.startswith(('0', '3')):
-            return f"sz{code}"
-        elif code.startswith(('4', '8', '9')):
-            return f"bj{code}"
-        else:
-            return f"unknown_{code}"
+        """直接返回纯数字代码作为 symbol"""
+        return code
 
 class StockDetailCollector:
     """

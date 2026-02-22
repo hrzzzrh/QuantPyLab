@@ -33,3 +33,23 @@ WHERE symbol = '600519'
   AND date BETWEEN '2024-01-01' AND '2024-12-31'
 ORDER BY date;
 ```
+
+### 4. 核心计算算法说明 (Algorithm Transparency)
+
+为确保分析一致性，视图内部指标计算遵循以下逻辑，严禁在分析层自行定义：
+
+*   **总市值 (Market Cap)**:
+    `market_cap = raw_close * total_shares`
+    *(注：必须使用不复权价计算市值，复权价仅用于收益率分析)*
+
+*   **市盈率 (PE TTM)**:
+    `pe_ttm = CASE WHEN net_profit_ttm > 0 THEN market_cap / net_profit_ttm ELSE NULL END`
+    *(注：亏损公司 PE 设为 NULL 以防止均值扭曲)*
+
+*   **市净率 (PB)**:
+    `pb = market_cap / NULLIF(net_assets, 0)`
+    *(注：`net_assets` 取自 ASOF JOIN 的最新资产负债表记录)*
+
+*   **后复权价 (HFQ Close)**:
+    `close_hfq = raw_close * adj_factor`
+    *(注：系统统一使用累积后复权因子，基准日为上市首日)*

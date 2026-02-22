@@ -69,7 +69,9 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
         detail_collector = StockDetailCollector()
         for symbol, code in tqdm(pending, desc="补全详情"):
             try:
-                info = detail_collector.fetch_from_xueqiu(symbol) if symbol.startswith(('sh', 'sz')) else {}
+                # 雪球接口需要带前缀的代码 (sh/sz)
+                xq_symbol = f"sh{code}" if code.startswith('6') else f"sz{code}"
+                info = detail_collector.fetch_from_xueqiu(xq_symbol)
                 if not info.get('list_date'):
                     info['list_date'] = detail_collector.fetch_from_eastmoney(code).get('list_date')
                 if info:
@@ -136,10 +138,11 @@ def sync_financial_indicators(symbol=None, force_all=False):
     target_tasks = []
 
     if symbol:
-        target_tasks = [(s[0], s[1]) for s in all_active if s[0] == symbol or s[1] == symbol]
+        target_tasks = [s for s in all_active if s[0] == symbol]
     elif force_all:
         target_tasks = all_active
     else:
+        # ... 保持现有增量逻辑 ...
         report_dates = get_target_report_dates()
         existing = store.get_existing_report_dates()
         target_codes = set()
@@ -150,18 +153,17 @@ def sync_financial_indicators(symbol=None, force_all=False):
                 for code in df[df['actual_date'].notna()]['code']:
                     if f"{code}_{r_date}" not in existing: target_codes.add(code)
         target_codes.update(get_orphan_codes("indicators", [s[0] for s in all_active]))
-        code_map = {s[0]: s[1] for s in all_active}
-        target_tasks = [(c, code_map[c]) for c in target_codes if c in code_map]
+        target_tasks = [s for s in all_active if s[0] in target_codes]
 
     if not target_tasks:
         logger.info("指标数据已是最新。")
         return
 
-    for code, m_symbol in tqdm(target_tasks, desc="指标同步"):
+    for code, _ in tqdm(target_tasks, desc="指标同步"):
         try:
-            fmt_symbol = m_symbol.upper()
-            if '.' not in fmt_symbol and fmt_symbol.startswith(('SH', 'SZ', 'BJ')):
-                fmt_symbol = f"{fmt_symbol[2:]}.{fmt_symbol[:2]}"
+            # 东财接口需要带后缀的代码 (如 600519.SH)
+            suffix = "SH" if code.startswith('6') else ("SZ" if code.startswith(('0', '3')) else "BJ")
+            fmt_symbol = f"{code}.{suffix}"
             collector.collect_indicators(code, fmt_symbol)
             time.sleep(random.uniform(0.5, 1.0))
         except Exception:
@@ -177,7 +179,7 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
 
     if symbol:
         logger.info(f"单只同步模式: {symbol}")
-        target_symbols = [s[0] for s in all_active if s[0] == symbol or s[1] == symbol]
+        target_symbols = [s[0] for s in all_active if s[0] == symbol]
         for code in target_symbols:
             calculator.calculate_for_symbol(code)
         return
@@ -236,7 +238,7 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     from data_ingestion.collectors.share_collector import ShareCollector
     collector = ShareCollector()
     all_active = get_active_stocks()
-    target_codes = [s[0] for s in all_active if s[0] == symbol or s[1] == symbol] if symbol else [s[0] for s in all_active]
+    target_codes = [s[0] for s in all_active if s[0] == symbol] if symbol else [s[0] for s in all_active]
     
     logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动...")
     for code in tqdm(target_codes, desc="股本同步"):
@@ -248,7 +250,7 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     from data_ingestion.collectors.kline_collector import DailyKlineCollector
     collector = DailyKlineCollector()
     all_active = get_active_stocks()
-    target_codes = [s[0] for s in all_active if s[0] == symbol or s[1] == symbol] if symbol else [s[0] for s in all_active]
+    target_codes = [s[0] for s in all_active if s[0] == symbol] if symbol else [s[0] for s in all_active]
     
     logger.info(f"开始同步 {len(target_codes)} 只股票的日线行情...")
     for code in tqdm(target_codes, desc="K线同步"):
