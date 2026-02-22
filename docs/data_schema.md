@@ -3,8 +3,32 @@
 ## 1. 文档索引
 **字段详细定义**：关于所有表（基础行情、财务报表、财务指标、TTM 数据）的具体字段含义、单位及样例值，请务必查阅 **[数据资产目录 (Data Catalog)](data_catalog.md)**。
 
-## 2. SQLite 元数据库 (metadata.db)
-... (此处保留 stocks 表原有规范)
+## 2. SQLite 元数据库 (data/metadata.db)
+
+SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存储于 `data/metadata.db`。它负责维护低频变动、强关联性的基础索引数据，是系统启动、任务分发及物理分片定位的**事实来源 (Source of Truth)**。
+
+### A. 职责范围
+- **实体索引**: 定义全市场合法股票的 `symbol` 与 `code` 映射。
+- **静态属性**: 存储行业、地域、上市日期等用于分组过滤的静态维度。
+- **状态维护**: 记录股票的存续状态 (`is_active`)，指导增量同步引擎排除已退市个股。
+
+### B. 核心表: `stocks` (全量股票索引)
+所有数据同步任务（Parquet 分片）均依赖于此表的 `symbol` 字段。
+
+| 字段名 | 类型 | 约束 | 说明 | 样例值 |
+| :--- | :--- | :--- | :--- | :--- |
+| `symbol` | TEXT | PRIMARY KEY | 带市场前缀的代码 (物理分片键) | `sh600519`, `sz000001` |
+| `code` | TEXT | NOT NULL | 纯 6 位数字代码 | `600519` |
+| `name` | TEXT | NOT NULL | 股票简称 | `贵州茅台` |
+| `area` | TEXT | - | 地域 (省份/城市) | `贵州` |
+| `industry` | TEXT | - | 东财细分行业 | `白酒` |
+| `list_date` | TEXT | - | 上市日期 (格式: YYYYMMDD) | `20010827` |
+| `is_active` | INTEGER | DEFAULT 1 | 存续状态 (1:在市, 0:退市) | `1` |
+| `updated_at` | DATETIME | DEFAULT ... | 最后同步时间 (UTC) | `2026-02-22 10:00:00` |
+
+### C. 同步逻辑与维护
+- **全量重建**: 执行 `sync-stocks` 时，系统会清空并重新从 AkShare 获取最新代码列表。
+- **属性补全**: 执行 `sync-metadata` 时，系统会针对 `area`, `industry`, `list_date` 等空字段，通过多源（雪球/东财）进行异步并发补全。
 
 ## 3. DuckDB 统一视图层 (Unified View Architecture)
 

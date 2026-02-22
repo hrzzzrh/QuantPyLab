@@ -15,7 +15,7 @@
 
 ### 2.1 全量同步 (`sync-all`)
 一键执行全流程同步流水线。
-- **执行顺序**: `financial` -> `indicators` -> `ttm` -> `share` -> `kline`
+- **执行顺序**: `indicators` -> `financial` -> `ttm` -> `share` -> `kline`
 - **示例**: `uv run main.py sync-all`
 
 ### 2.2 基础同步命令

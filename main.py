@@ -187,8 +187,8 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
     
     if force_all:
         logger.info("强制全量模式...")
-        query = "SELECT symbol, '20991231' as max_src FROM stocks WHERE is_active = 1"
-        candidates = duckdb_conn.execute(query).fetchall()
+        # 直接使用 get_active_stocks() 获取的 all_active 列表，无需再查 DuckDB
+        candidates = [(s[0], '20991231') for s in all_active]
     else:
         logger.info("智能增量模式：正在进行数据完整性自检...")
         if "fin_ttm" not in available_views:
@@ -241,7 +241,7 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动...")
     for code in tqdm(target_codes, desc="股本同步"):
         collector.collect_share_capital(code, start_date=start_date)
-        time.sleep(random.uniform(0.3, 0.5))
+        time.sleep(random.uniform(1, 1.5))
 
 def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     """同步日线行情数据"""
@@ -257,8 +257,9 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
 def sync_all_data_flow(symbol=None, force_all=False):
     """执行全量数据同步流水线 (除元数据外)"""
     logger.info(">>> 开始执行一键数据同步流水线 <<<")
-    sync_financial_statements(symbol=symbol, force_all=force_all)
+    # 先同步指标，因为指标表（东财源）的公告日期和更新日期更准确，用于后续修复三张表
     sync_financial_indicators(symbol=symbol, force_all=force_all)
+    sync_financial_statements(symbol=symbol, force_all=force_all)
     calculate_ttm_metrics(symbol=symbol, force_all=force_all)
     sync_share_capital(symbol=symbol, force_all=force_all)
     sync_daily_kline(symbol=symbol, force_all=force_all)
