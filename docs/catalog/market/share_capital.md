@@ -7,8 +7,9 @@
 | 序号 | 字段名 | 类型 | 说明 | 样例值 |
 | :--- | :--- | :--- | :--- | :--- |
 | 1 | `change_date` | DATE | 股本变动日期 | 2009-12-31 |
-| 2 | `total_shares` | DOUBLE | 总股本 (股) | 943800000.0 |
+| 2 | `total_shares` | BIGINT | 总股本 (股) | 943800000 |
 
 ## 2. 数据来源
-- 接口: `ak.stock_share_change_cninfo`
-- 逻辑: 巨潮资讯源，包含增发、送股、回购注销等所有导致股本变化的事件。
+- 接口: 新浪财经 (网页爬取)
+- 逻辑: 解析新浪财经股本变动历史页面，获取全量历史变动记录，并在本地执行增量过滤。
+- URL: `https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_StockStructureHistory/stockid/{symbol}/stocktype/TotalStock.phtml`

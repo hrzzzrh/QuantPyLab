@@ -15,6 +15,7 @@
 | 数据层级 | 核心数据表 | 指定数据源 | 理由 |
 | :--- | :--- | :--- | :--- |
 | **原始报表层** | `fin_balance_sheet`, `fin_income_statement`, `fin_cashflow_statement` | **新浪财经 (Sina)** | 历史数据最全，包含账龄、附注等细节科目。 |
+| **股本变动层** | `share_capital` | **新浪财经 (Sina)** | 网页历史记录解析准确且稳定。 |
 | **衍生指标层** | `fin_indicator` | **东方财富 (EastMoney)** | 计算标准统一，提供 YoY, QoQ, ROIC 等现成的高阶量化因子。**严禁与新浪指标混合**，以防计算口径冲突。 |
 | **元数据层** | `stocks`, `industries` | **混合 (Mix)** | 东财提供行业分类，雪球提供实时行情状态。 |
 

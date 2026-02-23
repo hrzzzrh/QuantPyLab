@@ -11,7 +11,7 @@
 | 2 | `symbol` | VARCHAR | 股票代码 | `daily_kline.symbol` |
 | 3 | `raw_close` | DOUBLE | 不复权收盘价 | `daily_kline.close` |
 | 4 | `close_hfq` | DOUBLE | **后复权**收盘价 | `close * adj_factor` |
-| 5 | `total_shares` | DOUBLE | 当日总股本 | 匹配 `share_capital` 最新变动 |
+| 5 | `total_shares` | BIGINT | 当日总股本 | 匹配 `share_capital` 最新变动 |
 | 6 | `market_cap` | DOUBLE | 总市值 | `raw_close * total_shares` |
 | 7 | `pe_ttm` | DOUBLE | 市盈率 (TTM) | `market_cap / net_profit_ttm` |
 | 8 | `pe_deduct_ttm` | DOUBLE | 扣非市盈率 (TTM) | `market_cap / deduct_net_profit_ttm` |
