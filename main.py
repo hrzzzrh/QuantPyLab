@@ -236,11 +236,13 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
 def sync_share_capital(symbol=None, force_all=False, start_date=None):
     """同步股本变动记录"""
     from data_ingestion.collectors.share_collector import ShareCollector
+    from utils.trade_date import get_latest_trade_date
     collector = ShareCollector()
     all_active = get_active_stocks()
     target_codes = [s[0] for s in all_active if s[0] == symbol] if symbol else [s[0] for s in all_active]
     
-    logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动...")
+    latest_trade_date = get_latest_trade_date().strftime('%Y%m%d')
+    logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动 (基准日期: {latest_trade_date})...")
     for code in tqdm(target_codes, desc="股本同步"):
         collector.collect_share_capital(code, start_date=start_date)
         time.sleep(random.uniform(1, 1.5))
@@ -248,13 +250,15 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
 def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     """同步日线行情数据"""
     from data_ingestion.collectors.kline_collector import DailyKlineCollector
+    from utils.trade_date import get_latest_trade_date
     collector = DailyKlineCollector()
     all_active = get_active_stocks()
     target_codes = [s[0] for s in all_active if s[0] == symbol] if symbol else [s[0] for s in all_active]
     
-    logger.info(f"开始同步 {len(target_codes)} 只股票的日线行情...")
+    latest_date = get_latest_trade_date().strftime('%Y%m%d')
+    logger.info(f"开始同步 {len(target_codes)} 只股票的日线行情 (基准日期: {latest_date})...")
     for code in tqdm(target_codes, desc="K线同步"):
-        collector.collect_kline(code, start_date=start_date)
+        collector.collect_kline(code, start_date=start_date, end_date=latest_date)
 
 def sync_all_data_flow(symbol=None, force_all=False):
     """执行全量数据同步流水线 (除元数据外)"""

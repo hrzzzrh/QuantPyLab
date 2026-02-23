@@ -2,6 +2,7 @@ import akshare as ak
 import pandas as pd
 from datetime import datetime, timedelta
 from utils.logger import logger
+from utils.trade_date import get_latest_trade_date
 from storage.file_store.parquet_store import ParquetStore
 from storage.database.manager import db_manager
 
@@ -39,6 +40,12 @@ class DailyKlineCollector:
         同步日线行情
         :param symbol: 纯数字代码 (如 600519)
         """
+        # 获取最新的有效交易日作为基准
+        latest_trade_date = get_latest_trade_date().strftime('%Y%m%d')
+
+        if not end_date:
+            end_date = latest_trade_date
+
         if not start_date:
             local_max = self._get_local_max_date(symbol)
             if local_max == "19900101":
@@ -48,11 +55,8 @@ class DailyKlineCollector:
                 dt = datetime.strptime(local_max, '%Y%m%d') + timedelta(days=1)
                 start_date = dt.strftime('%Y%m%d')
 
-        if not end_date:
-            end_date = datetime.now().strftime('%Y%m%d')
-
         if start_date > end_date:
-            logger.info(f"{symbol} 已是最新，无需同步")
+            logger.info(f"{symbol} 已是最新 (本地: {local_max if 'local_max' in locals() else '未知'} / 目标: {end_date})，无需同步")
             return
 
         try:
