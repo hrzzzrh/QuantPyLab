@@ -1,7 +1,58 @@
 import akshare as ak
 import pandas as pd
 from datetime import datetime, date
+import os
+from pathlib import Path
+from functools import lru_cache
 from utils.logger import logger
+from config.settings import WAREHOUSE_DIR
+
+CACHE_FILE = Path(WAREHOUSE_DIR) / "metadata" / "trade_calendar.parquet"
+
+@lru_cache(maxsize=1)
+def _get_all_trade_dates() -> list[date]:
+    """获取所有交易日历列表（带缓存）"""
+    need_update = False
+    
+    if CACHE_FILE.exists():
+        try:
+            df = pd.read_parquet(CACHE_FILE)
+            trade_dates = pd.to_datetime(df['trade_date']).dt.date.tolist()
+            
+            # 检查缓存是否足够新
+            # 如果最新日期早于今天，可能需要更新（akshare 通常提供未来日期）
+            today = date.today()
+            if trade_dates[-1] < today:
+                need_update = True
+                logger.info("交易日历缓存可能已过期，准备从网络同步...")
+            else:
+                return trade_dates
+        except Exception as e:
+            logger.warning(f"读取交易日历缓存失败: {e}")
+            need_update = True
+    else:
+        need_update = True
+        logger.info("未发现交易日历本地缓存，准备初始化...")
+
+    if need_update:
+        try:
+            # 获取新浪财经的所有历史交易日
+            df = ak.tool_trade_date_hist_sina()
+            df['trade_date'] = pd.to_datetime(df['trade_date']).dt.date
+            trade_dates = sorted(df['trade_date'].tolist())
+            
+            # 持久化到本地
+            os.makedirs(CACHE_FILE.parent, exist_ok=True)
+            pd.DataFrame({'trade_date': trade_dates}).to_parquet(CACHE_FILE, index=False)
+            logger.info(f"交易日历已同步并缓存至: {CACHE_FILE}")
+            
+            return trade_dates
+        except Exception as e:
+            logger.error(f"从网络获取交易日历失败: {e}")
+            if CACHE_FILE.exists():
+                logger.info("将使用旧的本地缓存作为兜底。")
+                return pd.to_datetime(pd.read_parquet(CACHE_FILE)['trade_date']).dt.date.tolist()
+            raise
 
 def get_latest_trade_date(ref_date: datetime = None) -> date:
     """
@@ -13,10 +64,7 @@ def get_latest_trade_date(ref_date: datetime = None) -> date:
         ref_date = datetime.now()
 
     try:
-        # 获取新浪财经的所有历史交易日
-        # 该接口返回的是全量日期，包含未来预测（如 2026 年末）
-        df = ak.tool_trade_date_hist_sina()
-        trade_dates = pd.to_datetime(df['trade_date']).dt.date.tolist()
+        trade_dates = _get_all_trade_dates()
         
         # 过滤掉大于参考日期的部分
         past_trade_dates = [d for d in trade_dates if d <= ref_date.date()]
@@ -27,7 +75,7 @@ def get_latest_trade_date(ref_date: datetime = None) -> date:
         latest = past_trade_dates[-1]
         
         # 特殊逻辑：如果是今天，但尚未收盘 (15:30)，则返回上一个交易日
-        if latest == ref_date.date() and ref_date.hour < 15 or (ref_date.hour == 15 and ref_date.minute < 30):
+        if latest == ref_date.date() and (ref_date.hour < 15 or (ref_date.hour == 15 and ref_date.minute < 30)):
             # 取倒数第二个
             if len(past_trade_dates) >= 2:
                 return past_trade_dates[-2]
