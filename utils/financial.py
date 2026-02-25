@@ -26,3 +26,15 @@ def get_consecutive_reports(end_report: str, n: int = 5) -> list:
         current = get_previous_report_date(current)
         reports.append(current)
     return reports
+
+def to_sina_symbol(code: str) -> str:
+    """
+    将 6 位数字代码转换为新浪格式 (带 sh/sz/bj 前缀)
+    """
+    if code.startswith(('6', '9', '688')):
+        return f"sh{code}"
+    elif code.startswith(('0', '2', '3')):
+        return f"sz{code}"
+    elif code.startswith(('4', '8')):
+        return f"bj{code}"
+    return code

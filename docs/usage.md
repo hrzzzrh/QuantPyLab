@@ -75,7 +75,7 @@ duckdb -init /tmp/views.sql -c "SELECT * FROM v_daily_valuation WHERE symbol='60
 ```
 
 ### 4.2 路径 B：编程式查询模板 (推荐用于分析)
-在编写 `workspace/research/` 下的分析脚本时，**必须使用 `db_manager`** 以确保所有视图（DAG 依赖）被自动正确加载。
+在编写 `workspace/research/` 下的分析脚本时，**必须使用 `db_manager`** 以确保所有视图（DAG 依赖）被自动正确加载。研究产生的结论性文档应存放在 `investigation/` 对应子目录下。
 
 **最小查询模板 (`investigate_data.py`)：**
 ```python

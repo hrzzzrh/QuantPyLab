@@ -41,6 +41,11 @@ uv run main.py --sync-indicators --symbol 300274
 ```
 
 ## 项目结构
-请参阅 `docs/architecture.md` 了解架构详情。
-详细命令说明请参阅 `docs/usage.md`。
-数据字典与指标定义请参阅 `docs/data_catalog.md`。
+- `investigation/`: 投研产出中心（个股跟踪手册、行业研究、宏观报告）。
+- `docs/`: 系统架构、数据字典与操作手册。
+- `workspace/`: 工程实验室（开发草案、分析脚本、原始数据）。
+- `data_ingestion/`: 数据采集引擎。
+- `storage/`: 存储与计算引擎（Parquet + DuckDB）。
+- `analysis/`: 因子库与分析逻辑。
+- `data/`: 本地数据仓库。
+详细架构请参阅 `docs/architecture.md`。

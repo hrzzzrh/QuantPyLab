@@ -20,6 +20,10 @@
 | **元数据层** | `stocks`, `industries` | **混合 (Mix)** | 东财提供行业分类，雪球提供实时行情状态。 |
 
 ## 目录架构说明
+- `investigation/`: 投研产出中心。
+    - `equities/`: 个股深度研究、跟踪手册。
+    - `industry/`: 行业格局、竞争分析。
+    - `macro/`: 宏观政策与经济指标分析。
 - `config/`: 存放股票列表、数据库路径、API 阈值等配置。
 - `data_ingestion/`: 数据采集层。包含按类别划分的 `collectors` 和处理“历史+增量”逻辑的 `incremental.py`。
 - `storage/`: 数据存储抽象层。
@@ -29,6 +33,7 @@
 - `backtest/`: 回测引擎。
 - `utils/`: **[工具函数库](utilities.md)**（包含交易日历、日志等通用工具）。
 - `data/`: 本地物理存储目录。
+- `workspace/`: 工程实验室。存放开发中设计稿及研究辅助工程（脚本、财报 PDF、临时数据）。
 
 ## 4. 标准扩展模式 (Extension Patterns)
 新增数据功能时，必须遵循以下标准模式：
@@ -40,7 +45,7 @@
 4.  **Entry**: 在 `main.py` 注册相应的 `--sync-xxx` 命令。
 
 ### 4.2 开发生命周期
-`docs/ (查阅现状)` -> `workspace/ (设计与Demo)` -> `Code (实现)` -> `docs/ (更新文档)`
+`docs/ (查阅现状)` -> `workspace/ (设计与工程实验)` -> `Code (实现)` -> `investigation/ (沉淀研究产出)` -> `docs/ (更新系统文档)`
 
 ## 5. 开发原则
 1. **增量更新**：每次运行采集前先检查本地最新数据日期，仅抓取缺失部分。
