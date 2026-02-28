@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import re
 from datetime import datetime, timedelta
 from utils.logger import logger
+from utils.retry import retry
 from storage.file_store.parquet_store import ParquetStore
 from storage.database.manager import db_manager
 
@@ -78,6 +79,7 @@ class ShareCollector:
             logger.error(f"解析新浪股本变动 {symbol} 出错: {e}")
             return pd.DataFrame()
 
+    @retry(max_retries=2, delay=2.0)
     def collect_share_capital(self, symbol: str, start_date: str = None):
         """
         同步股本变动记录
@@ -88,7 +90,7 @@ class ShareCollector:
         if not start_date:
             start_date = local_max
 
-        logger.info(f"正在抓取股本变动: {symbol} (本地最新: {local_max})")
+        logger.debug(f"正在抓取股本变动: {symbol} (本地最新: {local_max})")
 
         # 1. 抓取新浪数据 (新浪返回的是全量历史)
         df_new = self._fetch_sina_share_capital(symbol)
@@ -112,11 +114,14 @@ class ShareCollector:
         df_filtered = df_new[df_new['change_date'] > start_dt].copy()
 
         if df_filtered.empty:
-            logger.info(f"{symbol} 股本数据已是最新，跳过")
+            logger.debug(f"{symbol} 股本数据已是最新，跳过")
             return
 
         # 3. 增量合并逻辑
-        self._save_incremental(df_filtered, symbol)
+        try:
+            self._save_incremental(df_filtered, symbol)
+        except Exception as e:
+            raise e
 
     def _save_incremental(self, df_new: pd.DataFrame, symbol: str):
         """增量合并并保存"""
@@ -141,7 +146,7 @@ class ShareCollector:
             df_combined['total_shares'] = pd.to_numeric(df_combined['total_shares'], errors='coerce').fillna(0).astype('int64')
         
         self.store.save_partition(df_combined, 'share_capital', symbol)
-        logger.info(f"股本变动保存成功: {symbol} ({len(df_combined)} 条记录)")
+        logger.debug(f"股本变动保存成功: {symbol} ({len(df_combined)} 条记录)")
 
 if __name__ == "__main__":
     collector = ShareCollector()

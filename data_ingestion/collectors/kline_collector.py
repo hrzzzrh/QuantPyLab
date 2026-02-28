@@ -2,6 +2,7 @@ import akshare as ak
 import pandas as pd
 from datetime import datetime, timedelta
 from utils.logger import logger
+from utils.retry import retry
 from utils.trade_date import get_latest_trade_date
 from utils.financial import to_sina_symbol
 from storage.file_store.parquet_store import ParquetStore
@@ -112,6 +113,7 @@ class DailyKlineCollector:
         
         return df_merge
 
+    @retry(max_retries=2, delay=2.0)
     def collect_kline(self, symbol: str, start_date: str = None, end_date: str = None):
         """
         同步日线行情
@@ -133,11 +135,11 @@ class DailyKlineCollector:
                 start_date = dt.strftime('%Y%m%d')
 
         if start_date > end_date:
-            logger.info(f"{symbol} 已是最新 (目标: {end_date})，无需同步")
+            logger.debug(f"{symbol} 已是最新 (目标: {end_date})，无需同步")
             return
 
         try:
-            logger.info(f"正在从 {self.source} 抓取行情: {symbol} ({start_date} -> {end_date})")
+            logger.debug(f"正在从 {self.source} 抓取行情: {symbol} ({start_date} -> {end_date})")
             
             if self.source == "sina":
                 df_merge = self._fetch_from_sina(symbol, start_date, end_date)
@@ -158,8 +160,9 @@ class DailyKlineCollector:
             # 5. 存储 (增量合并逻辑)
             self._save_incremental(df_final, symbol)
 
-        except Exception:
-            logger.exception(f"抓取行情 {symbol} 失败 (Source: {self.source})")
+        except Exception as e:
+            # Re-raise 让 @retry 装饰器捕捉并重试
+            raise e
 
     def _save_incremental(self, df_new: pd.DataFrame, symbol: str):
         """增量合并并保存"""
@@ -175,7 +178,7 @@ class DailyKlineCollector:
             df_combined = df_new
 
         self.store.save_partition(df_combined, 'daily_kline', symbol)
-        logger.info(f"行情保存成功: {symbol} ({len(df_combined)} 条记录)")
+        logger.debug(f"行情保存成功: {symbol} ({len(df_combined)} 条记录)")
 
 if __name__ == "__main__":
     # 测试

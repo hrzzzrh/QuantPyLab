@@ -30,11 +30,20 @@ def get_consecutive_reports(end_report: str, n: int = 5) -> list:
 def to_sina_symbol(code: str) -> str:
     """
     将 6 位数字代码转换为新浪格式 (带 sh/sz/bj 前缀)
+    
+    规则参考:
+    - sh: 6 (主板/科创板), 900 (B股), 5 (基金/ETF), 000 (指数)
+    - sz: 0 (主板), 3 (创业板), 2 (B股), 1 (基金/ETF)
+    - bj: 4, 8, 920 (北交所)
     """
-    if code.startswith(('6', '9', '688')):
+    if code.startswith(('6', '5')):
         return f"sh{code}"
-    elif code.startswith(('0', '2', '3')):
+    if code.startswith(('0', '2', '3', '1')):
         return f"sz{code}"
-    elif code.startswith(('4', '8')):
+    if code.startswith(('4', '8')):
         return f"bj{code}"
+    if code.startswith('9'):
+        if code.startswith('920'):
+            return f"bj{code}"
+        return f"sh{code}"  # 900 为沪市 B 股
     return code

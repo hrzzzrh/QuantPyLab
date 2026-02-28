@@ -20,10 +20,10 @@ from data_ingestion.collectors.financial_collector import FinancialCollector
 # --- 辅助函数 ---
 
 def get_active_stocks():
-    """获取所有活跃股票的 (code, symbol)"""
+    """获取所有活跃股票的 (code, name)"""
     conn = db_manager.get_sqlite_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT code, symbol FROM stocks WHERE is_active = 1")
+    cursor.execute("SELECT code, name FROM stocks WHERE is_active = 1")
     return cursor.fetchall()
 
 def get_orphan_codes(category: str, all_codes: list) -> list:
@@ -120,7 +120,11 @@ def sync_financial_statements(symbol=None, force_all=False):
         logger.info("财务报表数据已是最新。")
         return
 
-    for code in tqdm(list(target_codes), desc="报表同步"):
+    symbol_name_map = {s[0]: s[1] for s in all_active}
+    pbar = tqdm(list(target_codes), desc="报表同步")
+    for code in pbar:
+        name = symbol_name_map.get(code, "")
+        pbar.set_description(f"报表同步: {code} {name}")
         try:
             stat_map = {"balance": "fin_balance_sheet", "profit": "fin_income_statement", "cashflow": "fin_cashflow_statement"}
             for st, table_name in stat_map.items():
@@ -159,7 +163,9 @@ def sync_financial_indicators(symbol=None, force_all=False):
         logger.info("指标数据已是最新。")
         return
 
-    for code, _ in tqdm(target_tasks, desc="指标同步"):
+    pbar = tqdm(target_tasks, desc="指标同步")
+    for code, name in pbar:
+        pbar.set_description(f"指标同步: {code} {name}")
         try:
             # 东财接口需要带后缀的代码 (如 600519.SH)
             suffix = "SH" if code.startswith('6') else ("SZ" if code.startswith(('0', '3')) else "BJ")
@@ -227,8 +233,12 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
         logger.info("数据完整性未达标，无需计算。")
         return
 
+    symbol_name_map = {s[0]: s[1] for s in all_active}
     logger.info(f"开始为 {len(target_symbols)} 只股票同步 TTM 指标...")
-    for code in tqdm(target_symbols, desc="TTM 计算"):
+    pbar = tqdm(target_symbols, desc="TTM 计算")
+    for code in pbar:
+        name = symbol_name_map.get(code, "")
+        pbar.set_description(f"TTM 计算: {code} {name}")
         try: calculator.calculate_for_symbol(code)
         except Exception:
             logger.exception(f"{code} TTM 计算失败")
@@ -239,11 +249,13 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     from utils.trade_date import get_latest_trade_date
     collector = ShareCollector()
     all_active = get_active_stocks()
-    target_codes = [s[0] for s in all_active if s[0] == symbol] if symbol else [s[0] for s in all_active]
+    target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
     
     latest_trade_date = get_latest_trade_date().strftime('%Y%m%d')
-    logger.info(f"开始同步 {len(target_codes)} 只股票的股本变动 (基准日期: {latest_trade_date})...")
-    for code in tqdm(target_codes, desc="股本同步"):
+    logger.info(f"开始同步 {len(target_tasks)} 只股票的股本变动 (基准日期: {latest_trade_date})...")
+    pbar = tqdm(target_tasks, desc="股本同步")
+    for code, name in pbar:
+        pbar.set_description(f"股本同步: {code} {name}")
         collector.collect_share_capital(code, start_date=start_date)
         time.sleep(random.uniform(1, 1.5))
 
@@ -253,12 +265,17 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     from utils.trade_date import get_latest_trade_date
     collector = DailyKlineCollector()
     all_active = get_active_stocks()
-    target_codes = [s[0] for s in all_active if s[0] == symbol] if symbol else [s[0] for s in all_active]
+    target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
     
     latest_date = get_latest_trade_date().strftime('%Y%m%d')
-    logger.info(f"开始同步 {len(target_codes)} 只股票的日线行情 (基准日期: {latest_date})...")
-    for code in tqdm(target_codes, desc="K线同步"):
-        collector.collect_kline(code, start_date=start_date, end_date=latest_date)
+    logger.info(f"开始同步 {len(target_tasks)} 只股票的日线行情 (基准日期: {latest_date})...")
+    pbar = tqdm(target_tasks, desc="K线同步")
+    for code, name in pbar:
+        pbar.set_description(f"K线同步: {code} {name}")
+        try:
+            collector.collect_kline(code, start_date=start_date, end_date=latest_date)
+        except Exception:
+            logger.error(f"{code} {name} K线同步最终失败 (已重试)")
 
 def sync_all_data_flow(symbol=None, force_all=False):
     """执行全量数据同步流水线 (除元数据外)"""

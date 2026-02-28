@@ -4,6 +4,7 @@ import time
 import random
 import os
 from utils.logger import logger
+from utils.retry import retry
 from storage.database.indicator_store import IndicatorStore
 
 class FinancialCollector:
@@ -40,6 +41,7 @@ class FinancialCollector:
         
         return mapping
 
+    @retry(max_retries=2, delay=2.0)
     def fetch_statement(self, code: str, stat_type: str) -> pd.DataFrame:
         """
         抓取指定股票的某类报表全量历史数据 (新浪源)。
@@ -81,10 +83,11 @@ class FinancialCollector:
 
             return df
 
-        except Exception:
-            logger.exception(f"抓取 {code} {stat_name} 失败")
-            return pd.DataFrame()
+        except Exception as e:
+            # Re-raise 让 @retry 装饰器捕捉并重试
+            raise e
 
+    @retry(max_retries=2, delay=2.0)
     def collect_indicators(self, symbol: str, market_symbol: str = None):
         """
         抓取并存储财务指标 (东财源)。
@@ -103,7 +106,7 @@ class FinancialCollector:
             market_symbol = market_symbol.upper()
 
         try:
-            logger.info(f"正在从东财抓取指标: {market_symbol}")
+            logger.debug(f"正在从东财抓取指标: {market_symbol}")
             
             # 1. 调用东财接口
             df = ak.stock_financial_analysis_indicator_em(symbol=market_symbol, indicator="按报告期")
@@ -148,8 +151,9 @@ class FinancialCollector:
             # 5. 入库
             self.indicator_store.save_indicators(df)
 
-        except Exception:
-            logger.exception(f"同步指标 {symbol} ({market_symbol}) 失败")
+        except Exception as e:
+            # Re-raise 让 @retry 装饰器捕捉并重试
+            raise e
 
     def get_disclosure_plans(self, date: str) -> pd.DataFrame:
         """
@@ -160,7 +164,7 @@ class FinancialCollector:
         # 组合查询：沪深A股 + 京市A股
         for sym in ['沪深A股', '京市A股']:
             try:
-                logger.info(f"正在获取 {sym} 的 {date} 披露计划...")
+                logger.debug(f"正在获取 {sym} 的 {date} 披露计划...")
                 df = ak.stock_yysj_em(symbol=sym, date=date)
                 if not df.empty:
                     all_plans.append(df)

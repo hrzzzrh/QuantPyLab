@@ -1,7 +1,23 @@
 import logging
 import sys
 from pathlib import Path
+from tqdm import tqdm
 from config.settings import LOG_DIR
+
+class TqdmLoggingHandler(logging.Handler):
+    """
+    自定义日志处理器，通过 tqdm.write 输出，避免打断进度条渲染。
+    """
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
 def setup_logger(name: str = "QuantPyLab", log_file: str = "app.log", level=logging.INFO):
     """设置项目全局日志器"""
@@ -18,8 +34,8 @@ def setup_logger(name: str = "QuantPyLab", log_file: str = "app.log", level=logg
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    # 输出到控制台
-    console_handler = logging.StreamHandler(sys.stdout)
+    # 输出到控制台 (使用 tqdm 兼容的 Handler)
+    console_handler = TqdmLoggingHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
