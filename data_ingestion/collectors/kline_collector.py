@@ -1,10 +1,11 @@
 import akshare as ak
 import pandas as pd
+import random
 from datetime import datetime, timedelta
 from utils.logger import logger
 from utils.retry import retry
 from utils.trade_date import get_latest_trade_date
-from utils.financial import to_sina_symbol
+from utils.financial import to_sina_symbol, get_market_label, MarketLabel
 from storage.file_store.parquet_store import ParquetStore
 from storage.database.manager import db_manager
 
@@ -15,7 +16,7 @@ class DailyKlineCollector:
     支持多源切换 (Sina/EM)
     """
 
-    def __init__(self, source: str = "sina"):
+    def __init__(self, source: str = "em"):
         self.store = ParquetStore()
         self.source = source
 
@@ -138,16 +139,23 @@ class DailyKlineCollector:
             logger.debug(f"{symbol} 已是最新 (目标: {end_date})，无需同步")
             return
 
+        # --- 智能多源决策 ---
+        market = get_market_label(symbol)
+        if market == MarketLabel.BJ:
+            active_source = "sina"
+        else:
+            active_source = random.choice(["em", "sina"])
+
         try:
-            logger.debug(f"正在从 {self.source} 抓取行情: {symbol} ({start_date} -> {end_date})")
+            logger.debug(f"正在从 {active_source} 抓取行情: {symbol} ({start_date} -> {end_date})")
             
-            if self.source == "sina":
+            if active_source == "sina":
                 df_merge = self._fetch_from_sina(symbol, start_date, end_date)
             else:
                 df_merge = self._fetch_from_em(symbol, start_date, end_date)
 
             if df_merge.empty:
-                logger.warning(f"{symbol} 抓取数据为空 (Source: {self.source})")
+                logger.warning(f"{symbol} 抓取数据为空 (Source: {active_source})")
                 return
 
             # 最终清洗

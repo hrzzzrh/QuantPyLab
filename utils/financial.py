@@ -27,23 +27,35 @@ def get_consecutive_reports(end_report: str, n: int = 5) -> list:
         reports.append(current)
     return reports
 
-def to_sina_symbol(code: str) -> str:
+from enum import Enum
+
+class MarketLabel(Enum):
+    SH = "SH"
+    SZ = "SZ"
+    BJ = "BJ"
+
+def get_market_label(code: str) -> MarketLabel:
     """
-    将 6 位数字代码转换为新浪格式 (带 sh/sz/bj 前缀)
+    识别股票代码所属的交易所标识 (MarketLabel Enum)
     
     规则参考:
-    - sh: 6 (主板/科创板), 900 (B股), 5 (基金/ETF), 000 (指数)
-    - sz: 0 (主板), 3 (创业板), 2 (B股), 1 (基金/ETF)
-    - bj: 4, 8, 920 (北交所)
+    - SH: 6 (主板/科创板), 900 (B股), 5 (基金/ETF)
+    - SZ: 0 (主板), 3 (创业板), 2 (B股), 1 (基金/ETF)
+    - BJ: 4, 8, 920 (北交所)
     """
-    if code.startswith(('6', '5')):
-        return f"sh{code}"
+    if code.startswith(('6', '5', '900')):
+        return MarketLabel.SH
     if code.startswith(('0', '2', '3', '1')):
-        return f"sz{code}"
-    if code.startswith(('4', '8')):
-        return f"bj{code}"
+        return MarketLabel.SZ
+    if code.startswith(('4', '8', '920')):
+        return MarketLabel.BJ
     if code.startswith('9'):
-        if code.startswith('920'):
-            return f"bj{code}"
-        return f"sh{code}"  # 900 为沪市 B 股
-    return code
+        return MarketLabel.SH 
+    return MarketLabel.SH
+
+def to_sina_symbol(code: str) -> str:
+    """
+    将 6 位数字代码转换为新浪格式 (前缀 sh/sz/bj)
+    """
+    label = get_market_label(code).value.lower()
+    return f"{label}{code}"

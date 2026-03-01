@@ -94,11 +94,15 @@ class FinancialCollector:
         :param symbol: 纯数字代码 (如 600004)
         :param market_symbol: 带后缀代码 (支持 sz300274 或 300274.SZ)
         """
+        from utils.financial import get_market_label, MarketLabel
         if not market_symbol:
-            market_symbol = f"{symbol}.SH" if symbol.startswith('6') else f"{symbol}.SZ"
+            label = get_market_label(symbol).value
+            market_symbol = f"{symbol}.{label}"
 
         # 格式标准化：统一转为 300274.SZ 这种东财标准格式
-        if market_symbol.startswith(('sz', 'sh', 'bj', 'SZ', 'SH', 'BJ')):
+        labels = [m.value for m in MarketLabel]
+        prefixes = tuple(labels + [l.lower() for l in labels])
+        if market_symbol.startswith(prefixes):
             pre = market_symbol[:2].upper()
             suf = market_symbol[2:]
             market_symbol = f"{suf}.{pre}"

@@ -67,10 +67,12 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
         if not pending: return
         
         detail_collector = StockDetailCollector()
+        from utils.financial import get_market_label
         for symbol, code in tqdm(pending, desc="补全详情"):
             try:
                 # 雪球接口需要带前缀的代码 (sh/sz)
-                xq_symbol = f"sh{code}" if code.startswith('6') else f"sz{code}"
+                label = get_market_label(code).value.lower()
+                xq_symbol = f"{label}{code}"
                 info = detail_collector.fetch_from_xueqiu(xq_symbol)
                 if not info.get('list_date'):
                     info['list_date'] = detail_collector.fetch_from_eastmoney(code).get('list_date')
@@ -164,12 +166,13 @@ def sync_financial_indicators(symbol=None, force_all=False):
         return
 
     pbar = tqdm(target_tasks, desc="指标同步")
+    from utils.financial import get_market_label
     for code, name in pbar:
         pbar.set_description(f"指标同步: {code} {name}")
         try:
             # 东财接口需要带后缀的代码 (如 600519.SH)
-            suffix = "SH" if code.startswith('6') else ("SZ" if code.startswith(('0', '3')) else "BJ")
-            fmt_symbol = f"{code}.{suffix}"
+            label = get_market_label(code).value
+            fmt_symbol = f"{code}.{label}"
             collector.collect_indicators(code, fmt_symbol)
             time.sleep(random.uniform(0.5, 1.0))
         except Exception:
@@ -251,6 +254,10 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     all_active = get_active_stocks()
     target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
     
+    if force_all and not start_date:
+        start_date = "19900101"
+        logger.info(f"强制全量模式：将从 {start_date} 开始同步股本变动")
+
     latest_trade_date = get_latest_trade_date().strftime('%Y%m%d')
     logger.info(f"开始同步 {len(target_tasks)} 只股票的股本变动 (基准日期: {latest_trade_date})...")
     pbar = tqdm(target_tasks, desc="股本同步")
@@ -267,6 +274,10 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     all_active = get_active_stocks()
     target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
     
+    if force_all and not start_date:
+        start_date = "19900101"
+        logger.info(f"强制全量模式：将从 {start_date} 开始同步 K 线数据")
+
     latest_date = get_latest_trade_date().strftime('%Y%m%d')
     logger.info(f"开始同步 {len(target_tasks)} 只股票的日线行情 (基准日期: {latest_date})...")
     pbar = tqdm(target_tasks, desc="K线同步")
