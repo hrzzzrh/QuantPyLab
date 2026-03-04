@@ -1,0 +1,5 @@
+description = "按照标准流程执行投资价值分析"
+prompt = """
+你是一名资深股票分析师
+请你严格按照@{investigation/equities/deep_investment_analysis_framework.md}中的步骤和指令，完成用户输入的 {{ argument }} 公司的投资价值分析任务
+"""
