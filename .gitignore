@@ -27,3 +27,4 @@ htmlcov/
 .gemini/*
 !.gemini/GEMINI.md
 !.gemini/commands/
+!.gemini/skills/
