@@ -144,7 +144,10 @@ class DailyKlineCollector:
         if market == MarketLabel.BJ:
             active_source = "sina"
         else:
-            active_source = random.choice(["em", "sina"])
+            # active_source = random.choice(["em", "sina"])
+            # em有点问题，先只用新浪
+
+            active_source = random.choice(["sina"])
 
         try:
             logger.debug(f"正在从 {active_source} 抓取行情: {symbol} ({start_date} -> {end_date})")
@@ -170,6 +173,7 @@ class DailyKlineCollector:
 
         except Exception as e:
             # Re-raise 让 @retry 装饰器捕捉并重试
+            logger.warn(f"行情保存失败: {symbol}，active_source:{active_source}")
             raise e
 
     def _save_incremental(self, df_new: pd.DataFrame, symbol: str):
@@ -191,4 +195,4 @@ class DailyKlineCollector:
 if __name__ == "__main__":
     # 测试
     collector = DailyKlineCollector()
-    collector.collect_kline("600519", start_date="20240101")
+    collector.collect_kline("002859")
