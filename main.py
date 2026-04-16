@@ -358,6 +358,11 @@ def main():
     # 10. show-views
     subparsers.add_parser("show-views", help="显示视图依赖关系图 (PlantUML)")
 
+    # 11. export-report
+    rep_p = subparsers.add_parser("export-report", help="合并并导出公司深度研报为 PDF")
+    rep_p.add_argument("--name", required=True, help="公司名称 (对应目录名)")
+    rep_p.add_argument("--output", "-o", type=str, help="输出文件路径")
+
     args = parser.parse_args()
 
     if args.command == "sync-stocks":
@@ -383,6 +388,11 @@ def main():
         print("\n--- PlantUML Source ---")
         print(puml)
         print("\n(You can copy this source to https://www.plantuml.com/plantuml/ to view the graph)\n")
+    elif args.command == "export-report":
+        from utils.report_exporter import ReportExporter
+        exporter = ReportExporter(args.name)
+        out = exporter.export(args.output)
+        logger.info(f"✅ 成功导出研报至: {out}")
     else:
         parser.print_help()
 

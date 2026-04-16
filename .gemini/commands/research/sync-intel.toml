@@ -3,7 +3,8 @@ prompt = """
 你现在作为 QuantPyLab 的投研总监，用户输入了目标公司:{{args}}，请对执行以下全自动化审计流程：
 
 1. **框架内化**：必须首先深度阅读并理解 @investigation/equities/deep_investment_analysis_framework.md 中的投研方法论与章节间的逻辑依赖关系。
-然后阅读 investigation/equities/目标公司/reports/ 目录下的每一份研报章节，禁止选择性阅读，理解目前的研究情况，以及明确研究时间锚点。
+然后按照投研方法论文档中的指导阅读数据资产与查询数据的方法，为量化分析做准备，所有量化分析脚本如果运行失败，必须修改直到运行成功。
+最后阅读 investigation/equities/目标公司/reports/ 目录下的每一份研报章节，禁止选择性阅读，理解目前的研究情况，以及明确研究时间锚点。
 
 2. **双轨情报抓取 (Dual-Track Intelligence Gathering) - 执行准则**：
    - **靶向跟踪 (按需执行)**：
