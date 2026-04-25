@@ -40,9 +40,10 @@
 4. **命名确定性 (Naming Precision)**：
     - **严禁模糊**：所有函数、类、变量及命令行指令名必须准确描述其职责。
     - **动宾结构**：指令名应遵循 `动作-对象` 规范。严禁使用 `all`, `export`, `data` 等过于宽泛的单词。例如：使用 `sync-all` 而非 `all`，使用 `export-views` 而非 `export`。
-5. **统一视图架构 (Unified View Architecture)**：
+5. **文档维护铁律 (Revision Integrity)**：在更新各级 `GEMINI.md`、研报、跟踪手册或任何核心文档时，严禁为了当前更新目的而简化、省略或调整文档中存量无关内容。必须始终保持文档的物理完整性与细节密度，仅对目标内容进行手术式修订。**严禁在 `replace` 或 `write_file` 等操作中使用 `...`、`(rest of code)` 或 `(存量叙述保留)` 等任何形式的占位符，必须提供字面意义上的完整文本。**
+6. **统一视图架构 (Unified View Architecture)**：
 所有数据查询必须通过视图完成。视图采用 Python 类定义 (`storage/database/views/`)，支持显式依赖 (DAG) 与自动可视化。
-6. **运行规范**：本项目统一使用 `uv` 进行环境管理。执行脚本格式：`uv run main.py <subcommand> [options]`。
+7. **运行规范**：本项目统一使用 `uv` 进行环境管理。执行脚本格式：`uv run main.py <subcommand> [options]`。
 
 ## 4. 项目进度
 - [x] **基础架构搭建**：完成 `uv` 环境配置，实现 SQLite/DuckDB 双引擎。
