@@ -47,8 +47,7 @@ class ShareCollector:
             response = requests.get(url, headers=self.headers, timeout=10)
             response.encoding = 'gbk'
             if response.status_code != 200:
-                logger.error(f"请求新浪股本页面失败: {symbol}, Status: {response.status_code}")
-                return pd.DataFrame()
+                raise Exception(f"请求新浪股本页面失败: {symbol}, Status: {response.status_code}")
 
             soup = BeautifulSoup(response.text, 'html.parser')
             tables = soup.find_all('table', id=re.compile(r'^historyTable'))
@@ -76,8 +75,8 @@ class ShareCollector:
                 df = df.sort_values('change_date', ascending=True).drop_duplicates('change_date')
             return df
         except Exception as e:
-            logger.error(f"解析新浪股本变动 {symbol} 出错: {e}")
-            return pd.DataFrame()
+            # 向上抛出异常，触发 @retry
+            raise e
 
     @retry(max_retries=2, delay=2.0)
     def collect_share_capital(self, symbol: str, start_date: str = None):

@@ -263,7 +263,10 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     pbar = tqdm(target_tasks, desc="股本同步")
     for code, name in pbar:
         pbar.set_description(f"股本同步: {code} {name}")
-        collector.collect_share_capital(code, start_date=start_date)
+        try:
+            collector.collect_share_capital(code, start_date=start_date)
+        except Exception:
+            logger.error(f"{code} {name} 股本同步最终失败 (已重试)")
         time.sleep(random.uniform(1, 1.5))
 
 def sync_daily_kline(symbol=None, force_all=False, start_date=None):
