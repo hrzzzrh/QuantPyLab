@@ -84,11 +84,32 @@ class FinancialStore:
             
             # 重新补上 symbol 供存储逻辑识别（虽然存储时会再删掉，但为了逻辑统一）
             df['symbol'] = symbol
+            
+            # --- 强制数值化清洗 ---
+            df = self._coerce_numeric(df)
+            
             self.parquet_store.save_partition(df, category, symbol)
             
         except Exception:
             logger.exception(f"存储 {table_name} 失败")
             raise
+
+    def _coerce_numeric(self, df: pd.DataFrame) -> pd.DataFrame:
+        """强制将财务指标列转为数值型，解决 mixed types 导致的 Parquet 写入失败"""
+        # 非财务数值列黑名单 (元数据列)
+        meta_cols = {'symbol', 'report_date', '公告日期', '更新日期', '数据源', '是否审计', '币种', '类型'}
+        
+        df = df.copy()
+        for col in df.columns:
+            if col in meta_cols:
+                # 转换为字符串，并将空值替换为空字符串，避免 Pandas 存为 object/NaN 导致的混乱
+                df[col] = df[col].astype(str).replace(['nan', 'None', 'NaT', '<NA>', 'nan '], '')
+            else:
+                # 所有的财务指标列，强制转换为数值型 (float64)
+                # errors='coerce' 会将无法转换的(如空字符串)转为 NaN
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        return df
 
     def get_existing_report_dates(self) -> set:
         """获取三张表都存在的 {symbol}_{report_date} 交集"""
