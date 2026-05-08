@@ -45,6 +45,7 @@
 所有数据查询必须通过视图完成。视图采用 Python 类定义 (`storage/database/views/`)，支持显式依赖 (DAG) 与自动可视化。
 7. **运行规范**：本项目统一使用 `uv` 进行环境管理。执行脚本格式：`uv run main.py <subcommand> [options]`。
 8. **禁止全量扫描数据目录 (Data Directory Guard)**：严禁使用 `ls` 或类似命令对 `data/` 目录进行全量或递归扫描（Parquet 分片数量巨大），必须使用精准路径、脚本查询或元数据库（`metadata.db`）定位目标。
+9. **大文件/PDF 处理原则 (Large File/PDF Handling Principle)**：在处理大型 PDF 财报或文档时，严禁直接全量读取。必须先通过脚本或工具提取关键章节（如会计数据、财务报表附注、管理层讨论等）或进行针对性抽样提取，以防止 Token 消耗过大导致上下文溢出或响应延迟过高。
 
 ## 4. 项目进度
 - [x] **基础架构搭建**：完成 `uv` 环境配置，实现 SQLite/DuckDB 双引擎。
