@@ -10,6 +10,7 @@ dependencies = [
     "linkify-it-py>=2.1.0",
     "markdown-it-py>=4.0.0",
     "pandas>=3.0.0",
+    "pdfplumber>=0.11.9",
     "playwright>=1.58.0",
     "pyarrow>=23.0.0",
     "tqdm>=4.67.1",
