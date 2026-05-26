@@ -1,6 +1,6 @@
 -- QuantPyLab 自动生成的视图脚本
 -- 运行环境: DuckDB
--- 生成时间: 2026-03-14 23:13:05
+-- 生成时间: 2026-05-18 23:00:42
 
 
 -- View: daily_kline
@@ -23,6 +23,9 @@ CREATE OR REPLACE VIEW fin_income_statement AS SELECT * FROM read_parquet('/User
 
 -- View: fin_indicator
 CREATE OR REPLACE VIEW fin_indicator AS SELECT * FROM read_parquet('/Users/hekunxi/some_project/QuantPyLab/data/warehouse/indicators/*/*.parquet', hive_partitioning=1, union_by_name=1);
+
+-- View: etf_kline
+CREATE OR REPLACE VIEW etf_kline AS SELECT * FROM read_parquet('/Users/hekunxi/some_project/QuantPyLab/data/warehouse/etf_kline/*/*.parquet', hive_partitioning=1, union_by_name=1);
 
 -- View: v_daily_valuation
 CREATE OR REPLACE VIEW v_daily_valuation AS

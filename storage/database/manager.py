@@ -38,6 +38,17 @@ class DBManager:
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS etfs (
+                symbol TEXT PRIMARY KEY,
+                code TEXT NOT NULL,
+                name TEXT NOT NULL,
+                fund_type TEXT,
+                list_date TEXT,
+                is_active INTEGER DEFAULT 1,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
 
     def get_sqlite_conn(self) -> sqlite3.Connection:

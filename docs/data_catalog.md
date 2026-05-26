@@ -11,6 +11,7 @@ skinparam componentStyle uml2
 title DuckDB View Dependencies
 
 [daily_kline]
+[etf_kline]
 [fin_balance_sheet]
 [fin_cashflow_statement]
 [fin_income_statement]
@@ -29,7 +30,9 @@ title DuckDB View Dependencies
 
 ### 基础与行情数据 (Market Data)
 - **[股票基础信息 (stocks)](catalog/market/stocks.md)**: 包含股票代码、名称、行业、地域等基础索引。
+- **[ETF基金基础信息 (etfs)](catalog/market/etfs.md)**: 包含ETF代码、名称、类型等基础索引。
 - **[日线行情 (daily_kline)](catalog/market/daily_kline.md)**: 每日价格、成交量及复权因子。
+- **[ETF日线行情 (etf_kline)](catalog/market/etf_kline.md)**: ETF每日价格、成交量及复权因子。
 - **[股本变动 (share_capital)](catalog/market/share_capital.md)**: 历史股本变更记录。
 
 ### 财务数据 (Financial Data)

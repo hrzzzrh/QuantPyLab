@@ -291,6 +291,50 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
         except Exception:
             logger.error(f"{code} {name} K线同步最终失败 (已重试)")
 
+def sync_etf_list():
+    """同步ETF基础列表 (etfs 表)"""
+    from data_ingestion.collectors.etf_collector import ETFListCollector
+    collector = ETFListCollector()
+    df = collector.fetch_all_etfs()
+    if df.empty:
+        return
+    conn = db_manager.get_sqlite_conn()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM etfs")
+    df.to_sql('etfs', conn, if_exists='append', index=False)
+    conn.commit()
+    logger.info(f"成功同步 {len(df)} 条记录到 etfs 表")
+
+def get_active_etfs():
+    """获取所有活跃ETF的 (code, name)"""
+    conn = db_manager.get_sqlite_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT code, name FROM etfs WHERE is_active = 1")
+    return cursor.fetchall()
+
+def sync_etf_kline(symbol=None, force_all=False, start_date=None):
+    """同步ETF日线行情数据"""
+    from data_ingestion.collectors.etf_collector import ETFKlineCollector
+    from utils.trade_date import get_latest_trade_date
+    collector = ETFKlineCollector()
+    all_active = get_active_etfs()
+    target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
+    
+    if force_all and not start_date:
+        start_date = "19900101"
+        logger.info(f"强制全量模式：将从 {start_date} 开始同步 ETF K 线数据")
+    
+    latest_date = get_latest_trade_date().strftime('%Y%m%d')
+    logger.info(f"开始同步 {len(target_tasks)} 只ETF的日线行情 (基准日期: {latest_date})...")
+    pbar = tqdm(target_tasks, desc="ETF K线同步")
+    for code, name in pbar:
+        pbar.set_description(f"ETF K线同步: {code} {name}")
+        try:
+            collector.collect_kline(code, start_date=start_date)
+        except Exception:
+            logger.error(f"{code} {name} ETF K线同步最终失败 (已重试)")
+        time.sleep(random.uniform(0.5, 1.0))
+
 def sync_all_data_flow(symbol=None, force_all=False):
     """执行全量数据同步流水线 (除元数据外)"""
     logger.info(">>> 开始执行一键数据同步流水线 <<<")
@@ -349,19 +393,28 @@ def main():
     kline_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
     kline_p.add_argument("--force-all", action="store_true", help="扫描所有活跃股票")
 
-    # 8. sync-all
+    # 8. sync-etf-list
+    subparsers.add_parser("sync-etf-list", help="同步场内交易基金列表 (etfs表)")
+
+    # 9. sync-etf-kline
+    etf_kline_p = subparsers.add_parser("sync-etf-kline", help="同步ETF日线行情数据")
+    etf_kline_p.add_argument("--symbol", type=str, help="指定单只ETF代码")
+    etf_kline_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
+    etf_kline_p.add_argument("--force-all", action="store_true", help="扫描所有活跃ETF")
+
+    # 10. sync-all
     all_p = subparsers.add_parser("sync-all", help="一键同步全流程数据 (除元数据)")
     all_p.add_argument("--symbol", type=str, help="指定单只股票代码")
     all_p.add_argument("--force-all", action="store_true", help="全量强制同步")
 
-    # 9. export-views
+    # 11. export-views
     exp_p = subparsers.add_parser("export-views", help="导出 DuckDB 视图的 SQL 定义脚本")
     exp_p.add_argument("--output", "-o", type=str, default="docs/view_definition.sql", help="输出文件路径 (默认: docs/view_definition.sql)")
 
-    # 10. show-views
+    # 12. show-views
     subparsers.add_parser("show-views", help="显示视图依赖关系图 (PlantUML)")
 
-    # 11. export-report
+    # 13. export-report
     rep_p = subparsers.add_parser("export-report", help="合并并导出公司深度研报为 PDF")
     rep_p.add_argument("--name", required=True, help="公司名称 (对应目录名)")
     rep_p.add_argument("--output", "-o", type=str, help="输出文件路径")
@@ -382,6 +435,10 @@ def main():
         sync_share_capital(symbol=args.symbol, force_all=args.force_all, start_date=args.start_date)
     elif args.command == "sync-kline":
         sync_daily_kline(symbol=args.symbol, force_all=args.force_all, start_date=args.start_date)
+    elif args.command == "sync-etf-list":
+        sync_etf_list()
+    elif args.command == "sync-etf-kline":
+        sync_etf_kline(symbol=args.symbol, force_all=args.force_all, start_date=args.start_date)
     elif args.command == "sync-all":
         sync_all_data_flow(symbol=args.symbol, force_all=args.force_all)
     elif args.command == "export-views":
