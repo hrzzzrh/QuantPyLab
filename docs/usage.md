@@ -115,6 +115,132 @@ if __name__ == "__main__":
 
 ---
 
-## 5. 环境维护
+## 5. 常见陷阱 (Pitfalls)
+
+编写分析脚本时，注意避开以下已知的易错点：
+
+### 5.1 `adj_factor` 不在 `v_daily_valuation` 中
+`v_daily_valuation` 内部使用了 `adj_factor` 计算 `close_hfq`，但**视图不暴露原始 `adj_factor` 字段**。
+```python
+# ❌ 错误：v_daily_valuation 没有 adj_factor 列
+SELECT date, raw_close, adj_factor FROM v_daily_valuation WHERE ...
+
+# ✅ 正确：需要复权因子时直接查基表 daily_kline
+SELECT date, close, adj_factor, close * adj_factor as close_hfq
+FROM daily_kline WHERE symbol = '002594'
+
+# ✅ 正确：只需要后复权价时直接用 v_daily_valuation 的 close_hfq
+SELECT date, raw_close, close_hfq FROM v_daily_valuation WHERE ...
+```
+
+### 5.2 股价类型必须显式标注
+`v_daily_valuation` 包含两种收盘价，字段名已明确区分，**禁止混用**：
+- `raw_close`：**不复权市价**（用于目标价定价、盈亏比计算、市值计算）
+- `close_hfq`：**后复权价**（用于长周期趋势分析、均线系统、支撑阻力位判定）
+
+```python
+# ❌ 错误：把 raw_close 用于 MA 趋势分析（受分红除权干扰）
+SELECT AVG(raw_close) FROM ...
+
+# ✅ 正确：用后复权价做技术分析
+df['ma60'] = df['close_hfq'].rolling(60).mean()
+```
+
+### 5.3 财务表列名为中文，SQL 中需正确转义
+三大报表 (`fin_balance_sheet`, `fin_income_statement`, `fin_cashflow_statement`) 和指标表 (`fin_indicator`) 的列名为中文，在 Python 字符串中需要双引号包裹：
+```python
+# ✅ 正确：双引号（SQL 标识符）包裹中文列名
+query = '''
+    SELECT report_date, "营业收入"/1e8 as rev_100m, "归属于母公司所有者的净利润"/1e8 as np_100m
+    FROM fin_income_statement WHERE symbol='002594'
+'''
+```
+
+### 5.4 `report_date` 类型为 VARCHAR 非 DATE
+财务报表的 `report_date` 存储为 `VARCHAR`（如 `'20251231'`），不能用 `>=` 直接与 Python 的 `datetime.date` 比较：
+```python
+# ✅ 正确：字符串比较
+WHERE report_date >= '20200101'
+
+# ❌ 错误：date 类型与 varchar 混用
+WHERE report_date >= '2020-01-01'  # 格式不匹配
+```
+
+### 5.5 Parquet 分区路径格式
+若需直接读 Parquet（而非通过视图），Hive 分区的路径格式必须精确匹配，不可猜测：
+```
+# 正确路径格式（参考 docs/view_definition.sql）
+data/warehouse/daily_kline/*/*.parquet
+data/warehouse/financial/ttm/*/*.parquet
+data/warehouse/financial_statements/type=balance/*/*.parquet
+data/warehouse/indicators/*/*.parquet
+data/warehouse/share_capital/*/*.parquet
+```
+
+### 5.6 `report_date` 格式在 TTM 表中为 `YYYYMMDD`
+`fin_ttm.report_date` 和 `pub_date` 均为 `YYYYMMDD` 格式的字符串（如 `'20260331'`），在用 `ORDER BY report_date` 之前无需转换，字符串排序即等于日期排序。但在需要与 `v_daily_valuation.date`（DATE 类型）进行 JOIN 时，需使用 `strptime(pub_date, '%Y%m%d')::DATE` 进行类型转换。
+
+### 5.7 务必 `close_all()` 释放资源
+使用 `db_manager` 的脚本必须在最后调用 `close_all()`：
+```python
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        db_manager.close_all()  # 必备，防止资源泄漏
+```
+
+### 5.8 `uv run python script.py` 需加 `PYTHONPATH=.`
+
+Python 运行脚本文件时会将**脚本所在目录**（而非当前工作目录）加入 `sys.path[0]`。因此从 `workspace/research/` 下的脚本 `import storage.database.manager` 会失败：
+
+```bash
+# ❌ 错误：ModuleNotFoundError: No module named 'storage'
+cd /path/to/project
+uv run python workspace/research/某公司/scripts/query.py
+
+# ✅ 正确：显式指定 PYTHONPATH 为项目根目录
+cd /path/to/project
+PYTHONPATH=. uv run python workspace/research/某公司/scripts/query.py
+```
+
+> **原因**：`uv run` 保持了 Python 的标准行为——执行文件时 `sys.path[0]` 指向文件所在目录。只有执行 `-c` 内联代码或 `-m` 模块时，`sys.path[0]` 才为当前工作目录。因此 `uv run python -c "from storage.database.manager import db_manager"` 能正常工作，但 `uv run python path/to/script.py` 不能。
+
+### 5.9 必须用 `uv run python`，不能用系统 `python3`
+
+项目的所有依赖（`duckdb`、`pandas` 等）安装在 `.venv` 中，系统 `python3` 无法访问：
+
+```bash
+# ❌ 错误：ModuleNotFoundError: No module named 'duckdb'
+python3 -c "from storage.database.manager import db_manager"
+
+# ✅ 正确：通过 uv 运行以激活虚拟环境
+uv run python -c "from storage.database.manager import db_manager"
+```
+
+### 5.10 `v_daily_valuation` 不含 OHLCV 行情字段
+
+`v_daily_valuation` 是估值分析视图，仅暴露计算估值所需的字段（`raw_close`、`close_hfq`、`total_shares`、`market_cap`、`pe_ttm`、`pb`、`ps_ttm`、`pcf_ttm`）。**不含 `open`、`high`、`low`、`volume`、`amount`**。
+
+做技术面分析（成交量、波动率、均线系统等）时需要 JOIN `daily_kline`：
+
+```python
+# ❌ 错误：v_daily_valuation 没有 open/volume 列
+SELECT date, open, high, low, close, volume
+FROM v_daily_valuation WHERE symbol = '002028'
+
+# ✅ 正确：JOIN daily_kline 获取完整行情
+SELECT k.date, k.open, k.high, k.low, k.close, k.volume, k.amount,
+       v.close_hfq, v.pe_ttm
+FROM daily_kline k
+JOIN v_daily_valuation v ON k.symbol = v.symbol AND k.date = v.date
+WHERE k.symbol = '002028'
+```
+
+> **注意**：`daily_kline` 只有不复权价格（`open/high/low/close`）和 `adj_factor`，需要后复权价格时通过 `v_daily_valuation.close_hfq` 或自行计算 `close * adj_factor` 获取。
+
+---
+
+## 6. 环境维护
 - **上下文刷新**: 在 Gemini CLI 中执行 `/memory refresh`。
 - **命名准则**: 本项目严禁使用模糊命名，所有新增指令必须符合 `动作-对象` 规范。
