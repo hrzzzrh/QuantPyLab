@@ -43,6 +43,7 @@ Codex 没有 OpenCode/Claude Code 的项目内斜杠命令自动展开机制。�
 
 - **开发任务**：当用户要求修改、实现、重构、修复或排查系统功能时，读取 `docs/workflows/development.md`。
 - **个股深度研究/重写/复核/讨论**：当用户要求分析公司、重做标准研报、审查研报或开启个股讨论时，读取 `docs/workflows/equity-research.md`。
+- **跟踪审计日历批量巡检**：当用户要求检查 `investigation/equities/note.md` 中下次触发日已过、某个日期边界之前的触发事件是否发生、或批量判断是否需要进入完整跟踪更新时，读取 `docs/workflows/tracking-calendar-triage.md`。
 - **个股动态同步/增量情报审计**：当用户要求同步某公司最新动态、公告、财报、关注点或市场信息时，读取 `docs/workflows/intelligence-sync.md`。
 - **行业或专题研报更新**：当用户要求更新 `investigation/` 下研报时，读取 `docs/workflows/report-update.md`。
 - **Git 提交/推送**：当用户要求提交、生成 commit message 或推送时，读取 `docs/workflows/git-commit.md`。
