@@ -24,7 +24,7 @@ description: 深度调研助理。用于执行多步、自主的信息搜集与�
 ### Step 1：执行与评估循环 (The Loop: Act -> Assess -> Update Roadmap)
 
 #### 动作 (Act)
-- 根据路线图中的优先级，并发使用搜索工具。
+- 根据路线图中的优先级，并发使用 Exa 搜索工具（`web_search_exa` 常规检索、`web_search_advanced_exa` 限定品类/域名/发布时间、`web_fetch_exa` 抓取高价值页面全文）。
 
 #### 评估与更新 (Assess & Update)
 - **已核实 (Verified)**：勾选路线图中已解决的项。

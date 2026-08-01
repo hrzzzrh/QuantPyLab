@@ -1,6 +1,22 @@
 {
-  "permission": {
-    "websearch": "allow"
+  "mcp": {
+    "exa": {
+      "type": "local",
+      "command": ["uv", "run", "tools/exa_mcp_server.py"],
+      "cwd": ".",
+      "enabled": true,
+      "environment": {
+        "EXA_API_KEYS": "{env:EXA_API_KEYS}"
+      }
+    }
   },
-  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "websearch": "deny",
+    "webfetch": "deny"
+  },
+  "tools": {
+    "websearch": false,
+    "webfetch": false
+  },
+  "$schema": "https://opencode.ai/config.json"
 }

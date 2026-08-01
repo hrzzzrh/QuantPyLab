@@ -10,6 +10,9 @@ logs/
 .env
 .python-version
 
+# Secrets
+config/exa_keys.json
+
 # IDE
 .idea/
 .vscode/

@@ -9,6 +9,7 @@ dependencies = [
     "duckdb>=1.4.4",
     "linkify-it-py>=2.1.0",
     "markdown-it-py>=4.0.0",
+    "mcp>=1.0,<2.0",
     "pandas>=3.0.0",
     "pdfplumber>=0.11.9",
     "playwright>=1.58.0",

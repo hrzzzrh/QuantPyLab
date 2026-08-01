@@ -56,3 +56,29 @@ from utils.financial import get_consecutive_reports
 list = get_consecutive_reports("20250930", 5)
 # 输出: ['20250930', '20250630', '20250331', '20241231', '20240930']
 ```
+
+---
+
+## 4. Exa 搜索 MCP 服务器 (`tools/exa_mcp_server.py`)
+
+网络信息检索基础设施。以本地 stdio MCP 服务器形式向 opencode 提供 Exa 搜索能力，替代了 opencode 内置的 `websearch`/`webfetch` 工具（已在 `.opencode/opencode.json` 中禁用）。
+
+### 提供的 MCP 工具
+
+| 工具名 | 功能 |
+|---|---|
+| `web_search_exa` | 常规网络搜索，返回标题/URL/发布日期/高亮摘要 |
+| `web_fetch_exa` | 按 URL 抓取网页正文为纯文本（单次最多 10 个 URL） |
+| `web_search_advanced_exa` | 高级搜索：品类（news/company/paper 等）、域名包含/排除、发布时间区间过滤 |
+
+### Key 配置（多 key 轮换）
+
+- 优先读取环境变量 `EXA_API_KEYS`（逗号分隔多个 key）。
+- 兜底读取 `config/exa_keys.json`（已被 gitignore，不入库），格式：`{"keys": ["key1", "key2"]}`。
+- 轮换策略：round-robin；某 key 触发 429 限流时自动切换下一 key 重试。
+
+### 运行方式
+
+```bash
+uv run tools/exa_mcp_server.py   # 由 .opencode/opencode.json 的 local MCP 配置自动拉起
+```
