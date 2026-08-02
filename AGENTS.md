@@ -19,7 +19,8 @@
 1. **文档先行 (Docs-First Discovery)**：禁止直接搜索代码，必须首先阅读 `docs/`。
 2. **提案与确认机制 (Proposal & Confirmation Protocol)**：本机制仅适用于功能开发工作。严禁抢跑：复杂功能变更必须先在 `workspace/` 编写设计文档并获得"确认锁"，简单功能变更可以先在对话中提出提案并获得"确认锁"，必须在用户明确回复同意执行后才能开始实际开发。研报、跟踪手册、投研汇总及其他 `investigation/` 相关工作不需要确认锁；用户提出明确任务后，可按对应 workflow 直接开展与写入。
 3. **数据怀疑论 (Data Skepticism)**：绝不假设两个数据源一致，必须实测采样。
-4. **命名确定性 (Naming Precision)**：
+4. **信源分级 (Source Hierarchy)**：事件类事实核验优先使用公司公告、交易所、巨潮资讯、公司官网、监管机构等可追溯来源；新闻稿和媒体报道只能作为辅助证据（线索），关键数据（订单金额、业绩数字、市占率、政策表述等）必须回到公告原文或权威来源核实后才能用于结论；对关键数据至少尝试两个独立来源交叉验证；对尚未发布的新数据如实说明、不得编造或外推；无法本地验证的外部数据按可信度采信或保守修正，并注明"未经本地验证"。
+5. **命名确定性 (Naming Precision)**：
     - **严禁模糊**：所有函数、类、变量及命令行指令名必须准确描述其职责。
     - **动宾结构**：指令名应遵循 `动作-对象` 规范。严禁使用 `all`, `export`, `data` 等过于宽泛的单词。例如：使用 `sync-all` 而非 `all`，使用 `export-views` 而非 `export`。
 5. **文档维护铁律 (Revision Integrity)**：在更新各级 `CLAUDE.md`、研报、跟踪手册或任何核心文档时，严禁为了当前更新目的而简化、省略或调整文档中存量无关内容。必须始终保持文档的物理完整性与细节密度，仅对目标内容进行手术式修订。**严禁在 `replace` 或 `write_file` 等操作中使用 `...`、`(rest of code)` 或 `(存量叙述保留)` 等任何形式的占位符，必须提供字面意义上的完整文本。**
@@ -42,9 +43,11 @@
 Codex 没有 OpenCode/Claude Code 的项目内斜杠命令自动展开机制。用户以自然语言提出任务时，必须按下列路由读取对应 workflow，并将 workflow 作为任务执行 SOP。
 
 - **开发任务**：当用户要求修改、实现、重构、修复或排查系统功能时，读取 `docs/workflows/development.md`。
-- **个股深度研究/重写/复核/讨论**：当用户要求分析公司、重做标准研报、审查研报或开启个股讨论时，读取 `docs/workflows/equity-research.md`。
+- **个股深度研究/重写/讨论**：当用户要求分析公司、重做标准研报或开启个股讨论时，读取 `docs/workflows/equity-research.md`；标准研报写完后必须按 `docs/workflows/research-review.md` 执行审查修正闭环。
+- **个股研报独立复核/审查/修正**：当用户要求审查、复核、评估、质检或修正个股研报、跟踪手册或投研汇总时，先读取 `docs/workflows/equity-research.md`，再读取 `docs/workflows/research-review.md`；可按 workflow 使用运行时只读子 agent，并由主 agent 裁决后执行修正。
+- **财报 PDF 转文本/信息提取**：当用户要求研读财报、提取年报/半年报/季报关键信息、或将财报 PDF 转为文本时，读取 `docs/workflows/financial-report-extraction.md`，并使用 Codex skill `$financial-report-extractor`。
 - **跟踪审计日历批量巡检**：当用户要求检查 `investigation/equities/note.md` 中下次触发日已过、某个日期边界之前的触发事件是否发生、或批量判断是否需要进入完整跟踪更新时，读取 `docs/workflows/tracking-calendar-triage.md`。
-- **个股动态同步/增量情报审计**：当用户要求同步某公司最新动态、公告、财报、关注点或市场信息时，读取 `docs/workflows/intelligence-sync.md`。
+- **个股动态同步/增量情报审计**：当用户要求同步某公司最新动态、公告、财报、关注点或市场信息时，读取 `docs/workflows/intelligence-sync.md`；若触发重大更新，继续读取 `docs/workflows/research-review.md` 并执行审查修正闭环。
 - **行业或专题研报更新**：当用户要求更新 `investigation/` 下研报时，读取 `docs/workflows/report-update.md`。
 - **Git 提交/推送**：当用户要求提交、生成 commit message 或推送时，读取 `docs/workflows/git-commit.md`。
 

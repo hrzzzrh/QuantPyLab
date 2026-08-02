@@ -82,41 +82,28 @@ def download_file(session, url, save_path, referer):
 
 # --- 巨潮资讯 (Cninfo) 逻辑 ---
 def get_org_id(session, stock_code):
-    """通过股票代码获取巨潮内部 orgId"""
-    search_url = "http://www.cninfo.com.cn/new/hisAnnouncement/query"
-    # 简单推断板块
-    if stock_code.startswith(('60', '68', '90')):
-        column = "sse"
-    elif stock_code.startswith(('00', '20', '30')):
-        column = "szse"
-    elif stock_code.startswith(('4', '8')):
-        column = "bj"
-    else:
-        column = "sse" # 默认沪市
-
-    payload = {
-        "pageNum": 1,
-        "pageSize": 10,
-        "tabName": "fulltext",
-        "column": column,
-        "stock": "",
-        "searchkey": stock_code,
-        "isCheckee": "false",
-    }
+    """通过股票代码获取巨潮内部 orgId（topSearch 接口支持沪/深/北交所新旧代码）"""
+    search_url = "http://www.cninfo.com.cn/new/information/topSearch/query"
     headers = {
-        "Referer": "http://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/fulltext/search",
+        "Referer": "http://www.cninfo.com.cn/",
         "X-Requested-With": "XMLHttpRequest"
     }
     try:
-        resp = session.post(search_url, data=payload, headers=headers, timeout=15)
+        resp = session.post(search_url, data={"keyWord": stock_code, "maxNum": 10}, headers=headers, timeout=15)
         data = resp.json()
-        announcements = data.get('announcements', [])
-        for a in announcements:
-            if a.get('secCode') == stock_code:
-                return a.get('orgId'), column
+        for item in data:
+            if item.get('code') == stock_code:
+                org_id = item.get('orgId', '')
+                if org_id.startswith('gfbj'):
+                    column = "bj"
+                elif stock_code.startswith(('60', '68', '90')):
+                    column = "sse"
+                else:
+                    column = "szse"
+                return org_id, column
     except Exception as e:
         print(f"⚠️ Failed to fetch orgId for {stock_code}: {e}")
-    return None, column
+    return None, ("bj" if stock_code.startswith(('4', '8', '92')) else ("sse" if stock_code.startswith(('60', '68', '90')) else "szse"))
 
 def fetch_cninfo_reports(stock_code, limit=12):
     print(f"🔍 Searching Cninfo for {stock_code} (target {limit})...")
