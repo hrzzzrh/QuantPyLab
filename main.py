@@ -26,6 +26,17 @@ def get_active_stocks():
     cursor.execute("SELECT code, name FROM stocks WHERE is_active = 1")
     return cursor.fetchall()
 
+def get_financial_symbols():
+    """
+    获取数据仓库中实际存在财务报表的全部股票代码。
+    数据源为 fin_income_statement 视图 (Parquet 分片目录枚举)，
+    覆盖 stocks 表之外的"孤儿股" (如已退市但历史数据保留的股票)。
+    """
+    conn = db_manager.get_duckdb_conn()
+    db_manager.ensure_views('fin_income_statement')
+    rows = conn.execute("SELECT DISTINCT symbol FROM fin_income_statement").fetchall()
+    return [r[0] for r in rows]
+
 def get_orphan_codes(category: str, all_codes: list) -> list:
     """获取尚未同步过特定类别数据的股票代码"""
     if category == "financial":
@@ -179,27 +190,40 @@ def sync_financial_indicators(symbol=None, force_all=False):
             logger.exception(f"{code} 指标同步失败")
 
 def calculate_ttm_metrics(symbol=None, force_all=False):
-    """计算滚动十二个月 (TTM) 财务指标"""
+    """
+    计算滚动十二个月 (TTM) 财务指标。
+
+    候选集构建原则 (孤儿股补全):
+    - stocks 表 (sync-stocks 清空重建) 仅含东财当前列表, 已退市股不在其中;
+    - 但退市股的历史财务报表仍保留在 Parquet 数据湖中 (孤儿股);
+    - 因此 TTM 候选集必须以"数据湖实际存在的报表"为准 (fin_income_statement),
+      而非仅 stocks 表, 否则孤儿股的 TTM 永远不会被批量重算。
+    """
     from analysis.processors.ttm_calculator import TTMCalculator
     calculator = TTMCalculator()
     all_active = get_active_stocks()
-    
+    active_symbols = {s[0] for s in all_active}
+
     candidates = [] # 存储 (symbol, max_src_date)
 
     if symbol:
+        # 单只模式: 不依赖 stocks 表, 直接按数据湖中是否存在报表判断
+        if symbol not in get_financial_symbols():
+            logger.warning(f"数据湖中无 {symbol} 的财务报表, 跳过")
+            return
         logger.info(f"单只同步模式: {symbol}")
-        target_symbols = [s[0] for s in all_active if s[0] == symbol]
-        for code in target_symbols:
-            calculator.calculate_for_symbol(code)
+        calculator.calculate_for_symbol(symbol)
         return
 
     duckdb_conn = db_manager.get_duckdb_conn()
+    db_manager.ensure_views('fin_income_statement', 'fin_ttm')
     available_views = db_manager.list_available_views()
     
     if force_all:
         logger.info("强制全量模式...")
-        # 直接使用 get_active_stocks() 获取的 all_active 列表，无需再查 DuckDB
-        candidates = [(s[0], '20991231') for s in all_active]
+        # 候选集 = 数据湖中实际有报表的全部股票 (含孤儿股, 覆盖退市股),
+        # 而非仅 stocks 活跃列表, 避免孤儿股 TTM 永不被重算
+        candidates = [(s, '20991231') for s in get_financial_symbols()]
     else:
         logger.info("智能增量模式：正在进行数据完整性自检...")
         if "fin_ttm" not in available_views:
