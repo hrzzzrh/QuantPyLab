@@ -1,12 +1,28 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Dict, List, Optional
+
+from .schema_builder import ensure_schema
+
+
+def build_schema_map_expr(dataset: str) -> str:
+    """
+    根据 schema 缓存生成 read_parquet 的 schema MAP 表达式。
+    缓存缺失时自动重建。
+    """
+    schema: Dict[str, str] = ensure_schema(dataset)
+    parts = [
+        f"'{name}': {{'name': '{name}', 'type': '{dtype}', 'default_value': NULL}}"
+        for name, dtype in sorted(schema.items())
+    ]
+    return "{" + ", ".join(parts) + "}::MAP(VARCHAR, STRUCT(name VARCHAR, type VARCHAR, default_value VARCHAR))"
+
 
 class DuckDBView(ABC):
     """
     DuckDB 视图定义基类。
     所有视图都应继承此类，并实现必要的属性和方法。
     """
-    
+
     @property
     @abstractmethod
     def name(self) -> str:

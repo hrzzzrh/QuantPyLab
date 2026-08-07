@@ -39,7 +39,8 @@ class FinancialStore:
             # --- 日期对齐修复逻辑开始 ---
             # 从 fin_indicator (东财源) 获取更准确的公告日期和更新日期
             try:
-                # 检查 fin_indicator 视图是否已加载
+                # 确保 fin_indicator 视图可用（按需注册）
+                db_manager.ensure_views('fin_indicator')
                 available_views = db_manager.list_available_views()
                 if "fin_indicator" in available_views:
                     sql = f"SELECT report_date, \"公告日期\" as em_ann_date, \"更新日期\" as em_up_date FROM fin_indicator WHERE symbol = '{symbol}'"

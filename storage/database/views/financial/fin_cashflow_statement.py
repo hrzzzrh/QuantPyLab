@@ -1,7 +1,10 @@
-from storage.database.view_base import DuckDBView
+from storage.database.view_base import DuckDBView, build_schema_map_expr
 
 class CashFlowStatementView(DuckDBView):
     name = "fin_cashflow_statement"
     
     def get_sql(self, warehouse_dir: str) -> str:
-        return f"CREATE OR REPLACE VIEW {self.name} AS SELECT * FROM read_parquet('{warehouse_dir}/financial_statements/type=cashflow/*/*.parquet', hive_partitioning=1, union_by_name=1)"
+        schema_expr = build_schema_map_expr(self.name)
+        return f"""CREATE OR REPLACE VIEW {self.name} AS
+            SELECT *, regexp_extract(filename, 'symbol=(\d+)', 1) AS symbol
+            FROM read_parquet('{warehouse_dir}/financial_statements/type=cashflow/*/*.parquet', filename=true, schema={schema_expr})"""

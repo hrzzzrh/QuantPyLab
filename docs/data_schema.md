@@ -45,7 +45,8 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 | 特性 | 说明 |
 | :--- | :--- |
 | **显式依赖** | 必须在 `dependencies` 属性中列出所依赖的视图名。 |
-| **自动化加载** | 系统在启动时会自动构建有向无环图 (DAG) 并按正确顺序加载视图。 |
+| **按需注册** | 视图采用 Lazy Loading：调用方通过 `db_manager.ensure_views(...)` 声明所需视图，系统按 DAG 拓扑序注册（含全部依赖），已注册视图自动跳过。 |
+| **schema 预声明** | 视图 SQL 通过 `read_parquet(..., schema=MAP(...))` 预声明列集与类型（缓存于 `storage/database/views/schemas/`），替代运行时全分片 schema 推断，将视图加载峰值内存从 GB 级降至 MB 级。字段变更后需 `uv run main.py rebuild-schemas` 重建缓存。 |
 | **动态 SQL** | 可以在 Python 中利用逻辑动态生成 SQL 语句（如路径替换、字段筛选）。 |
 
 **目录结构即业务域 (Domain)**：

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "built_at": "2026-08-07T21:48:36",
+  "column_count": 2,
+  "columns": {
+    "total_shares": "DOUBLE",
+    "change_date": "DATE"
+  }
+}

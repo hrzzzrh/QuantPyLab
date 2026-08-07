@@ -60,41 +60,91 @@ class DBManager:
         return self._sqlite_conn
 
     def get_duckdb_conn(self) -> duckdb.DuckDBPyConnection:
-        """获取 DuckDB 连接 (作为瞬态计算引擎)"""
+        """获取 DuckDB 连接 (作为瞬态计算引擎)。
+
+        视图采用按需注册 (Lazy View Loading)：
+        默认不注册任何视图，调用方通过 ensure_views() 声明所需视图，
+        避免一次性加载全部视图导致的分片元数据扫描内存暴涨。
+        """
         if self._duckdb_conn is None:
             # 使用内存模式
             self._duckdb_conn = duckdb.connect(":memory:")
-            # 自动挂载 Parquet 数据湖中的视图
-            self.init_warehouse_views(self._duckdb_conn)
         return self._duckdb_conn
 
-    def init_warehouse_views(self, conn: duckdb.DuckDBPyConnection):
-        """扫描并加载所有视图，支持基于 DAG 的自动依赖处理"""
-        from utils.logger import logger
-        
+    def _get_view_loader(self) -> ViewLoader:
         views_dir = Path(__file__).parent / "views"
-        if not views_dir.exists():
+        loader = ViewLoader(views_dir)
+        loader.discover_views()
+        return loader
+
+    def ensure_views(self, *view_names: str):
+        """按需注册指定视图（含其依赖），已注册的视图自动跳过。
+
+        使用 DAG 拓扑排序保证依赖视图先于依赖者创建。
+        """
+        from utils.logger import logger
+
+        conn = self.get_duckdb_conn()
+        loader = self._get_view_loader()
+
+        registered = set(self.list_available_views())
+        needed = set(view_names)
+        instances = {n: cls() for n, cls in loader.view_classes.items()}
+        # 收集全部传递依赖
+        changed = True
+        while changed:
+            changed = False
+            for name in list(needed):
+                inst = instances.get(name)
+                if inst is None:
+                    continue
+                for dep in inst.dependencies:
+                    if dep not in needed:
+                        needed.add(dep)
+                        changed = True
+
+        to_create = [n for n in needed if n in loader.view_classes and n not in registered]
+        if not to_create:
             return
 
-        loader = ViewLoader(views_dir)
-        
+        # 拓扑排序确保依赖先创建
+        from graphlib import TopologicalSorter
+        ts = TopologicalSorter()
+        for name in to_create:
+            inst = instances[name]
+            deps = [d for d in inst.dependencies if d in to_create]
+            ts.add(name, *deps)
         try:
-            # 1. 发现并排序
-            loader.discover_views()
-            sorted_views = loader.get_sorted_views()
-            
-            # 2. 按顺序执行 SQL
-            for view in sorted_views:
-                try:
-                    sql = view.get_sql(str(self.warehouse_dir))
-                    conn.execute(sql)
-                except Exception:
-                    logger.exception(f"加载视图失败 {view.name}")
-                    
-            logger.info(f"成功加载 {len(sorted_views)} 个视图")
-            
-        except Exception:
-            logger.exception("初始化视图层失败")
+            order = list(ts.static_order())
+        except Exception as e:
+            raise ValueError(f"视图依赖图循环引用: {e}")
+
+        created = []
+        for name in order:
+            if name not in to_create:
+                continue
+            try:
+                cls = loader.view_classes[name]
+                conn.execute(cls().get_sql(str(self.warehouse_dir)))
+                created.append(name)
+            except Exception:
+                logger.exception(f"按需加载视图失败 {name}")
+        if created:
+            logger.info(f"按需加载视图: {', '.join(created)}")
+
+    def init_warehouse_views(self, conn: duckdb.DuckDBPyConnection):
+        """扫描并注册全部视图（全量模式，仅在明确需要时调用）"""
+        from utils.logger import logger
+
+        loader = self._get_view_loader()
+        sorted_views = loader.get_sorted_views()
+        for view in sorted_views:
+            try:
+                sql = view.get_sql(str(self.warehouse_dir))
+                conn.execute(sql)
+            except Exception:
+                logger.exception(f"加载视图失败 {view.name}")
+        logger.info(f"成功加载 {len(sorted_views)} 个视图")
 
     def get_view_relationships_puml(self) -> str:
         """获取当前视图依赖关系的 PlantUML 源码"""

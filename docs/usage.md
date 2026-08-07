@@ -49,6 +49,9 @@
 | :--- | :--- | :--- |
 | `export-views` | 导出 DuckDB 视图 SQL 脚本 | `[--output]` (默认: `docs/view_definition.sql`) |
 | `show-views` | 显示视图依赖拓扑图 | 无 |
+| `rebuild-schemas` | 重建视图 schema 预声明缓存 | `[--dataset]` (默认: 全部) |
+
+> **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
 ---
 
@@ -77,7 +80,7 @@ duckdb -init /tmp/views.sql -c "SELECT * FROM v_daily_valuation WHERE symbol='60
 ```
 
 ### 4.2 路径 B：编程式查询模板 (推荐用于分析)
-在编写 `workspace/research/` 下的分析脚本时，**必须使用 `db_manager`** 以确保所有视图（DAG 依赖）被自动正确加载。研究产生的结论性文档应存放在 `investigation/` 对应子目录下。
+在编写 `workspace/research/` 下的分析脚本时，**必须使用 `db_manager`**，并在查询前通过 `ensure_views(...)` 显式声明所需视图（DAG 依赖自动带出）。研究产生的结论性文档应存放在 `investigation/` 对应子目录下。
 
 **最小查询模板 (`investigate_data.py`)：**
 ```python
@@ -85,8 +88,9 @@ from storage.database.manager import db_manager
 import pandas as pd
 
 def main():
-    # 1. 获取连接 (系统会自动执行所有 View 定义)
+    # 1. 获取连接 (视图默认不加载，需显式声明)
     conn = db_manager.get_duckdb_conn()
+    db_manager.ensure_views('v_daily_valuation')  # 依赖视图 (daily_kline 等) 自动注册
     symbol = '002487'
 
     # 2. 编写 SQL (推荐使用 TTM 或 估值视图)
@@ -112,6 +116,14 @@ if __name__ == "__main__":
 1. 运行 `uv run main.py export-views` 生成 SQL 定义。
 2. 在 DBeaver 中新建 DuckDB 连接。
 3. 执行导出的 SQL 脚本即可直接在可视化界面查询逻辑视图。
+
+### 4.4 视图加载机制：按需注册 + schema 预声明
+视图系统采用两层机制，保证内存占用可控（初始化峰值 < 0.2GB，全量查询峰值 < 1.5GB）：
+
+1. **按需注册 (Lazy Loading)**：`get_duckdb_conn()` 不自动注册任何视图；通过 `db_manager.ensure_views('view_name', ...)` 声明所需视图，系统按 DAG 拓扑序注册（含全部依赖），已注册视图自动跳过。
+2. **schema 预声明 (Schema Predeclaration)**：视图 SQL 通过 `read_parquet(..., schema=MAP(...))` 预声明列集与类型，替代 `union_by_name=1` 的运行时全分片 schema 推断（后者需扫描全部 5500+ 分片 footer，导致 6-7GB 峰值内存）。schema 缓存位于 `storage/database/views/schemas/<dataset>.json`，由 `rebuild-schemas` 命令生成。
+   - `symbol` 分区列通过 `filename=true` + `regexp_extract(filename, 'symbol=(\d+)', 1)` 从路径提取。
+   - **schema 外列查询静默返回 NULL 而非报错**：字段变更后必须执行 `uv run main.py rebuild-schemas`，否则新列数据不可见。
 
 ---
 

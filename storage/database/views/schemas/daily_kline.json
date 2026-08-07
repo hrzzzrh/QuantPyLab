@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "built_at": "2026-08-07T21:48:35",
+  "column_count": 8,
+  "columns": {
+    "date": "DATE",
+    "open": "DOUBLE",
+    "amount": "DOUBLE",
+    "high": "DOUBLE",
+    "low": "DOUBLE",
+    "volume": "DOUBLE",
+    "close": "DOUBLE",
+    "adj_factor": "DOUBLE"
+  }
+}

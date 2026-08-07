@@ -376,6 +376,19 @@ def export_duckdb_views(output_path: str):
     Path(output_path).write_text(sql, encoding='utf-8')
     logger.info(f"视图脚本已导出至: {output_path}")
 
+def rebuild_view_schemas(dataset: str = None):
+    """重建视图 schema 预声明缓存 (字段变更后必须执行)"""
+    from storage.database.schema_builder import rebuild_all, rebuild_dataset, DATASET_PATTERNS
+    if dataset:
+        if dataset not in DATASET_PATTERNS:
+            logger.error(f"未知数据集: {dataset} (可选: {', '.join(DATASET_PATTERNS)})")
+            return
+        rebuild_dataset(dataset)
+        logger.info(f"schema 缓存重建完成: {dataset}")
+    else:
+        rebuild_all()
+        logger.info("全部 schema 缓存重建完成")
+
 # --- CLI 定义 ---
 
 def main():
@@ -443,6 +456,10 @@ def main():
     rep_p.add_argument("--name", required=True, help="公司名称 (对应目录名)")
     rep_p.add_argument("--output", "-o", type=str, help="输出文件路径")
 
+    # 14. rebuild-schemas
+    rs_p = subparsers.add_parser("rebuild-schemas", help="重建视图 schema 预声明缓存 (财务字段变更后必须执行)")
+    rs_p.add_argument("--dataset", "-d", type=str, help="仅重建指定数据集")
+
     args = parser.parse_args()
 
     if args.command == "sync-stocks":
@@ -477,6 +494,8 @@ def main():
         exporter = ReportExporter(args.name)
         out = exporter.export(args.output)
         logger.info(f"✅ 成功导出研报至: {out}")
+    elif args.command == "rebuild-schemas":
+        rebuild_view_schemas(dataset=args.dataset)
     else:
         parser.print_help()
 
