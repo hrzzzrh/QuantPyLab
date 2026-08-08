@@ -23,12 +23,12 @@ DATASET_PATTERNS = {
 SCHEMA_DIR = Path(__file__).parent / "views" / "schemas"
 
 # 类型加宽优先级: 取值越高越宽
-_TYPE_RANK = {"VARCHAR": 0, "BIGINT": 1, "INTEGER": 2, "FLOAT": 3, "DOUBLE": 4}
+_TYPE_RANK = {"VARCHAR": 0, "INTEGER": 1, "BIGINT": 2, "FLOAT": 3, "DOUBLE": 4}
 
 
 def _wider_type(t1: str, t2: str) -> str:
     """选择更宽的类型 (避免精度损失)"""
-    return t1 if _TYPE_RANK.get(t1, 5) >= _TYPE_RANK.get(t2, 0) else t2
+    return t1 if _TYPE_RANK.get(t1, 5) >= _TYPE_RANK.get(t2, 5) else t2
 
 
 def build_schema(pattern: str) -> Dict[str, str]:
