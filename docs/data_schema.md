@@ -21,7 +21,7 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 | `code` | TEXT | NOT NULL | 纯 6 位数字代码 | `600519` |
 | `name` | TEXT | NOT NULL | 股票简称 | `贵州茅台` |
 | `area` | TEXT | - | 地域 (省份/城市) | `贵州` |
-| `industry` | TEXT | - | 东财细分行业 | `白酒` |
+| `industry` | TEXT | - | 行业 (雪球资料源) | `白酒` |
 | `list_date` | TEXT | - | 上市日期 (格式: YYYYMMDD) | `20010827` |
 | `is_active` | INTEGER | DEFAULT 1 | 存续状态 (1:在市, 0:退市) | `1` |
 | `last_trade_date` | TEXT | - | 最后交易日 (YYYYMMDD)，由退市股 K 线腾讯重建流程写入真实值；未重建前为 NULL | `20260630` |
@@ -31,9 +31,10 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 - **差量 diff 更新**: 执行 `sync-stocks` 时，以 AkShare 当前在市列表 (`stock_info_a_code_name`，含沪深北) 为基准进行 diff：
     - 新列表有、库中无 → 插入 (is_active=1)
     - 两边都有 → 更新名称 (若曾被误标退市则恢复)
-    - 库中有、新列表无 → 标记退市 (is_active=0)，last_trade_date 由退市股 K 线腾讯重建流程写入
+    - 库中有、新列表无 → 标记退市 (is_active=0) 并回填 `last_trade_date`
     - 接口返回空列表时跳过本次更新，防止数据源异常导致全库误标退市。
-- **属性补全**: 执行 `sync-metadata` 时，系统会针对 `area`, `industry`, `list_date` 等空字段，通过多源（雪球/东财）进行异步并发补全。
+- **退市股清单合并**: diff 后从沪深交易所退市股列表 (`stock_info_sh_delist`/`stock_info_sz_delist`) 补齐历史退市股 (插入 is_active=0)，保证重建场景退市股清单完整；不修改已有行。北交所退市股无接口，暂不覆盖。
+- **属性补全**: 执行 `sync-metadata` 时，系统会针对 `area`, `industry`, `list_date` 等空字段进行异步并发补全；行业由雪球个股资料补全 (东财 push2 接口已风控弃用)，地域/上市日期由雪球→东财→巨潮三级兜底。
 
 ## 3. DuckDB 统一视图层 (Unified View Architecture)
 

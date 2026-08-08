@@ -9,7 +9,6 @@ import pandas as pd
 from tqdm import tqdm
 
 from data_ingestion.collectors.financial_collector import FinancialCollector
-from data_ingestion.collectors.industry_collector import HighSpeedIndustryCollector
 from data_ingestion.collectors.stock_list import (
     StockDetailCollector,
     StockListCollector,
@@ -126,18 +125,129 @@ def sync_stock_list():
 
     conn.commit()
     total = cursor.execute("SELECT COUNT(*) FROM stocks").fetchone()[0]
+    inactive_total = cursor.execute(
+        "SELECT COUNT(*) FROM stocks WHERE is_active = 0"
+    ).fetchone()[0]
     logger.info(
-        f"stocks 表 diff 同步完成: 在市 {len(incoming)} 只, 新增 {len(new_symbols)},"
-        f" 退市 {delisted}, 库内总数 {total}"
+        f"stocks 表 diff 同步完成: 在市 {len(incoming)} 只"
+        f" (本次新增 {len(new_symbols)}, 本次标记退市 {delisted}),"
+        f" 库内总数 {total} (其中退市 {inactive_total})"
     )
+
+    merge_delisted_stocks()
+
+
+def merge_delisted_stocks():
+    """从沪深交易所退市股清单合并历史退市股 (仅插入缺失, 不修改已有行)
+
+    重建场景必需: 当前在市列表不含历史退市股, 仅靠 diff 无法恢复退市股清单,
+    会导致退市股数据 (K线/财务/股本) 永远无法同步。北交所退市股无清单接口, 暂不覆盖。
+    """
+    import akshare as ak
+
+    conn = db_manager.get_sqlite_conn()
+    existing_codes = {r[0] for r in conn.execute("SELECT code FROM stocks").fetchall()}
+
+    try:
+        sh = ak.stock_info_sh_delist()
+        sz = ak.stock_info_sz_delist()
+    except Exception as e:
+        logger.warning(f"退市股清单接口获取失败, 跳过合并: {e}")
+        return
+
+    def _candidates(df, code_col, name_col, date_col):
+        rows = []
+        for _, row in df.iterrows():
+            code = str(row[code_col]).zfill(6)
+            if code in existing_codes:
+                continue
+            name = str(row[name_col])
+            date_raw = row[date_col]
+            last_date = str(date_raw).replace("-", "") if pd.notna(date_raw) else None
+            rows.append((code, code, name, last_date))
+        return rows
+
+    candidates = []
+    if sh is not None and not sh.empty:
+        candidates += _candidates(sh, "公司代码", "公司简称", "暂停上市日期")
+    if sz is not None and not sz.empty:
+        candidates += _candidates(sz, "证券代码", "证券简称", "终止上市日期")
+
+    # 按 code 去重 (沪深清单可能有重叠代码)
+    seen = set()
+    merged = 0
+    for code, symbol, name, last_date in candidates:
+        if code in seen:
+            continue
+        seen.add(code)
+        conn.execute(
+            "INSERT INTO stocks (symbol, code, name, is_active, last_trade_date, updated_at)"
+            " VALUES (?, ?, ?, 0, ?, CURRENT_TIMESTAMP)",
+            (symbol, code, name, last_date),
+        )
+        merged += 1
+    conn.commit()
+    if merged:
+        logger.info(f"合并退市股清单: 新增 {merged} 只退市股 (is_active=0)")
+
+
+def _sync_industries_via_xueqiu(conn):
+    """雪球并发补全行业 (industry 为 NULL 的活跃股; 退市股雪球无资料, 不请求)
+
+    东财批量接口 (push2) 已风控不可用, 行业改用雪球个股资料 (affiliate_industry.ind_name)。
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT symbol, code FROM stocks WHERE industry IS NULL AND is_active = 1"
+    )
+    pending = cursor.fetchall()
+    if not pending:
+        logger.info("行业无需补全")
+        return
+
+    detail_collector = StockDetailCollector()
+    from utils.financial import get_market_label
+
+    def fetch_industry(symbol, code):
+        """并发 worker: 仅做网络抓取, 不触碰数据库连接。"""
+        label = get_market_label(code).value.lower()
+        info = detail_collector.fetch_from_xueqiu(f"{label}{code}")
+        time.sleep(random.uniform(0.05, 0.1))
+        return symbol, info.get("industry_xq")
+
+    max_workers = 2
+    commit_every = 20
+    updated = 0
+    failed = 0
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(fetch_industry, s, c) for s, c in pending]
+        for future in tqdm(as_completed(futures), total=len(futures), desc="补全行业"):
+            try:
+                symbol, industry = future.result()
+            except Exception:
+                failed += 1
+                continue
+            if not industry:
+                failed += 1
+                continue
+            cursor.execute(
+                "UPDATE stocks SET industry = ?, updated_at = CURRENT_TIMESTAMP"
+                " WHERE symbol = ?",
+                (industry, symbol),
+            )
+            updated += 1
+            if updated % commit_every == 0:
+                conn.commit()
+    conn.commit()
+    logger.info(f"行业补全完成: 更新 {updated} 只, 失败 {failed} 只")
 
 
 def sync_stock_metadata(run_industry=True, run_list_info=True):
     """补全股票元数据 (行业、上市日期等)"""
     conn = db_manager.get_sqlite_conn()
     if run_industry:
-        logger.info("--- 正在批量同步行业信息 ---")
-        HighSpeedIndustryCollector().sync_industries(conn)
+        logger.info("--- 正在批量同步行业信息 (雪球源) ---")
+        _sync_industries_via_xueqiu(conn)
 
     if run_list_info:
         logger.info("--- 正在补全个股上市详情 (地域、日期, 雪球并发) ---")
@@ -189,8 +299,15 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                     failed += 1
                     continue
                 cursor.execute(
-                    "UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
-                    (info.get("area"), info.get("list_date"), symbol),
+                    "UPDATE stocks SET area = ?, list_date = ?,"
+                    " industry = COALESCE(industry, ?), updated_at = CURRENT_TIMESTAMP"
+                    " WHERE symbol = ?",
+                    (
+                        info.get("area"),
+                        info.get("list_date"),
+                        info.get("industry_xq"),
+                        symbol,
+                    ),
                 )
                 updated += 1
                 if updated % commit_every == 0:
