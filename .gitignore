@@ -27,6 +27,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Generated backtest research outputs
+workspace/backtest/results/
+
 .gemini/*
 !.gemini/GEMINI.md
 !.gemini/commands/

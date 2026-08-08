@@ -1,0 +1,26 @@
+from pathlib import Path
+
+import pytest
+
+from backtest.config import load_backtest_config
+from backtest.strategy_registry import get_backtest_strategy, list_backtest_strategies
+
+
+def test_loads_toml_backtest_config():
+    config = load_backtest_config(Path("config/backtest/price_momentum.toml"))
+
+    assert config.strategy_name == "price-momentum"
+    assert config.strategy_parameters["lookback_days"] == 120
+    assert config.start_date.isoformat() == "2018-01-01"
+
+
+def test_registry_exposes_two_explicit_strategies():
+    names = [metadata.name for metadata in list_backtest_strategies()]
+
+    assert names == ["price-momentum", "quality-value-recovery"]
+    assert get_backtest_strategy("price-momentum").metadata.version == "1"
+
+
+def test_registry_rejects_unknown_strategy():
+    with pytest.raises(ValueError, match="未注册的回测策略"):
+        get_backtest_strategy("unknown-strategy")

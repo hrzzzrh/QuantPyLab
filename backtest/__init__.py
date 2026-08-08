@@ -1,0 +1,1 @@
+"""Daily equity backtesting utilities."""

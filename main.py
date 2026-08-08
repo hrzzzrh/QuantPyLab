@@ -389,6 +389,36 @@ def rebuild_view_schemas(dataset: str = None):
         rebuild_all()
         logger.info("全部 schema 缓存重建完成")
 
+def run_backtest(backtest_config_path: str):
+    """按 TOML 配置运行已注册策略并输出可复现的研究产物。"""
+    from backtest.config import load_backtest_config
+    from backtest.data_access import BacktestDataAccess
+    from backtest.engine import DailyBacktestEngine
+    from backtest.reporter import write_backtest_result
+    from backtest.strategy_base import validate_target_weights
+    from backtest.strategy_registry import get_backtest_strategy
+
+    config = load_backtest_config(backtest_config_path)
+    strategy = get_backtest_strategy(config.strategy_name)
+    parameters = strategy.validate_parameters(config.strategy_parameters)
+    config = config.with_resolved_strategy(strategy.metadata.version, parameters)
+    data_access = BacktestDataAccess(db_manager)
+    signal_data = strategy.load_signal_data(data_access, config, parameters)
+    targets = validate_target_weights(strategy.build_targets(signal_data, config, parameters))
+    benchmark_prices = data_access.load_benchmark_prices(config)
+    result = DailyBacktestEngine(config).run(signal_data, targets, benchmark_prices)
+    output_dir = write_backtest_result(config, result.daily_nav, targets, result.trades)
+    logger.info(f"回测完成，结果目录: {output_dir}")
+
+
+def list_registered_backtest_strategies():
+    """列出策略注册表，避免用户依赖代码文件名猜测策略名称。"""
+    from backtest.strategy_registry import list_backtest_strategies
+
+    for metadata in list_backtest_strategies():
+        print(f"{metadata.name} (v{metadata.version}): {metadata.description}")
+        print(f"  参数: {metadata.parameter_summary}")
+
 # --- CLI 定义 ---
 
 def main():
@@ -460,6 +490,13 @@ def main():
     rs_p = subparsers.add_parser("rebuild-schemas", help="重建视图 schema 预声明缓存 (财务字段变更后必须执行)")
     rs_p.add_argument("--dataset", "-d", type=str, help="仅重建指定数据集")
 
+    # 15. run-backtest
+    backtest_p = subparsers.add_parser("run-backtest", help="运行日频股票策略回测")
+    backtest_p.add_argument("--backtest-config", required=True, help="回测 TOML 配置文件路径")
+
+    # 16. list-backtest-strategies
+    subparsers.add_parser("list-backtest-strategies", help="列出已注册的日频回测策略")
+
     args = parser.parse_args()
 
     if args.command == "sync-stocks":
@@ -496,6 +533,10 @@ def main():
         logger.info(f"✅ 成功导出研报至: {out}")
     elif args.command == "rebuild-schemas":
         rebuild_view_schemas(dataset=args.dataset)
+    elif args.command == "run-backtest":
+        run_backtest(backtest_config_path=args.backtest_config)
+    elif args.command == "list-backtest-strategies":
+        list_registered_backtest_strategies()
     else:
         parser.print_help()
 

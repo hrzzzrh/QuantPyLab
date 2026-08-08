@@ -1,0 +1,16 @@
+[run]
+start_date = "2018-01-01"
+end_date = "2026-08-07"
+initial_capital = 1000000
+commission_bps = 5
+slippage_bps = 5
+benchmark_symbol = "510300"
+
+[strategy]
+name = "price-momentum"
+
+[strategy.parameters]
+holding_count = 20
+lookback_days = 120
+trend_window = 120
+min_listing_days = 250

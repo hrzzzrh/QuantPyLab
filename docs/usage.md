@@ -50,8 +50,23 @@
 | `export-views` | 导出 DuckDB 视图 SQL 脚本 | `[--output]` (默认: `docs/view_definition.sql`) |
 | `show-views` | 显示视图依赖拓扑图 | 无 |
 | `rebuild-schemas` | 重建视图 schema 预声明缓存 | `[--dataset]` (默认: 全部) |
+| `run-backtest` | 按 TOML 运行日频股票策略回测 | `--backtest-config PATH` |
+| `list-backtest-strategies` | 列出已注册的日频回测策略 | 无 |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
+
+### 3.3 日频回测 (`run-backtest`)
+
+`run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）和 `price-momentum`（中期动量与趋势）两种策略。所有策略均在每月最后一个交易日收盘后产生信号，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
+
+```bash
+uv run main.py list-backtest-strategies
+
+uv run main.py run-backtest \
+  --backtest-config config/backtest/quality_value_recovery.toml
+```
+
+示例 TOML 位于 `config/backtest/`。将 `[run]` 中的 `benchmark_symbol` 设为空字符串可跳过 ETF 基准。每次运行会在 `workspace/backtest/results/` 创建独立目录，保存解析后的参数 JSON、每日净值、调仓目标、成交记录和摘要；该目录是实验产物，不纳入版本控制。完整的策略参数、数据口径与扩展边界见 [日频股票回测](backtest.md)。
 
 ---
 
