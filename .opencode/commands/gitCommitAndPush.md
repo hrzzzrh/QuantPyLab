@@ -1,7 +1,4 @@
 ---
-description: 根据当前变更总结git commit msg，确认后commit&push
+description: 提交并推送修改
 ---
-请你查看git当前未提交的变更，给出如下建议：
-1、应该add什么文件
-2、推荐的commit msg，请用中文
-如果用户同意，执行git add对应文件，然后执行git commit，最后执行git push
+请你查看除workspace目录以外的所有变更，然后提交并推送到远端。如果变更文件较多，请你仔细分析合理拆分commit。
