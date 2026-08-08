@@ -1,6 +1,7 @@
 import argparse
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -23,11 +24,11 @@ from utils.requests_protection import SinaBlockedError
 # --- 辅助函数 ---
 
 
-def get_active_stocks():
-    """获取所有活跃股票的 (code, name)"""
+def get_all_stocks():
+    """获取 stocks 表全部股票的 (code, name) (含已退市股, 保证从零重建时历史数据可回测)"""
     conn = db_manager.get_sqlite_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT code, name FROM stocks WHERE is_active = 1")
+    cursor.execute("SELECT code, name FROM stocks")
     return cursor.fetchall()
 
 
@@ -61,18 +62,93 @@ def get_orphan_codes(category: str, all_codes: list) -> list:
 # --- 业务逻辑函数 ---
 
 
+def _get_last_trade_date_from_kline(symbol: str) -> str | None:
+    """从本地日线分片查询最后交易日 (YYYYMMDD), 无行情数据返回 None"""
+    from storage.file_store.parquet_store import ParquetStore
+
+    path = ParquetStore().base_dir / "daily_kline" / f"symbol={symbol}" / "data.parquet"
+    if not path.exists():
+        return None
+    try:
+        conn = db_manager.get_duckdb_conn()
+        res = conn.execute(f"SELECT MAX(date) FROM read_parquet('{path}')").fetchone()
+        if not res or not res[0]:
+            return None
+        if isinstance(res[0], datetime):
+            return res[0].strftime("%Y%m%d")
+        return str(res[0]).replace("-", "")
+    except Exception:
+        return None
+
+
 def sync_stock_list():
-    """同步基础股票列表 (stocks 表)"""
+    """同步股票列表: 差量 diff 更新 (新增插入, 存量更新, 消失标记退市)
+
+    以 AkShare 当前在市列表为基准:
+    - 新列表有、库中无   -> INSERT (is_active=1)
+    - 两边都有          -> 更新 name (若曾被误标退市则恢复)
+    - 库中有、新列表无   -> UPDATE is_active=0 + 回填 last_trade_date
+    接口返回空列表时跳过, 防止数据源异常导致全库误标退市。
+    """
     collector = StockListCollector()
     df = collector.fetch_all_stocks()
     if df.empty:
+        logger.warning("股票列表接口返回为空, 跳过 diff 更新 (防止误标退市)")
         return
+
     conn = db_manager.get_sqlite_conn()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM stocks")
-    df.to_sql("stocks", conn, if_exists="append", index=False)
+    existing = cursor.execute("SELECT symbol, name, is_active FROM stocks").fetchall()
+    existing_map = {row[0]: (row[1], row[2]) for row in existing}
+    incoming = set(df["symbol"].tolist())
+    old_symbols = set(existing_map.keys())
+
+    # 1. 新上市: 插入
+    new_symbols = incoming - old_symbols
+    if new_symbols:
+        df_new = df[df["symbol"].isin(new_symbols)]
+        df_new.to_sql("stocks", conn, if_exists="append", index=False)
+        logger.info(f"新增 {len(df_new)} 只股票: {', '.join(new_symbols)}")
+
+    # 2. 两边都有: 更新名称; 若曾被标记退市则恢复
+    common = incoming & old_symbols
+    restored = 0
+    for symbol in common:
+        row = df[df["symbol"] == symbol].iloc[0]
+        old_name, old_active = existing_map[symbol]
+        if row["name"] != old_name or old_active == 0:
+            cursor.execute(
+                "UPDATE stocks SET name = ?, is_active = 1, last_trade_date = NULL,"
+                " updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
+                (row["name"], symbol),
+            )
+            if old_active == 0:
+                restored += 1
+    if restored:
+        logger.info(f"恢复 {restored} 只曾被标记退市的股票")
+
+    # 3. 库中有、新列表无: 标记退市 + 回填 last_trade_date
+    gone = old_symbols - incoming
+    delisted = 0
+    for symbol in gone:
+        old_name, old_active = existing_map[symbol]
+        if old_active == 0:
+            continue
+        last_date = _get_last_trade_date_from_kline(symbol)
+        cursor.execute(
+            "UPDATE stocks SET is_active = 0, last_trade_date = ?,"
+            " updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
+            (last_date, symbol),
+        )
+        logger.info(f"标记退市: {symbol} {old_name} (last_trade_date={last_date})")
+        delisted += 1
+
     conn.commit()
-    logger.info(f"成功同步 {len(df)} 条记录到 stocks 表")
+    total = cursor.execute("SELECT COUNT(*) FROM stocks").fetchone()[0]
+    logger.info(
+        f"stocks 表 diff 同步完成: 在市 {len(incoming)} 只, 新增 {len(new_symbols)},"
+        f" 退市 {delisted}, 库内总数 {total}"
+    )
 
 
 def sync_stock_metadata(run_industry=True, run_list_info=True):
@@ -83,39 +159,63 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
         HighSpeedIndustryCollector().sync_industries(conn)
 
     if run_list_info:
-        logger.info("--- 正在补全个股上市详情 (地域、日期) ---")
+        logger.info("--- 正在补全个股上市详情 (地域、日期, 雪球并发) ---")
         cursor = conn.cursor()
         cursor.execute(
             "SELECT symbol, code FROM stocks WHERE area IS NULL OR list_date IS NULL"
         )
         pending = cursor.fetchall()
         if not pending:
+            logger.info("个股详情无需补全")
             return
 
         detail_collector = StockDetailCollector()
         from utils.financial import get_market_label
 
-        for symbol, code in tqdm(pending, desc="补全详情"):
-            try:
-                # 雪球接口需要带前缀的代码 (sh/sz)
-                label = get_market_label(code).value.lower()
-                xq_symbol = f"{label}{code}"
-                info = detail_collector.fetch_from_xueqiu(xq_symbol)
-                if not info.get("list_date"):
-                    info["list_date"] = detail_collector.fetch_from_eastmoney(code).get(
-                        "list_date"
-                    )
-                if info:
-                    cursor.execute(
-                        "UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
-                        (info.get("area"), info.get("list_date"), symbol),
-                    )
-                time.sleep(random.uniform(0.2, 0.4))
-            except Exception:
-                logger.debug(f"补全 {symbol} 详情失败", exc_info=True)
-            if tqdm.get_lock().locks:
-                conn.commit()
+        def fetch_detail(symbol, code):
+            """并发 worker: 仅做网络抓取, 不触碰数据库连接。"""
+            label = get_market_label(code).value.lower()
+            info = detail_collector.fetch_from_xueqiu(f"{label}{code}")
+            if not info.get("list_date"):
+                info["list_date"] = detail_collector.fetch_from_eastmoney(code).get(
+                    "list_date"
+                )
+            if not info.get("list_date") or not info.get("area"):
+                # 雪球对部分股票 (境外注册/部分北交所) 返回空资料, 巨潮兜底 (官方披露平台)
+                cninfo = detail_collector.fetch_from_cninfo(code)
+                info["area"] = info.get("area") or cninfo.get("area")
+                info["list_date"] = info.get("list_date") or cninfo.get("list_date")
+            time.sleep(random.uniform(0.05, 0.1))
+            return symbol, info
+
+        # 串行请求是主要瓶颈 (网络延迟 ~0.7s/只), 采用 2 并发 + 主线程串行写库,
+        # 兼顾速度与雪球风控; 每 COMMIT_EVERY 只提交一次, 中断不丢已写入数据。
+        max_workers = 2
+        commit_every = 20
+        updated = 0
+        failed = 0
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = [pool.submit(fetch_detail, s, c) for s, c in pending]
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc="补全详情"
+            ):
+                try:
+                    symbol, info = future.result()
+                except Exception:
+                    failed += 1
+                    continue
+                if not info:
+                    failed += 1
+                    continue
+                cursor.execute(
+                    "UPDATE stocks SET area = ?, list_date = ?, updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
+                    (info.get("area"), info.get("list_date"), symbol),
+                )
+                updated += 1
+                if updated % commit_every == 0:
+                    conn.commit()
         conn.commit()
+        logger.info(f"个股详情补全完成: 更新 {updated} 只, 失败 {failed} 只")
 
 
 def get_target_report_dates():
@@ -135,8 +235,8 @@ def sync_financial_statements(symbol=None, force_all=False):
     """同步财务三大报表"""
     store = FinancialStore()
     collector = FinancialCollector()
-    all_active = get_active_stocks()
-    all_codes = [s[0] for s in all_active]
+    all_stocks = get_all_stocks()
+    all_codes = [s[0] for s in all_stocks]
     target_codes = set()
 
     if symbol:
@@ -160,7 +260,7 @@ def sync_financial_statements(symbol=None, force_all=False):
         logger.info("财务报表数据已是最新。")
         return
 
-    symbol_name_map = {s[0]: s[1] for s in all_active}
+    symbol_name_map = {s[0]: s[1] for s in all_stocks}
     pbar = tqdm(list(target_codes), desc="报表同步")
     for code in pbar:
         name = symbol_name_map.get(code, "")
@@ -187,13 +287,13 @@ def sync_financial_indicators(symbol=None, force_all=False):
     """同步东财财务指标"""
     store = IndicatorStore()
     collector = FinancialCollector()
-    all_active = get_active_stocks()
+    all_stocks = get_all_stocks()
     target_tasks = []
 
     if symbol:
-        target_tasks = [s for s in all_active if s[0] == symbol]
+        target_tasks = [s for s in all_stocks if s[0] == symbol]
     elif force_all:
-        target_tasks = all_active
+        target_tasks = all_stocks
     else:
         # ... 保持现有增量逻辑 ...
         report_dates = get_target_report_dates()
@@ -206,8 +306,8 @@ def sync_financial_indicators(symbol=None, force_all=False):
                 for code in df[df["actual_date"].notna()]["code"]:
                     if f"{code}_{r_date}" not in existing:
                         target_codes.add(code)
-        target_codes.update(get_orphan_codes("indicators", [s[0] for s in all_active]))
-        target_tasks = [s for s in all_active if s[0] in target_codes]
+        target_codes.update(get_orphan_codes("indicators", [s[0] for s in all_stocks]))
+        target_tasks = [s for s in all_stocks if s[0] in target_codes]
 
     if not target_tasks:
         logger.info("指标数据已是最新。")
@@ -233,15 +333,15 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
     计算滚动十二个月 (TTM) 财务指标。
 
     候选集构建原则 (孤儿股补全):
-    - stocks 表 (sync-stocks 清空重建) 仅含东财当前列表, 已退市股不在其中;
-    - 但退市股的历史财务报表仍保留在 Parquet 数据湖中 (孤儿股);
+    - stocks 表 (sync-stocks 差量更新) 中已退市股以 is_active=0 标记, 但仍保留历史记录;
+    - 退市股的历史财务报表保留在 Parquet 数据湖中 (孤儿股);
     - 因此 TTM 候选集必须以"数据湖实际存在的报表"为准 (fin_income_statement),
       而非仅 stocks 表, 否则孤儿股的 TTM 永远不会被批量重算。
     """
     from analysis.processors.ttm_calculator import TTMCalculator
 
     calculator = TTMCalculator()
-    all_active = get_active_stocks()
+    all_stocks = get_all_stocks()
 
     candidates = []  # 存储 (symbol, max_src_date)
 
@@ -301,7 +401,7 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
         logger.info("数据完整性未达标，无需计算。")
         return
 
-    symbol_name_map = {s[0]: s[1] for s in all_active}
+    symbol_name_map = {s[0]: s[1] for s in all_stocks}
     logger.info(f"开始为 {len(target_symbols)} 只股票同步 TTM 指标...")
     pbar = tqdm(target_symbols, desc="TTM 计算")
     for code in pbar:
@@ -316,11 +416,15 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
 def sync_share_capital(symbol=None, force_all=False, start_date=None):
     """同步股本变动记录"""
     from data_ingestion.collectors.share_collector import ShareCollector
+    from storage.database.sync_status import (
+        DATASET_SHARE_CAPITAL,
+        is_synced_today,
+    )
     from utils.trade_date import get_latest_trade_date
 
     collector = ShareCollector()
-    all_active = get_active_stocks()
-    target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
+    all_stocks = get_all_stocks()
+    target_tasks = [s for s in all_stocks if s[0] == symbol] if symbol else all_stocks
 
     if force_all and not start_date:
         start_date = "19900101"
@@ -330,14 +434,30 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     logger.info(
         f"开始同步 {len(target_tasks)} 只股票的股本变动 (基准日期: {latest_trade_date})..."
     )
+    skipped = 0
+    failed = 0
     pbar = tqdm(target_tasks, desc="股本同步")
     for code, name in pbar:
         pbar.set_description(f"股本同步: {code} {name}")
+        # 单股/强制模式绕过"当日已同步"检查, 默认模式跳过今日已同步股票
+        if (
+            not symbol
+            and not force_all
+            and is_synced_today(DATASET_SHARE_CAPITAL, code)
+        ):
+            skipped += 1
+            continue
         try:
             collector.collect_share_capital(code, start_date=start_date)
         except Exception:
+            failed += 1
             logger.error(f"{code} {name} 股本同步最终失败 (已重试)")
         time.sleep(random.uniform(1, 1.5))
+
+    logger.info(
+        f"股本同步完成: 共 {len(target_tasks)} 只, 本次同步 {len(target_tasks) - skipped - failed} 只, "
+        f"跳过 {skipped} 只 (今日已同步), 失败 {failed} 只"
+    )
 
 
 def sync_daily_kline(symbol=None, force_all=False, start_date=None):
@@ -346,8 +466,8 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     from utils.trade_date import get_latest_trade_date
 
     collector = DailyKlineCollector()
-    all_active = get_active_stocks()
-    target_tasks = [s for s in all_active if s[0] == symbol] if symbol else all_active
+    all_stocks = get_all_stocks()
+    target_tasks = [s for s in all_stocks if s[0] == symbol] if symbol else all_stocks
 
     if force_all and not start_date:
         start_date = "19900101"

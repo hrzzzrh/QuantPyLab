@@ -10,7 +10,7 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 ### A. 职责范围
 - **实体索引**: 定义全市场合法股票的 `symbol` 与 `code` 映射。
 - **静态属性**: 存储行业、地域、上市日期等用于分组过滤的静态维度。
-- **状态维护**: 记录股票的存续状态 (`is_active`)，指导增量同步引擎排除已退市个股。
+- **状态维护**: 记录股票的存续状态 (`is_active`) 与最后交易日 (`last_trade_date`)，为回测引擎提供退市判定依据。数据同步候选集始终取 `stocks` 表全量 (含已退市股)，确保从零重建时退市股的历史行情/财报仍可同步并可回测。
 
 ### B. 核心表: `stocks` (全量股票索引)
 所有数据同步任务（Parquet 分片）均依赖于此表的 `symbol` 字段。
@@ -24,10 +24,15 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 | `industry` | TEXT | - | 东财细分行业 | `白酒` |
 | `list_date` | TEXT | - | 上市日期 (格式: YYYYMMDD) | `20010827` |
 | `is_active` | INTEGER | DEFAULT 1 | 存续状态 (1:在市, 0:退市) | `1` |
+| `last_trade_date` | TEXT | - | 最后交易日 (YYYYMMDD)，退市时从本地日线回填；无本地行情时为 NULL | `20260630` |
 | `updated_at` | DATETIME | DEFAULT ... | 最后同步时间 (UTC) | `2026-02-22 10:00:00` |
 
 ### C. 同步逻辑与维护
-- **全量重建**: 执行 `sync-stocks` 时，系统会清空并重新从 AkShare 获取最新代码列表。
+- **差量 diff 更新**: 执行 `sync-stocks` 时，以 AkShare 当前在市列表 (`stock_info_a_code_name`，含沪深北) 为基准进行 diff：
+    - 新列表有、库中无 → 插入 (is_active=1)
+    - 两边都有 → 更新名称 (若曾被误标退市则恢复)
+    - 库中有、新列表无 → 标记退市 (is_active=0) 并回填 `last_trade_date`
+    - 接口返回空列表时跳过本次更新，防止数据源异常导致全库误标退市。
 - **属性补全**: 执行 `sync-metadata` 时，系统会针对 `area`, `industry`, `list_date` 等空字段，通过多源（雪球/东财）进行异步并发补全。
 
 ## 3. DuckDB 统一视图层 (Unified View Architecture)

@@ -5,6 +5,7 @@ from pathlib import Path
 import duckdb
 
 from config.settings import SQLITE_DB_PATH, WAREHOUSE_DIR
+from utils.logger import logger
 
 from .view_loader import ViewLoader
 
@@ -37,6 +38,7 @@ class DBManager:
                 industry TEXT,
                 list_date TEXT,
                 is_active INTEGER DEFAULT 1,
+                last_trade_date TEXT,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -51,6 +53,22 @@ class DBManager:
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sync_status (
+                dataset TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                last_sync_date DATE NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (dataset, symbol)
+            )
+        """)
+        # 存量表迁移: 老库无 last_trade_date 列时补充
+        columns = [
+            row[1] for row in conn.execute("PRAGMA table_info(stocks)").fetchall()
+        ]
+        if "last_trade_date" not in columns:
+            conn.execute("ALTER TABLE stocks ADD COLUMN last_trade_date TEXT")
+            logger.info("迁移: stocks 表补充 last_trade_date 列")
         conn.commit()
 
     def get_sqlite_conn(self) -> sqlite3.Connection:

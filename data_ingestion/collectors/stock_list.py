@@ -108,3 +108,82 @@ class StockDetailCollector:
         except Exception as e:
             logger.debug(f"东财接口抓取失败 {code}: {e}")
             return {}
+
+    def fetch_from_cninfo(self, code: str) -> dict:
+        """从巨潮资讯获取上市日期与注册地省份 (北交所兜底源)。
+
+        雪球对部分北交所股票返回空资料, 巨潮 (官方信息披露平台) 覆盖沪深北全市场。
+        """
+        try:
+            df = stock.stock_profile_cninfo(symbol=code)
+            if df.empty or "上市日期" not in df.columns:
+                return {}
+            raw_date = df["上市日期"].iloc[0]
+            list_date = ""
+            if raw_date and str(raw_date) != "None":
+                list_date = str(raw_date).replace("-", "")[:8]
+
+            area = None
+            raw_addr = df["注册地址"].iloc[0] if "注册地址" in df.columns else None
+            if raw_addr:
+                area = self._parse_province(str(raw_addr))
+            return {"area": area, "list_date": list_date}
+        except Exception as e:
+            logger.debug(f"巨潮接口抓取失败 {code}: {e}")
+            return {}
+
+    @staticmethod
+    def _parse_province(addr: str) -> str | None:
+        """从注册地址解析省份/直辖市/自治区"""
+        import re
+
+        provinces = [
+            "北京",
+            "天津",
+            "上海",
+            "重庆",
+            "河北",
+            "山西",
+            "辽宁",
+            "吉林",
+            "黑龙江",
+            "江苏",
+            "浙江",
+            "安徽",
+            "福建",
+            "江西",
+            "山东",
+            "河南",
+            "湖北",
+            "湖南",
+            "广东",
+            "海南",
+            "四川",
+            "贵州",
+            "云南",
+            "陕西",
+            "甘肃",
+            "青海",
+            "内蒙古",
+            "广西",
+            "西藏",
+            "宁夏",
+            "新疆",
+            "台湾",
+            "香港",
+            "澳门",
+        ]
+        if not addr:
+            return None
+        # 前缀匹配 (常见: 江苏省XX市 / 北京市XX区 / 香港特别行政区)
+        for province in provinces:
+            if addr.startswith(province):
+                return province
+        # 括号模式 (自贸区/高新区: "中国（安徽）自由贸易试验区...")
+        match = re.search(r"[（(]([^（()）]{1,4})[）)]", addr)
+        if match:
+            inside = match.group(1)
+            for province in provinces:
+                if inside.startswith(province) or province in inside:
+                    return province
+        return None
