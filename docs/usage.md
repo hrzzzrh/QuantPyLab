@@ -27,15 +27,15 @@
 
 ### 3.1 全量同步 (`sync-all`)
 一键执行全流程同步流水线。
-- **执行顺序**: `indicators` -> `financial` -> `ttm` -> `share` -> `kline`
+- **执行顺序**: `stocks` (名单 diff + 退市清单合并) -> `metadata` (行业/地域/上市日期) -> `indicators` -> `financial` -> `ttm` -> `share` -> `kline`
 - **示例**: `uv run main.py sync-all`
-- **单股示例**: `uv run main.py sync-all --symbol 600519` (强制刷新该股所有财务数据并增量补全行情)
+- **单股示例**: `uv run main.py sync-all --symbol 600519` (强制刷新该股所有财务数据并增量补全行情; 名单与元数据为全市场操作, 单股模式跳过)
 
 ### 3.2 基础同步命令
 | 子命令 | 说明 | 增量逻辑 | 特有参数 |
 | :--- | :--- | :--- | :--- |
-| `sync-stocks` | 同步 A 股全量代码与名称 | **差量 diff**: 新增插入、存量更新名称、消失标记退市 (is_active=0)；last_trade_date 由退市股 K 线重建流程写入 | 无 |
-| `sync-metadata` | 同步行业、上市日期等元数据 | 自动识别缺失字段补全 | `--industry`, `--list-info` |
+| `sync-stocks` | 同步 A 股全量代码与名称 | **差量 diff**: 新增插入、存量更新名称、消失标记退市 (is_active=0)；随后**合并沪深退市股清单** (补齐历史退市股, 重建场景必需)；last_trade_date 由退市股 K 线重建流程写入 | 无 |
+| `sync-metadata` | 同步行业、上市日期等元数据 | 自动识别缺失字段补全；行业由雪球个股资料补全 (东财 push2 接口已风控弃用)，地域/上市日期由雪球→东财→巨潮三级兜底 | `--industry`, `--list-info` |
 | `sync-financial` | 同步财务三报表原始数据 | 披露日历驱动 + 孤儿股补全 | 无 |
 | `sync-indicators`| 同步东财计算指标 | 披露日历驱动 + 孤儿股补全 | 无 |
 | `calc-ttm` | 计算 TTM 滚动财务数据 | **差异驱动**: 校验最近 5 季数据齐全后补算。候选集以数据湖实际存在的报表为准 (含孤儿股/退市股)，不依赖 stocks 表 | 无 |

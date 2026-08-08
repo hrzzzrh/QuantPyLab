@@ -638,9 +638,13 @@ def sync_etf_kline(symbol=None, force_all=False, start_date=None):
 
 
 def sync_all_data_flow(symbol=None, force_all=False):
-    """执行全量数据同步流水线 (除元数据外)"""
+    """执行全量数据同步流水线 (含名单/元数据; 单股模式跳过名单与元数据)"""
     logger.info(">>> 开始执行一键数据同步流水线 <<<")
     try:
+        if not symbol:
+            # 名单与元数据是全市场操作, 单股模式跳过
+            sync_stock_list()
+            sync_stock_metadata()
         # 先同步指标，因为指标表（东财源）的公告日期和更新日期更准确，用于后续修复三张表
         sync_financial_indicators(symbol=symbol, force_all=force_all)
         sync_financial_statements(symbol=symbol, force_all=force_all)
