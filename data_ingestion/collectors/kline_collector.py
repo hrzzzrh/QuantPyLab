@@ -1,15 +1,22 @@
 import random
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import akshare as ak
 import pandas as pd
 
 from storage.database.manager import db_manager
+from storage.database.sync_status import (
+    DATASET_KLINE,
+    get_last_sync_date,
+    record_sync_success,
+)
 from storage.file_store.parquet_store import ParquetStore
 from utils.financial import MarketLabel, get_market_label, to_sina_symbol
 from utils.logger import logger
 from utils.retry import retry
 from utils.trade_date import get_latest_trade_date
+
+_TENCENT_PAGE_SIZE = 640
 
 
 class DailyKlineCollector:
@@ -17,11 +24,141 @@ class DailyKlineCollector:
     日线 K 线采集器
     策略: 存原始价格 + 复权因子
     支持多源切换 (Sina/EM)
+    退市股: 腾讯源全量重建 (单一复权口径)
     """
 
     def __init__(self, source: str = "em"):
         self.store = ParquetStore()
         self.source = source
+
+    def _is_delisted(self, symbol: str) -> bool:
+        """查询 stocks 表判断是否退市 (is_active=0)"""
+        conn = db_manager.get_sqlite_conn()
+        row = conn.execute(
+            "SELECT is_active FROM stocks WHERE symbol = ?", (symbol,)
+        ).fetchone()
+        return row is not None and row[0] == 0
+
+    def _fetch_tencent_page(self, symbol: str, end_date: str, fq: str) -> list[list]:
+        """抓取腾讯 fqkline 单页 (640条, 截至 end_date 向前)"""
+        import requests
+
+        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
+        params = {
+            "param": (
+                f"{to_sina_symbol(symbol)},day,1990-01-01,{end_date},"
+                f"{_TENCENT_PAGE_SIZE},{fq}"
+            )
+        }
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/144.0.0.0 Safari/537.36"
+            )
+        }
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        data = resp.json()
+        key = f"{fq}day" if fq else "day"
+        rows = ((data.get("data") or {}).get(to_sina_symbol(symbol)) or {}).get(key)
+        return rows or []
+
+    def _fetch_tencent_series(self, symbol: str, fq: str) -> pd.DataFrame:
+        """分页抓取腾讯全量行情序列 (640/页, 尾部前翻)"""
+        all_rows: list[list] = []
+        end = get_latest_trade_date().strftime("%Y-%m-%d")
+        for _ in range(60):
+            rows = self._fetch_tencent_page(symbol, end, fq)
+            if not rows:
+                break
+            all_rows = rows + all_rows
+            if len(rows) < _TENCENT_PAGE_SIZE:
+                break
+            end = rows[0][0]
+        if not all_rows:
+            return pd.DataFrame(
+                columns=["date", "open", "close", "high", "low", "volume"]
+            )
+        df = pd.DataFrame(all_rows).iloc[:, :6]
+        df.columns = ["date", "open", "close", "high", "low", "volume"]
+        df = df.astype(
+            {
+                "open": float,
+                "close": float,
+                "high": float,
+                "low": float,
+                "volume": float,
+            }
+        )
+        return df
+
+    def _fetch_tencent_full(self, symbol: str) -> pd.DataFrame:
+        """腾讯全量重建: day(不复权) + hfq(后复权) -> raw + adj_factor (腾讯单一口径)"""
+        df_raw = self._fetch_tencent_series(symbol, "")
+        if df_raw.empty:
+            return pd.DataFrame()
+        df_hfq = self._fetch_tencent_series(symbol, "hfq")
+
+        df = df_raw.merge(
+            df_hfq[["date", "close"]],
+            on="date",
+            how="left",
+            suffixes=("", "_hfq"),
+        )
+        # adj_factor = 腾讯后复权收盘 / 不复权收盘 (腾讯自身算法, 区间自洽)
+        df["adj_factor"] = df["close_hfq"] / df["close"]
+        df["adj_factor"] = df["adj_factor"].ffill().fillna(1.0)
+        # 腾讯 hfq 对退市整理期首日暴跌股可能溢出为负 (实测 000004):
+        # 负值段之前数据有效, 尾段按接缝日因子延续 (退市整理期无除权先验)
+        if (df["adj_factor"] <= 0).any():
+            valid = df[df["adj_factor"] > 0]
+            if valid.empty:
+                raise RuntimeError(f"{symbol} 腾讯 hfq 复权数据全为负, 放弃重建")
+            cut_off = valid["date"].max()
+            seam_factor = valid["adj_factor"].iloc[-1]
+            tail_mask = df["date"] > cut_off
+            df.loc[tail_mask, "adj_factor"] = seam_factor
+            logger.warning(
+                f"{symbol} 腾讯 hfq 在 {cut_off} 后为负, "
+                f"尾段 {int(tail_mask.sum())} 天 adj_factor 按接缝因子 {seam_factor:.6f} 延续"
+            )
+
+        # 腾讯不提供成交额, 按 手*100*收盘价 估算
+        df["amount"] = df["volume"] * 100.0 * df["close"]
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        df["symbol"] = symbol
+        final_cols = [
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "amount",
+            "adj_factor",
+            "symbol",
+        ]
+        return df[final_cols].copy()
+
+    def _collect_delisted(self, symbol: str):
+        """退市股: 腾讯全量重建 (整体覆盖, 单一复权口径)"""
+        if get_last_sync_date(DATASET_KLINE, symbol) is not None:
+            logger.debug(f"{symbol} 退市股 K线已重建, 跳过")
+            return
+        df = self._fetch_tencent_full(symbol)
+        if df.empty:
+            raise RuntimeError(f"{symbol} 腾讯源未返回退市股行情数据")
+        self.store.save_partition(df, "daily_kline", symbol)
+        # 以腾讯真实最后交易日更新 last_trade_date (纠正 sync-stocks 从本地不完整K线回填的偏小值)
+        last_date = df["date"].max()
+        conn = db_manager.get_sqlite_conn()
+        conn.execute(
+            "UPDATE stocks SET last_trade_date = ? WHERE symbol = ?",
+            (last_date.strftime("%Y%m%d"), symbol),
+        )
+        conn.commit()
+        record_sync_success(DATASET_KLINE, symbol, date.today())
+        logger.info(f"{symbol} 退市股 K线腾讯全量重建完成: {len(df)} 条")
 
     def _get_local_max_date(self, symbol: str) -> str:
         """获取本地已存储的最新日期"""
@@ -157,6 +294,11 @@ class DailyKlineCollector:
         同步日线行情
         :param symbol: 纯数字代码 (如 600519)
         """
+        # 退市股: 腾讯全量重建 (单一复权口径, 现有新浪源已无退市股数据)
+        if self._is_delisted(symbol):
+            self._collect_delisted(symbol)
+            return
+
         # 获取最新的有效交易日作为基准
         latest_trade_date = get_latest_trade_date().strftime("%Y%m%d")
 

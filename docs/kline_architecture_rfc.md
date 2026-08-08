@@ -167,6 +167,7 @@ ASOF JOIN assets_hist a
 - **数据源**: `ak.stock_zh_a_hist`。
 - **逻辑**: 同时抓取 Raw 和 HFQ，计算并存储 `adj_factor`。
 - **存储**: 使用 Parquet 写入，按 Symbol 分区。
+- **退市股专项 (2026-08)**: 已退市股票 (is_active=0) 新浪/东财源均无数据。改用腾讯 `fqkline` 接口 (`web.ifzq.gtimg.cn`) 全量重建该股整个 K线: 不复权 day + 后复权 hfq → `adj_factor = hfq/raw`，整体覆盖本地分片，单一复权口径自洽。腾讯不提供成交额，`amount` 按 `volume×100×收盘价` 估算。重建完成写 `sync_status` (dataset='kline') 后跳过。腾讯 hfq 对退市整理期首日暴跌股可能溢出为负 (实测 000004): 负值段之前因子有效, 尾段按接缝日因子延续 (退市整理期无除权先验) 并记 warning; 全负才放弃重建。注意: 各数据源复权因子算法不同 (实测新浪/腾讯在部分股票上存在除权日分歧与长期漂移)，**禁止跨源拼接复权序列**。
 
 ### Phase 3: 估值视图构建 (Analysis Layer)
 - **任务**: 在 `storage/database/manager.py` 中编写 SQL View 注册逻辑。

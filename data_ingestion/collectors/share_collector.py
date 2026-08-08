@@ -1,11 +1,15 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
 from storage.database.manager import db_manager
+from storage.database.sync_status import (
+    DATASET_SHARE_CAPITAL,
+    record_sync_success,
+)
 from storage.file_store.parquet_store import ParquetStore
 from utils.logger import logger
 from utils.retry import retry
@@ -113,6 +117,7 @@ class ShareCollector:
 
         if df_new is None or df_new.empty:
             logger.debug(f"{symbol} 未获取到股本变动记录")
+            record_sync_success(DATASET_SHARE_CAPITAL, symbol, date.today())
             return
 
         # 2. 过滤增量数据
@@ -133,6 +138,7 @@ class ShareCollector:
 
         if df_filtered.empty:
             logger.debug(f"{symbol} 股本数据已是最新，跳过")
+            record_sync_success(DATASET_SHARE_CAPITAL, symbol, date.today())
             return
 
         # 3. 增量合并逻辑
@@ -140,6 +146,7 @@ class ShareCollector:
             self._save_incremental(df_filtered, symbol)
         except Exception as e:
             raise e
+        record_sync_success(DATASET_SHARE_CAPITAL, symbol, date.today())
 
     def _save_incremental(self, df_new: pd.DataFrame, symbol: str):
         """增量合并并保存"""
