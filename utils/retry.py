@@ -1,23 +1,37 @@
-import time
 import functools
+import time
+
 from utils.logger import logger
 
-def retry(max_retries: int = 2, delay: float = 1.0, exceptions: tuple = (Exception,)):
+
+def retry(
+    max_retries: int = 2,
+    delay: float = 1.0,
+    exceptions: tuple = (Exception,),
+    fatal_exceptions: tuple = (),
+):
     """
     通用重试装饰器
     :param max_retries: 最大重试次数 (不含首次执行，默认 2 次，即最多执行 3 次)
     :param delay: 重试间隔 (秒)
     :param exceptions: 触发重试的异常类型
+    :param fatal_exceptions: 致命异常类型 (命中后立即抛出，不重试；如 IP 风控封禁)
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             last_exception = None
-            for attempt in range(1, max_retries + 2): # attempt 1 是首次执行
+            for attempt in range(1, max_retries + 2):  # attempt 1 是首次执行
                 try:
                     return func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
+                    if isinstance(e, fatal_exceptions):
+                        logger.error(
+                            f"执行 {func.__name__} 中止 (致命异常，不重试): {e}"
+                        )
+                        raise
                     if attempt <= max_retries:
                         logger.warning(
                             f"执行 {func.__name__} 失败 (第 {attempt} 次尝试): {e}. "
@@ -25,9 +39,13 @@ def retry(max_retries: int = 2, delay: float = 1.0, exceptions: tuple = (Excepti
                         )
                         time.sleep(delay)
                     else:
-                        logger.error(f"执行 {func.__name__} 最终失败 (已尝试 {attempt} 次): {e}")
-            
+                        logger.error(
+                            f"执行 {func.__name__} 最终失败 (已尝试 {attempt} 次): {e}"
+                        )
+
             if last_exception:
                 raise last_exception
+
         return wrapper
+
     return decorator

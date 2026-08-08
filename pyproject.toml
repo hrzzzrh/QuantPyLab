@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "akshare>=1.18.22",
+    "akshare>=1.18.83",
     "duckdb>=1.4.4",
     "linkify-it-py>=2.1.0",
     "markdown-it-py>=4.0.0",
@@ -21,8 +21,30 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.16.2",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 88
+exclude = [
+    "workspace",
+    ".venv",
+    ".opencode",
+    "data",
+    "logs",
+    "tmp",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+# E501 由 ruff format 负责结构性换行；剩余超长行为 SQL/HTML/中文标签等字符串字面量，
+# 拆行需字符串拼接且损害可读性，故忽略
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

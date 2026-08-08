@@ -85,3 +85,21 @@ class TestRetryDecorator:
             return 1
 
         assert my_named_func.__name__ == "my_named_func"
+
+    def test_fatal_exception_not_retried(self, monkeypatch):
+        calls = []
+        sleeps = []
+        monkeypatch.setattr(time, "sleep", lambda d: sleeps.append(d))
+
+        class FatalError(RuntimeError):
+            pass
+
+        @retry(max_retries=2, delay=0.5, fatal_exceptions=(FatalError,))
+        def func():
+            calls.append(1)
+            raise FatalError("blocked")
+
+        with pytest.raises(FatalError, match="blocked"):
+            func()
+        assert len(calls) == 1
+        assert sleeps == []
