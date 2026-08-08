@@ -36,6 +36,10 @@ class DailyBacktestEngine:
         if calendar.empty:
             raise ValueError("指定区间没有可用交易日行情")
 
+        # 每只股票在行情数据中的最后交易日 (数据层判定行情终结, 不依赖 stocks 快照)。
+        # 最后交易日收盘后按收盘价强制清算, 后续不再产生任何交易与定价。
+        last_trade_dates = price_data.groupby("symbol")["date"].max().to_dict()
+
         price_map = {
             trading_date: frame.set_index("symbol").to_dict("index")
             for trading_date, frame in price_data.groupby("date")
@@ -86,6 +90,18 @@ class DailyBacktestEngine:
             positions, last_close_prices = self._mark_positions_to_close(
                 positions, last_close_prices, today_prices
             )
+            # 行情终结 (退市/摘牌) 清算: 最后交易日收盘后按收盘价强制变现。
+            positions, cash, last_close_prices, delist_trades = (
+                self._liquidate_delisted(
+                    trading_date,
+                    positions,
+                    cash,
+                    last_close_prices,
+                    today_prices,
+                    last_trade_dates,
+                )
+            )
+            trades.extend(delist_trades)
             nav = cash + sum(positions.values())
             nav_rows.append(
                 {
@@ -226,6 +242,49 @@ class DailyBacktestEngine:
             else:
                 close_values[symbol] = value
         return close_values, last_close_prices
+
+    @staticmethod
+    def _liquidate_delisted(
+        trading_date,
+        positions,
+        cash,
+        last_close_prices,
+        today_prices,
+        last_trade_dates,
+    ):
+        """最后交易日收盘后按收盘价强制清算持仓 (退市/摘牌/行情终结)。
+
+        清算后持仓移出组合, 避免次日缺失行情触发 blocked 冻结整次调仓,
+        也避免持仓价值悬空在最后价格造成净值失真。
+        """
+        delist_trades = []
+        for symbol in list(positions):
+            if last_trade_dates.get(symbol) != trading_date:
+                continue
+            row = today_prices.get(symbol)
+            if not row or pd.isna(row.get("close_hfq")) or not row.get("close_hfq"):
+                continue
+            value = positions.pop(symbol)
+            previous_close = last_close_prices.get(symbol)
+            if previous_close and not pd.isna(previous_close):
+                # 收盘标记可能因缺失开盘价未滚动, 此处按收盘价补齐最后一日涨跌。
+                value = value * float(row["close_hfq"]) / previous_close
+            cash += value
+            last_close_prices.pop(symbol, None)
+            delist_trades.append(
+                {
+                    "date": trading_date,
+                    "signal_date": None,
+                    "symbol": symbol,
+                    "side": "DELIST",
+                    "raw_open": row.get("close"),
+                    "adjusted_open": row.get("close_hfq"),
+                    "notional": value,
+                    "cost": 0.0,
+                    "reason": "delisted_liquidation",
+                }
+            )
+        return positions, cash, last_close_prices, delist_trades
 
     def _calculate_benchmark_nav(self, daily_nav, benchmark_prices):
         if benchmark_prices is None or benchmark_prices.empty:

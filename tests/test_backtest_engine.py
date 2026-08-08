@@ -99,3 +99,100 @@ def test_rebalance_charges_commission_and_slippage_on_turnover():
     assert result.daily_nav.loc[
         result.daily_nav["date"] == pd.Timestamp("2024-01-03"), "nav"
     ].iloc[0] == pytest.approx(109_890)
+
+
+def test_delisted_position_is_liquidated_at_last_close():
+    dates = pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04"])
+    rows = []
+    # 000001 最后交易日为 2024-01-03, 之后行情终结 (退市)。
+    for current_date, a_open, a_close in zip(dates[:2], [100, 100], [100, 110]):
+        rows.append(
+            {
+                "date": current_date,
+                "symbol": "000001",
+                "open": a_open,
+                "open_hfq": a_open,
+                "close_hfq": a_close,
+            }
+        )
+    for current_date in dates:
+        rows.append(
+            {
+                "date": current_date,
+                "symbol": "000002",
+                "open": 50.0,
+                "open_hfq": 50.0,
+                "close_hfq": 50.0,
+            }
+        )
+    prices = pd.DataFrame(rows)
+    targets = pd.DataFrame(
+        [{"date": pd.Timestamp("2024-01-02"), "symbol": "000001", "target_weight": 1.0}]
+    )
+
+    result = DailyBacktestEngine(_config()).run(prices, targets)
+
+    delist_trades = result.trades.loc[result.trades["side"] == "DELIST"]
+    assert len(delist_trades) == 1
+    trade = delist_trades.iloc[0]
+    assert trade["date"] == pd.Timestamp("2024-01-03")
+    assert trade["symbol"] == "000001"
+    assert trade["adjusted_open"] == 110
+    assert trade["notional"] == pytest.approx(109_890)
+    assert trade["cost"] == 0
+    assert not result.trades["side"].isin(["SKIP_REBALANCE"]).any()
+    # 清算后不再持仓: 净值冻结为清算价值, 不被后续行情终结日影响。
+    assert result.daily_nav.loc[
+        result.daily_nav["date"] == pd.Timestamp("2024-01-04"), "nav"
+    ].iloc[0] == pytest.approx(109_890)
+
+
+def test_delisted_position_does_not_block_rebalance():
+    dates = pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04"])
+    rows = []
+    # 000001 最后交易日为 2024-01-03; 000002 全程在市。
+    for current_date, a_open, a_close in zip(dates[:2], [100, 100], [100, 110]):
+        rows.append(
+            {
+                "date": current_date,
+                "symbol": "000001",
+                "open": a_open,
+                "open_hfq": a_open,
+                "close_hfq": a_close,
+            }
+        )
+    for current_date in dates:
+        rows.append(
+            {
+                "date": current_date,
+                "symbol": "000002",
+                "open": 50.0,
+                "open_hfq": 50.0,
+                "close_hfq": 50.0,
+            }
+        )
+    prices = pd.DataFrame(rows)
+    # 01-02 信号: 全仓 000001; 01-03 信号: 全仓 000002 (000001 已清算, 不应阻塞调仓)。
+    targets = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-02"),
+                "symbol": "000001",
+                "target_weight": 1.0,
+            },
+            {
+                "date": pd.Timestamp("2024-01-03"),
+                "symbol": "000002",
+                "target_weight": 1.0,
+            },
+        ]
+    )
+
+    result = DailyBacktestEngine(_config()).run(prices, targets)
+
+    assert not result.trades["side"].isin(["SKIP_REBALANCE"]).any()
+    buy_b = result.trades.loc[
+        (result.trades["side"] == "BUY") & (result.trades["symbol"] == "000002")
+    ]
+    assert len(buy_b) == 1
+    assert buy_b.iloc[0]["date"] == pd.Timestamp("2024-01-04")
