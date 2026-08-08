@@ -149,7 +149,7 @@ class DailyKlineCollector:
         if df.empty:
             raise RuntimeError(f"{symbol} 腾讯源未返回退市股行情数据")
         self.store.save_partition(df, "daily_kline", symbol)
-        # 以腾讯真实最后交易日更新 last_trade_date (纠正 sync-stocks 从本地不完整K线回填的偏小值)
+        # 以腾讯真实最后交易日写入 last_trade_date (sync-stocks 标记退市时保持 NULL, 由本流程负责)
         last_date = df["date"].max()
         conn = db_manager.get_sqlite_conn()
         conn.execute(

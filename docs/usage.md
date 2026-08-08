@@ -34,7 +34,7 @@
 ### 3.2 基础同步命令
 | 子命令 | 说明 | 增量逻辑 | 特有参数 |
 | :--- | :--- | :--- | :--- |
-| `sync-stocks` | 同步 A 股全量代码与名称 | **差量 diff**: 新增插入、存量更新名称、消失标记退市 (is_active=0) 并回填 last_trade_date | 无 |
+| `sync-stocks` | 同步 A 股全量代码与名称 | **差量 diff**: 新增插入、存量更新名称、消失标记退市 (is_active=0)；last_trade_date 由退市股 K 线重建流程写入 | 无 |
 | `sync-metadata` | 同步行业、上市日期等元数据 | 自动识别缺失字段补全 | `--industry`, `--list-info` |
 | `sync-financial` | 同步财务三报表原始数据 | 披露日历驱动 + 孤儿股补全 | 无 |
 | `sync-indicators`| 同步东财计算指标 | 披露日历驱动 + 孤儿股补全 | 无 |

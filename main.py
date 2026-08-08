@@ -62,32 +62,14 @@ def get_orphan_codes(category: str, all_codes: list) -> list:
 # --- 业务逻辑函数 ---
 
 
-def _get_last_trade_date_from_kline(symbol: str) -> str | None:
-    """从本地日线分片查询最后交易日 (YYYYMMDD), 无行情数据返回 None"""
-    from storage.file_store.parquet_store import ParquetStore
-
-    path = ParquetStore().base_dir / "daily_kline" / f"symbol={symbol}" / "data.parquet"
-    if not path.exists():
-        return None
-    try:
-        conn = db_manager.get_duckdb_conn()
-        res = conn.execute(f"SELECT MAX(date) FROM read_parquet('{path}')").fetchone()
-        if not res or not res[0]:
-            return None
-        if isinstance(res[0], datetime):
-            return res[0].strftime("%Y%m%d")
-        return str(res[0]).replace("-", "")
-    except Exception:
-        return None
-
-
 def sync_stock_list():
     """同步股票列表: 差量 diff 更新 (新增插入, 存量更新, 消失标记退市)
 
     以 AkShare 当前在市列表为基准:
     - 新列表有、库中无   -> INSERT (is_active=1)
     - 两边都有          -> 更新 name (若曾被误标退市则恢复)
-    - 库中有、新列表无   -> UPDATE is_active=0 + 回填 last_trade_date
+    - 库中有、新列表无   -> UPDATE is_active=0 (last_trade_date 保持 NULL,
+      由退市股 K 线腾讯重建流程写入真实最后交易日)
     接口返回空列表时跳过, 防止数据源异常导致全库误标退市。
     """
     collector = StockListCollector()
@@ -134,13 +116,12 @@ def sync_stock_list():
         old_name, old_active = existing_map[symbol]
         if old_active == 0:
             continue
-        last_date = _get_last_trade_date_from_kline(symbol)
         cursor.execute(
-            "UPDATE stocks SET is_active = 0, last_trade_date = ?,"
-            " updated_at = CURRENT_TIMESTAMP WHERE symbol = ?",
-            (last_date, symbol),
+            "UPDATE stocks SET is_active = 0, updated_at = CURRENT_TIMESTAMP"
+            " WHERE symbol = ?",
+            (symbol,),
         )
-        logger.info(f"标记退市: {symbol} {old_name} (last_trade_date={last_date})")
+        logger.info(f"标记退市: {symbol} {old_name}")
         delisted += 1
 
     conn.commit()

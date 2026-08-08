@@ -24,14 +24,14 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 | `industry` | TEXT | - | 东财细分行业 | `白酒` |
 | `list_date` | TEXT | - | 上市日期 (格式: YYYYMMDD) | `20010827` |
 | `is_active` | INTEGER | DEFAULT 1 | 存续状态 (1:在市, 0:退市) | `1` |
-| `last_trade_date` | TEXT | - | 最后交易日 (YYYYMMDD)，退市时从本地日线回填；无本地行情时为 NULL | `20260630` |
+| `last_trade_date` | TEXT | - | 最后交易日 (YYYYMMDD)，由退市股 K 线腾讯重建流程写入真实值；未重建前为 NULL | `20260630` |
 | `updated_at` | DATETIME | DEFAULT ... | 最后同步时间 (UTC) | `2026-02-22 10:00:00` |
 
 ### C. 同步逻辑与维护
 - **差量 diff 更新**: 执行 `sync-stocks` 时，以 AkShare 当前在市列表 (`stock_info_a_code_name`，含沪深北) 为基准进行 diff：
     - 新列表有、库中无 → 插入 (is_active=1)
     - 两边都有 → 更新名称 (若曾被误标退市则恢复)
-    - 库中有、新列表无 → 标记退市 (is_active=0) 并回填 `last_trade_date`
+    - 库中有、新列表无 → 标记退市 (is_active=0)，last_trade_date 由退市股 K 线腾讯重建流程写入
     - 接口返回空列表时跳过本次更新，防止数据源异常导致全库误标退市。
 - **属性补全**: 执行 `sync-metadata` 时，系统会针对 `area`, `industry`, `list_date` 等空字段，通过多源（雪球/东财）进行异步并发补全。
 
