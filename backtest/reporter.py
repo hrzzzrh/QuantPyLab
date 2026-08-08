@@ -32,7 +32,10 @@ def write_backtest_result(
 def _write_summary(path: Path, daily_nav: pd.DataFrame, trades: pd.DataFrame) -> None:
     metrics = calculate_performance_metrics(daily_nav)
     benchmark_metrics = calculate_performance_metrics(daily_nav, "benchmark_nav")
-    turnover = trades.loc[trades["side"].isin(["BUY", "SELL"]), "notional"].sum() / daily_nav["nav"].iloc[0]
+    turnover = (
+        trades.loc[trades["side"].isin(["BUY", "SELL"]), "notional"].sum()
+        / daily_nav["nav"].iloc[0]
+    )
     lines = [
         "# 回测摘要",
         "",

@@ -17,6 +17,9 @@
 ```bash
 # 安装依赖
 uv sync
+
+# 启用 Git 提交钩子 (提交时自动执行 ruff lint 与格式检查)
+git config core.hooksPath .githooks
 ```
 
 ### 2. 初始化元数据

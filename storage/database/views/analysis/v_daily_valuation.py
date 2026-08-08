@@ -1,5 +1,6 @@
 from storage.database.view_base import DuckDBView
 
+
 class DailyValuationView(DuckDBView):
     name = "v_daily_valuation"
     dependencies = ["daily_kline", "share_capital", "fin_ttm", "fin_balance_sheet"]

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
 
 from .schema_builder import ensure_schema
 
@@ -9,12 +8,16 @@ def build_schema_map_expr(dataset: str) -> str:
     根据 schema 缓存生成 read_parquet 的 schema MAP 表达式。
     缓存缺失时自动重建。
     """
-    schema: Dict[str, str] = ensure_schema(dataset)
+    schema: dict[str, str] = ensure_schema(dataset)
     parts = [
         f"'{name}': {{'name': '{name}', 'type': '{dtype}', 'default_value': NULL}}"
         for name, dtype in sorted(schema.items())
     ]
-    return "{" + ", ".join(parts) + "}::MAP(VARCHAR, STRUCT(name VARCHAR, type VARCHAR, default_value VARCHAR))"
+    return (
+        "{"
+        + ", ".join(parts)
+        + "}::MAP(VARCHAR, STRUCT(name VARCHAR, type VARCHAR, default_value VARCHAR))"
+    )
 
 
 class DuckDBView(ABC):
@@ -30,7 +33,7 @@ class DuckDBView(ABC):
         pass
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         """
         依赖的其他视图名称列表。
         用于构建 DAG 并确定加载顺序。

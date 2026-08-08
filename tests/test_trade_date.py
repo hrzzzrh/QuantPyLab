@@ -1,7 +1,6 @@
 """单元测试: utils/trade_date.py 交易日历（mock 网络与缓存，不触真实网络）"""
 
 from datetime import date, datetime
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -22,7 +21,9 @@ MOCK_TRADE_DATES = [
 @pytest.fixture(autouse=True)
 def _isolate_cache(tmp_path, monkeypatch):
     """每个测试使用独立的缓存文件并清空内存缓存"""
-    monkeypatch.setattr(trade_date_mod, "CACHE_FILE", tmp_path / "trade_calendar.parquet")
+    monkeypatch.setattr(
+        trade_date_mod, "CACHE_FILE", tmp_path / "trade_calendar.parquet"
+    )
     _get_all_trade_dates.cache_clear()
     yield
     _get_all_trade_dates.cache_clear()
@@ -79,7 +80,9 @@ class TestTradeCalendarCache:
     def test_fresh_cache_skips_network(self, monkeypatch, tmp_path):
         """缓存足够新时不再请求网络"""
         cache_path = tmp_path / "trade_calendar.parquet"
-        pd.DataFrame({"trade_date": MOCK_TRADE_DATES}).to_parquet(cache_path, index=False)
+        pd.DataFrame({"trade_date": MOCK_TRADE_DATES}).to_parquet(
+            cache_path, index=False
+        )
         _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
         assert _get_all_trade_dates() == MOCK_TRADE_DATES
 

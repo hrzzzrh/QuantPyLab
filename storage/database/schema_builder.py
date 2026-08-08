@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
 
 import duckdb
 
@@ -31,7 +30,7 @@ def _wider_type(t1: str, t2: str) -> str:
     return t1 if _TYPE_RANK.get(t1, 5) >= _TYPE_RANK.get(t2, 5) else t2
 
 
-def build_schema(pattern: str) -> Dict[str, str]:
+def build_schema(pattern: str) -> dict[str, str]:
     """
     扫描数据集全部分片，聚合列名+类型的并集。
     同名不同型取更宽类型。使用 parquet_schema 单次 SQL 完成，无需逐文件打开。
@@ -49,7 +48,7 @@ def build_schema(pattern: str) -> Dict[str, str]:
     ).fetchall()
     conn.close()
 
-    types: Dict[str, str] = {}
+    types: dict[str, str] = {}
     total_files = 0
     for name, dtype, nfiles in rows:
         total_files = max(total_files, nfiles)
@@ -64,7 +63,7 @@ def build_schema(pattern: str) -> Dict[str, str]:
     return types
 
 
-def save_schema(dataset: str, schema: Dict[str, str]):
+def save_schema(dataset: str, schema: dict[str, str]):
     """写入 schema 缓存 JSON"""
     SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -78,7 +77,7 @@ def save_schema(dataset: str, schema: Dict[str, str]):
     logger.info(f"schema 缓存已写入: {path} ({len(schema)} 列)")
 
 
-def load_schema(dataset: str) -> Optional[Dict[str, str]]:
+def load_schema(dataset: str) -> dict[str, str] | None:
     """读取 schema 缓存；缺失/损坏返回 None"""
     path = SCHEMA_DIR / f"{dataset}.json"
     if not path.exists():
@@ -93,7 +92,7 @@ def load_schema(dataset: str) -> Optional[Dict[str, str]]:
         return None
 
 
-def ensure_schema(dataset: str) -> Dict[str, str]:
+def ensure_schema(dataset: str) -> dict[str, str]:
     """
     获取数据集 schema，缺失/损坏时自动重建。
     返回 (schema, rebuilt 标记) 之外的 schema 字典。

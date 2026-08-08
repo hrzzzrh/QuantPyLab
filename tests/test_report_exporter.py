@@ -29,7 +29,9 @@ class TestGetSortedFiles:
         _write_file(reports_dir / "研报章节三：业务拆解.md", "# 章节三")
         _write_file(reports_dir / "研报章节五：估值定价分析.md", "# 章节五")
         _write_file(reports_dir / "研报章节七：投资摘要与风险因素.md", "# 章节七")
-        _write_file(reports_dir / "贵州茅台_完整版深度研究报告_2026年1月1日.md", "# 完整版")
+        _write_file(
+            reports_dir / "贵州茅台_完整版深度研究报告_2026年1月1日.md", "# 完整版"
+        )
         _write_file(base / "跟踪手册.md", "# 跟踪手册")
 
         exporter = ReportExporter("贵州茅台", base_dir=str(base.parent))

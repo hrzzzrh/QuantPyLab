@@ -72,7 +72,12 @@ class DailyBacktestEngine:
                     )
                 else:
                     positions, cash, rebalance_trades = self._rebalance(
-                        trading_date, signal_date, open_values, cash, planned_weights, today_prices
+                        trading_date,
+                        signal_date,
+                        open_values,
+                        cash,
+                        planned_weights,
+                        today_prices,
                     )
                     trades.extend(rebalance_trades)
             else:
@@ -92,7 +97,9 @@ class DailyBacktestEngine:
             )
 
         daily_nav = pd.DataFrame(nav_rows)
-        daily_nav["benchmark_nav"] = self._calculate_benchmark_nav(daily_nav, benchmark_prices)
+        daily_nav["benchmark_nav"] = self._calculate_benchmark_nav(
+            daily_nav, benchmark_prices
+        )
         trade_columns = [
             "date",
             "signal_date",
@@ -104,9 +111,13 @@ class DailyBacktestEngine:
             "cost",
             "reason",
         ]
-        return BacktestResult(daily_nav=daily_nav, trades=pd.DataFrame(trades, columns=trade_columns))
+        return BacktestResult(
+            daily_nav=daily_nav, trades=pd.DataFrame(trades, columns=trade_columns)
+        )
 
-    def _build_execution_plans(self, targets: pd.DataFrame, calendar: pd.DatetimeIndex) -> dict:
+    def _build_execution_plans(
+        self, targets: pd.DataFrame, calendar: pd.DatetimeIndex
+    ) -> dict:
         if targets.empty:
             return {}
         target_data = targets.copy()
@@ -118,7 +129,10 @@ class DailyBacktestEngine:
                 continue
             plans[following_dates[0]] = (
                 signal_date,
-                {row.symbol: float(row.target_weight) for row in group.itertuples(index=False)},
+                {
+                    row.symbol: float(row.target_weight)
+                    for row in group.itertuples(index=False)
+                },
             )
         return plans
 
@@ -137,7 +151,15 @@ class DailyBacktestEngine:
                 open_values[symbol] = value * float(open_price) / previous_close
         return open_values, blocked_symbols
 
-    def _rebalance(self, trading_date, signal_date, open_values, cash, planned_weights, today_prices):
+    def _rebalance(
+        self,
+        trading_date,
+        signal_date,
+        open_values,
+        cash,
+        planned_weights,
+        today_prices,
+    ):
         available_weights = {
             symbol: weight
             for symbol, weight in planned_weights.items()
@@ -146,10 +168,15 @@ class DailyBacktestEngine:
         before_nav = cash + sum(open_values.values())
         symbols = set(open_values) | set(available_weights)
         notional_by_symbol = {
-            symbol: abs(available_weights.get(symbol, 0.0) * before_nav - open_values.get(symbol, 0.0))
+            symbol: abs(
+                available_weights.get(symbol, 0.0) * before_nav
+                - open_values.get(symbol, 0.0)
+            )
             for symbol in symbols
         }
-        total_cost = sum(notional_by_symbol.values()) * self.config.transaction_cost_rate
+        total_cost = (
+            sum(notional_by_symbol.values()) * self.config.transaction_cost_rate
+        )
         after_cost_nav = before_nav - total_cost
         # 以扣成本后的净值分配目标权重，避免手续费把现金余额推成负数。
         positions = {
@@ -187,7 +214,12 @@ class DailyBacktestEngine:
             row = today_prices.get(symbol)
             open_price = row.get("open_hfq") if row else None
             close_price = row.get("close_hfq") if row else None
-            if pd.notna(open_price) and open_price and pd.notna(close_price) and close_price:
+            if (
+                pd.notna(open_price)
+                and open_price
+                and pd.notna(close_price)
+                and close_price
+            ):
                 # 只计算开盘至收盘的后复权变动；隔夜变动已在 _mark_positions_to_open 计入。
                 close_values[symbol] = value * float(close_price) / float(open_price)
                 last_close_prices[symbol] = float(close_price)
@@ -200,8 +232,12 @@ class DailyBacktestEngine:
             return pd.Series(index=daily_nav.index, dtype="float64")
         benchmark = benchmark_prices.copy()
         benchmark["date"] = pd.to_datetime(benchmark["date"])
-        benchmark = benchmark.dropna(subset=["close_hfq"]).drop_duplicates("date", keep="last")
-        benchmark = benchmark.set_index("date")["close_hfq"].reindex(daily_nav["date"], method="ffill")
+        benchmark = benchmark.dropna(subset=["close_hfq"]).drop_duplicates(
+            "date", keep="last"
+        )
+        benchmark = benchmark.set_index("date")["close_hfq"].reindex(
+            daily_nav["date"], method="ffill"
+        )
         first_valid = benchmark.first_valid_index()
         if first_valid is None:
             return pd.Series(index=daily_nav.index, dtype="float64")

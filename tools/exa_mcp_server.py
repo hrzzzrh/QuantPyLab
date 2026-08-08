@@ -83,7 +83,7 @@ class ExaClient:
                 last_error = exc
                 continue
             if resp.status_code == 429:
-                last_error = RuntimeError(f"key 触限流 (429)，切换下一 key 重试")
+                last_error = RuntimeError("key 触限流 (429)，切换下一 key 重试")
                 continue
             if resp.status_code >= 400:
                 raise RuntimeError(

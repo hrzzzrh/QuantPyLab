@@ -14,7 +14,7 @@ EM_HEADERS = {
     "sec-fetch-dest": "script",
     "sec-fetch-mode": "no-cors",
     "sec-fetch-site": "same-site",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
 }
 
 EM_PARAMS_COMMON = {
@@ -24,5 +24,5 @@ EM_PARAMS_COMMON = {
     "po": "1",
     "dect": "1",
     "wbp2u": "|0|0|0|web",
-    "ut": "fa5fd1943c7b386f172d6893dbfba10b"  # 你的第一个 ut，经测试可用
+    "ut": "fa5fd1943c7b386f172d6893dbfba10b",  # 你的第一个 ut，经测试可用
 }

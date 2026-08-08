@@ -25,7 +25,7 @@ from utils.trade_date import get_latest_trade_date
 
 # 假设今天是 2025-02-08 (周六)
 ld = get_latest_trade_date()
-print(ld) # 输出: 2025-02-07
+print(ld)  # 输出: 2025-02-07
 ```
 
 ---

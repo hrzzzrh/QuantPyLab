@@ -51,7 +51,9 @@ def isolated_warehouse(tmp_path, monkeypatch):
     return tmp_path
 
 
-def _write_income(warehouse: Path, symbol: str, rows, columns=("net_profit", "revenue")):
+def _write_income(
+    warehouse: Path, symbol: str, rows, columns=("net_profit", "revenue")
+):
     df = pd.DataFrame(
         [
             {
@@ -164,7 +166,8 @@ class TestCalculateForSymbol:
         """income 与 cashflow 期间不一致时: 该期净利 TTM 正常, 缺失指标为 NaN 但行保留"""
         _write_income(isolated_warehouse, "000001", FULL_REPORTS)
         cashflow_rows = [
-            (rd, pub, ocf) for rd, pub, ocf in [
+            (rd, pub, ocf)
+            for rd, pub, ocf in [
                 ("20221231", "2023-04-28", 600),
                 ("20230331", "2023-04-28", 100),
                 ("20230630", "2023-08-30", 350),

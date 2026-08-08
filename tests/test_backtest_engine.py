@@ -22,7 +22,9 @@ def _config():
 def _prices(open_for_b=50.0):
     dates = pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"])
     rows = []
-    for current_date, a_open, a_close in zip(dates, [100, 100, 110, 121], [100, 110, 121, 121]):
+    for current_date, a_open, a_close in zip(
+        dates, [100, 100, 110, 121], [100, 110, 121, 121]
+    ):
         rows.append(
             {
                 "date": current_date,
@@ -55,7 +57,12 @@ def test_signal_executes_at_next_trading_day_open():
     buy_trade = result.trades.loc[result.trades["side"] == "BUY"].iloc[0]
     assert buy_trade["date"] == pd.Timestamp("2024-01-03")
     assert buy_trade["signal_date"] == pd.Timestamp("2024-01-02")
-    assert result.daily_nav.loc[result.daily_nav["date"] == pd.Timestamp("2024-01-02"), "nav"].iloc[0] == 100_000
+    assert (
+        result.daily_nav.loc[
+            result.daily_nav["date"] == pd.Timestamp("2024-01-02"), "nav"
+        ].iloc[0]
+        == 100_000
+    )
 
 
 def test_missing_target_open_leaves_capital_as_cash():
@@ -71,7 +78,12 @@ def test_missing_target_open_leaves_capital_as_cash():
     result = DailyBacktestEngine(_config()).run(prices, targets)
 
     assert result.trades.empty
-    assert result.daily_nav.loc[result.daily_nav["date"] == pd.Timestamp("2024-01-03"), "cash"].iloc[0] == 100_000
+    assert (
+        result.daily_nav.loc[
+            result.daily_nav["date"] == pd.Timestamp("2024-01-03"), "cash"
+        ].iloc[0]
+        == 100_000
+    )
 
 
 def test_rebalance_charges_commission_and_slippage_on_turnover():
@@ -84,4 +96,6 @@ def test_rebalance_charges_commission_and_slippage_on_turnover():
     buy_trade = result.trades.loc[result.trades["side"] == "BUY"].iloc[0]
     assert buy_trade["notional"] == 100_000
     assert buy_trade["cost"] == 100
-    assert result.daily_nav.loc[result.daily_nav["date"] == pd.Timestamp("2024-01-03"), "nav"].iloc[0] == pytest.approx(109_890)
+    assert result.daily_nav.loc[
+        result.daily_nav["date"] == pd.Timestamp("2024-01-03"), "nav"
+    ].iloc[0] == pytest.approx(109_890)

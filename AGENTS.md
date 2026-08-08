@@ -27,7 +27,8 @@
 6. **统一视图架构 (Unified View Architecture)**：
 所有数据查询必须通过视图完成。视图采用 Python 类定义 (`storage/database/views/`)，支持显式依赖 (DAG) 与自动可视化。
 7. **运行规范**：本项目统一使用 `uv` 进行环境管理。执行脚本格式：`uv run main.py <subcommand> [options]`。
-8. **禁止全量扫描数据目录 (Data Directory Guard)**：严禁使用 `ls` 或类似命令对 `data/` 目录进行全量或递归扫描（Parquet 分片数量巨大），必须使用精准路径、脚本查询或元数据库（`metadata.db`）定位目标。
+8. **代码质量检查 (Lint Gate)**：修改核心代码（`storage/`、`backtest/`、`data_ingestion/`、`utils/`、`config/`、`analysis/`、`tools/`、`main.py`、`tests/`，不含 `workspace/`）后，必须依次运行 `uv run ruff check .` 与 `uv run ruff format --check .`，两项全部通过方可完成任务；如需格式化运行 `uv run ruff format .`。规则与豁免配置见 `pyproject.toml` 的 `[tool.ruff]`。
+9. **禁止全量扫描数据目录 (Data Directory Guard)**：严禁使用 `ls` 或类似命令对 `data/` 目录进行全量或递归扫描（Parquet 分片数量巨大），必须使用精准路径、脚本查询或元数据库（`metadata.db`）定位目标。
 
 ## 4. 项目进度
 - [x] **基础架构搭建**：完成 `uv` 环境配置，实现 SQLite/DuckDB 双引擎。

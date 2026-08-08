@@ -103,4 +103,6 @@ class TestBuildSchemaMapExpr:
         expr = view_base_mod.build_schema_map_expr("fin_ttm")
         assert "'a': {'name': 'a', 'type': 'BIGINT'" in expr
         assert "'b': {'name': 'b', 'type': 'VARCHAR'" in expr
-        assert expr.endswith("::MAP(VARCHAR, STRUCT(name VARCHAR, type VARCHAR, default_value VARCHAR))")
+        assert expr.endswith(
+            "::MAP(VARCHAR, STRUCT(name VARCHAR, type VARCHAR, default_value VARCHAR))"
+        )

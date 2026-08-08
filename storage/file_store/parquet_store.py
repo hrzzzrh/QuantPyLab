@@ -1,8 +1,11 @@
-import pandas as pd
 import os
 from pathlib import Path
-from utils.logger import logger
+
+import pandas as pd
+
 from config.settings import WAREHOUSE_DIR
+from utils.logger import logger
+
 
 class ParquetStore:
     """
@@ -26,25 +29,22 @@ class ParquetStore:
         # 1. 准备目录 (Hive-style: category/symbol=XXXXXX/)
         target_dir = self.base_dir / category / f"symbol={symbol}"
         target_dir.mkdir(parents=True, exist_ok=True)
-        
+
         target_path = target_dir / "data.parquet"
         temp_path = target_dir / f".tmp_{symbol}.parquet"
 
         try:
             # 如果 symbol 列在 DF 中，导出时排除它（因为它已在目录名中）
-            cols_to_save = [c for c in df.columns if c != 'symbol']
-            
+            cols_to_save = [c for c in df.columns if c != "symbol"]
+
             # 2. 写入临时文件
             df[cols_to_save].to_parquet(
-                temp_path, 
-                engine='pyarrow', 
-                compression='snappy', 
-                index=False
+                temp_path, engine="pyarrow", compression="snappy", index=False
             )
 
             # 3. 原子替换
             os.replace(temp_path, target_path)
-            
+
         except Exception:
             logger.exception(f"写入 Parquet 失败 [{symbol}]")
             if temp_path.exists():

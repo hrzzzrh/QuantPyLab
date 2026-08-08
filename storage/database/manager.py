@@ -1,25 +1,27 @@
 import sqlite3
-import duckdb
-import os
 from datetime import datetime
 from pathlib import Path
+
+import duckdb
+
 from config.settings import SQLITE_DB_PATH, WAREHOUSE_DIR
-from typing import Optional, List
+
 from .view_loader import ViewLoader
+
 
 class DBManager:
     """
     数据库管理器，负责管理 SQLite (元数据) 和 DuckDB (分析数据) 的连接。
     遵循读写分离原则，统一通过此类获取连接。
     """
-    
+
     def __init__(self):
         self.sqlite_path = SQLITE_DB_PATH
         self.warehouse_dir = Path(WAREHOUSE_DIR)
-        
-        self._sqlite_conn: Optional[sqlite3.Connection] = None
-        self._duckdb_conn: Optional[duckdb.DuckDBPyConnection] = None
-        
+
+        self._sqlite_conn: sqlite3.Connection | None = None
+        self._duckdb_conn: duckdb.DuckDBPyConnection | None = None
+
         # 初始化表结构
         self.initialize_schema()
 
@@ -54,7 +56,9 @@ class DBManager:
     def get_sqlite_conn(self) -> sqlite3.Connection:
         """获取 SQLite 连接 (元数据)"""
         if self._sqlite_conn is None:
-            self._sqlite_conn = sqlite3.connect(self.sqlite_path, check_same_thread=False)
+            self._sqlite_conn = sqlite3.connect(
+                self.sqlite_path, check_same_thread=False
+            )
             # 启用外键约束
             self._sqlite_conn.execute("PRAGMA foreign_keys = ON;")
         return self._sqlite_conn
@@ -103,12 +107,15 @@ class DBManager:
                         needed.add(dep)
                         changed = True
 
-        to_create = [n for n in needed if n in loader.view_classes and n not in registered]
+        to_create = [
+            n for n in needed if n in loader.view_classes and n not in registered
+        ]
         if not to_create:
             return
 
         # 拓扑排序确保依赖先创建
         from graphlib import TopologicalSorter
+
         ts = TopologicalSorter()
         for name in to_create:
             inst = instances[name]
@@ -159,28 +166,30 @@ class DBManager:
         loader = ViewLoader(views_dir)
         loader.discover_views()
         sorted_views = loader.get_sorted_views()
-        
+
         sql_blocks = [
             "-- QuantPyLab 自动生成的视图脚本",
             "-- 运行环境: DuckDB",
             f"-- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "\n"
+            "\n",
         ]
-        
+
         for view in sorted_views:
             sql = view.get_sql(str(self.warehouse_dir)).strip()
-            if not sql.endswith(';'):
-                sql += ';'
+            if not sql.endswith(";"):
+                sql += ";"
             sql_blocks.append(f"-- View: {view.name}")
             sql_blocks.append(sql)
             sql_blocks.append("")
-            
+
         return "\n".join(sql_blocks)
 
-    def list_available_views(self) -> List[str]:
+    def list_available_views(self) -> list[str]:
         """获取当前 DuckDB 中可用的所有视图列表"""
         conn = self.get_duckdb_conn()
-        res = conn.execute("SELECT table_name FROM information_schema.tables WHERE table_type='VIEW'").fetchall()
+        res = conn.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_type='VIEW'"
+        ).fetchall()
         return [row[0] for row in res]
 
     def close_all(self):
@@ -191,6 +200,7 @@ class DBManager:
         if self._duckdb_conn:
             self._duckdb_conn.close()
             self._duckdb_conn = None
+
 
 # 创建全局单例
 db_manager = DBManager()

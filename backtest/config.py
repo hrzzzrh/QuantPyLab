@@ -1,7 +1,7 @@
+import tomllib
 from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from pathlib import Path
-import tomllib
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,8 @@ class BacktestConfig:
         if self.commission_bps < 0 or self.slippage_bps < 0:
             raise ValueError("手续费和滑点不能为负数")
         if self.benchmark_symbol and (
-            not isinstance(self.benchmark_symbol, str) or not self.benchmark_symbol.isdigit()
+            not isinstance(self.benchmark_symbol, str)
+            or not self.benchmark_symbol.isdigit()
         ):
             raise ValueError("基准代码必须是纯数字")
 
@@ -41,7 +42,9 @@ class BacktestConfig:
         payload["transaction_cost_rate"] = self.transaction_cost_rate
         return payload
 
-    def with_resolved_strategy(self, version: str, parameters: dict) -> "BacktestConfig":
+    def with_resolved_strategy(
+        self, version: str, parameters: dict
+    ) -> "BacktestConfig":
         return replace(self, strategy_version=version, strategy_parameters=parameters)
 
 

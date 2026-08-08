@@ -29,7 +29,9 @@ class BacktestDataAccess:
             view_names.append("fin_indicator")
         self.db_manager.ensure_views(*view_names)
         conn = self.db_manager.get_duckdb_conn()
-        lookback_start = self._get_lookback_start(conn, config.start_date, lookback_days)
+        lookback_start = self._get_lookback_start(
+            conn, config.start_date, lookback_days
+        )
         indicator_sql = self._build_indicator_join(indicator_fields)
         frame = conn.execute(
             f"""
@@ -63,15 +65,19 @@ class BacktestDataAccess:
         if not config.benchmark_symbol:
             return pd.DataFrame(columns=["date", "close_hfq"])
         self.db_manager.ensure_views("etf_kline")
-        frame = self.db_manager.get_duckdb_conn().execute(
-            """
+        frame = (
+            self.db_manager.get_duckdb_conn()
+            .execute(
+                """
             SELECT CAST(date AS DATE) AS date, close * adj_factor AS close_hfq
             FROM etf_kline
             WHERE symbol = ? AND CAST(date AS DATE) BETWEEN ? AND ?
             ORDER BY date
             """,
-            [config.benchmark_symbol, config.start_date, config.end_date],
-        ).df()
+                [config.benchmark_symbol, config.start_date, config.end_date],
+            )
+            .df()
+        )
         frame["date"] = pd.to_datetime(frame["date"])
         return frame
 
@@ -125,9 +131,14 @@ class BacktestDataAccess:
         """
 
     @staticmethod
-    def _build_indicator_projection(indicator_fields: tuple[IndicatorField, ...]) -> str:
-        return "" if not indicator_fields else ", " + ", ".join(
-            f"indicators.{field.alias}" for field in indicator_fields
+    def _build_indicator_projection(
+        indicator_fields: tuple[IndicatorField, ...],
+    ) -> str:
+        return (
+            ""
+            if not indicator_fields
+            else ", "
+            + ", ".join(f"indicators.{field.alias}" for field in indicator_fields)
         )
 
     @staticmethod

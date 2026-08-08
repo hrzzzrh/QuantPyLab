@@ -3,7 +3,9 @@ import math
 import pandas as pd
 
 
-def calculate_performance_metrics(daily_nav: pd.DataFrame, column: str = "nav") -> dict[str, float | int | None]:
+def calculate_performance_metrics(
+    daily_nav: pd.DataFrame, column: str = "nav"
+) -> dict[str, float | int | None]:
     series = daily_nav.set_index("date")[column].dropna()
     if series.empty:
         return {
@@ -19,7 +21,9 @@ def calculate_performance_metrics(daily_nav: pd.DataFrame, column: str = "nav") 
     elapsed_days = max((series.index[-1] - series.index[0]).days, 1)
     annualized_return = (1 + total_return) ** (365.25 / elapsed_days) - 1
     daily_returns = series.pct_change().dropna()
-    annualized_volatility = daily_returns.std(ddof=0) * math.sqrt(252) if not daily_returns.empty else 0.0
+    annualized_volatility = (
+        daily_returns.std(ddof=0) * math.sqrt(252) if not daily_returns.empty else 0.0
+    )
     sharpe_ratio = (
         daily_returns.mean() / daily_returns.std(ddof=0) * math.sqrt(252)
         if len(daily_returns) > 1 and daily_returns.std(ddof=0) > 0

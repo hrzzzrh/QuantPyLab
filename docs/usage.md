@@ -55,6 +55,18 @@
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
+### 2.4 代码质量检查 (Lint & Format)
+
+本项目使用 `ruff` 统一管理 lint 与代码格式（配置见 `pyproject.toml` 的 `[tool.ruff]`）。检查范围为核心代码（`storage/`、`backtest/`、`data_ingestion/`、`utils/`、`config/`、`analysis/`、`tools/`、`main.py`、`tests/`），`workspace/` 下的开发脚本被排除。
+
+```bash
+uv run ruff check .        # 静态检查（规则: E/F/I/UP）
+uv run ruff format .       # 自动格式化
+uv run ruff format --check .   # 检查格式是否符合规范（CI 用）
+```
+
+> **E501 行长度说明**：`E501` 已配置忽略。结构性超长行由 `ruff format` 自动换行；剩余的 SQL/HTML/中文标签等字符串字面量不做强制拆行。
+
 ### 3.3 日频回测 (`run-backtest`)
 
 `run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）和 `price-momentum`（中期动量与趋势）两种策略。所有策略均在每月最后一个交易日收盘后产生信号，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
@@ -102,11 +114,12 @@ duckdb -init /tmp/views.sql -c "SELECT * FROM v_daily_valuation WHERE symbol='60
 from storage.database.manager import db_manager
 import pandas as pd
 
+
 def main():
     # 1. 获取连接 (视图默认不加载，需显式声明)
     conn = db_manager.get_duckdb_conn()
-    db_manager.ensure_views('v_daily_valuation')  # 依赖视图 (daily_kline 等) 自动注册
-    symbol = '002487'
+    db_manager.ensure_views("v_daily_valuation")  # 依赖视图 (daily_kline 等) 自动注册
+    symbol = "002487"
 
     # 2. 编写 SQL (推荐使用 TTM 或 估值视图)
     query = f"""
@@ -120,11 +133,12 @@ def main():
     df = conn.execute(query).df()
     print(df)
 
+
 if __name__ == "__main__":
     try:
         main()
     finally:
-        db_manager.close_all() # 务必关闭连接释放资源
+        db_manager.close_all()  # 务必关闭连接释放资源
 ```
 
 ### 4.3 路径 C：外部工具 (DBeaver)
@@ -177,10 +191,10 @@ df['ma60'] = df['close_hfq'].rolling(60).mean()
 三大报表 (`fin_balance_sheet`, `fin_income_statement`, `fin_cashflow_statement`) 和指标表 (`fin_indicator`) 的列名为中文，在 Python 字符串中需要双引号包裹：
 ```python
 # ✅ 正确：双引号（SQL 标识符）包裹中文列名
-query = '''
+query = """
     SELECT report_date, "营业收入"/1e8 as rev_100m, "归属于母公司所有者的净利润"/1e8 as np_100m
     FROM fin_income_statement WHERE symbol='002594'
-'''
+"""
 ```
 
 ### 5.4 `report_date` 类型为 VARCHAR 非 DATE

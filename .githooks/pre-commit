@@ -1,0 +1,17 @@
+#!/bin/sh
+# 提交前钩子 (Pre-commit Hook)
+# 与 AGENTS.md 开发核心原则第 8 条 (Lint Gate) 保持一致：
+# 依次运行 ruff lint 与格式检查，任一项失败则阻断提交。
+#
+# 启用方式（一次即可，配置存于 .git/config，不入库）：
+#   git config core.hooksPath .githooks
+
+set -e
+
+echo "→ ruff check"
+uv run ruff check .
+
+echo "→ ruff format --check"
+uv run ruff format --check .
+
+echo "✓ lint 与格式检查通过"

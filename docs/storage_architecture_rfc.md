@@ -142,11 +142,14 @@ import pandas as pd
 import os
 from pathlib import Path
 
+
 class ParquetStore:
     def __init__(self, base_dir: str):
         self.base_dir = Path(base_dir)
 
-    def write_atomic(self, df: pd.DataFrame, partition_col: str, partition_val: str, category: str):
+    def write_atomic(
+        self, df: pd.DataFrame, partition_col: str, partition_val: str, category: str
+    ):
         """
         原子写入：先写 temp，再 rename。
         确保分析进程永远读不到"写了一半"的损坏文件。
@@ -154,14 +157,14 @@ class ParquetStore:
         # 1. 确定目标路径
         target_dir = self.base_dir / category
         target_dir.mkdir(parents=True, exist_ok=True)
-        
+
         filename = f"{partition_col}={partition_val}.parquet"
         target_path = target_dir / filename
         temp_path = target_dir / f".tmp_{filename}"
 
         # 2. 写入临时文件
         # engine='pyarrow' 性能通常优于 fastparquet
-        df.to_parquet(temp_path, engine='pyarrow', compression='snappy')
+        df.to_parquet(temp_path, engine="pyarrow", compression="snappy")
 
         # 3. 原子替换 (Critical Section)
         # 在 POSIX 系统上，os.replace 是原子的

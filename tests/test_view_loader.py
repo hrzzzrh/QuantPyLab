@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from storage.database.view_base import DuckDBView
 from storage.database.view_loader import ViewLoader
 
 VIEW_TEMPLATE = """\
