@@ -7,7 +7,9 @@ import pandas as pd
 from storage.database.manager import db_manager
 from storage.database.sync_status import (
     DATASET_KLINE,
+    DATASET_KLINE_DAILY,
     get_last_sync_date,
+    is_synced_today,
     record_sync_success,
 )
 from storage.file_store.parquet_store import ParquetStore
@@ -16,15 +18,12 @@ from utils.logger import logger
 from utils.retry import retry
 from utils.trade_date import get_latest_trade_date
 
-_TENCENT_PAGE_SIZE = 640
-
 
 class DailyKlineCollector:
     """
     日线 K 线采集器
     策略: 存原始价格 + 复权因子
     支持多源切换 (Sina/EM)
-    退市股: 腾讯源全量重建 (单一复权口径)
     """
 
     def __init__(self, source: str = "em"):
@@ -38,127 +37,6 @@ class DailyKlineCollector:
             "SELECT is_active FROM stocks WHERE symbol = ?", (symbol,)
         ).fetchone()
         return row is not None and row[0] == 0
-
-    def _fetch_tencent_page(self, symbol: str, end_date: str, fq: str) -> list[list]:
-        """抓取腾讯 fqkline 单页 (640条, 截至 end_date 向前)"""
-        import requests
-
-        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
-        params = {
-            "param": (
-                f"{to_sina_symbol(symbol)},day,1990-01-01,{end_date},"
-                f"{_TENCENT_PAGE_SIZE},{fq}"
-            )
-        }
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/144.0.0.0 Safari/537.36"
-            )
-        }
-        resp = requests.get(url, params=params, headers=headers, timeout=15)
-        data = resp.json()
-        key = f"{fq}day" if fq else "day"
-        rows = ((data.get("data") or {}).get(to_sina_symbol(symbol)) or {}).get(key)
-        return rows or []
-
-    def _fetch_tencent_series(self, symbol: str, fq: str) -> pd.DataFrame:
-        """分页抓取腾讯全量行情序列 (640/页, 尾部前翻)"""
-        all_rows: list[list] = []
-        end = get_latest_trade_date().strftime("%Y-%m-%d")
-        for _ in range(60):
-            rows = self._fetch_tencent_page(symbol, end, fq)
-            if not rows:
-                break
-            all_rows = rows + all_rows
-            if len(rows) < _TENCENT_PAGE_SIZE:
-                break
-            end = rows[0][0]
-        if not all_rows:
-            return pd.DataFrame(
-                columns=["date", "open", "close", "high", "low", "volume"]
-            )
-        df = pd.DataFrame(all_rows).iloc[:, :6]
-        df.columns = ["date", "open", "close", "high", "low", "volume"]
-        df = df.astype(
-            {
-                "open": float,
-                "close": float,
-                "high": float,
-                "low": float,
-                "volume": float,
-            }
-        )
-        return df
-
-    def _fetch_tencent_full(self, symbol: str) -> pd.DataFrame:
-        """腾讯全量重建: day(不复权) + hfq(后复权) -> raw + adj_factor (腾讯单一口径)"""
-        df_raw = self._fetch_tencent_series(symbol, "")
-        if df_raw.empty:
-            return pd.DataFrame()
-        df_hfq = self._fetch_tencent_series(symbol, "hfq")
-
-        df = df_raw.merge(
-            df_hfq[["date", "close"]],
-            on="date",
-            how="left",
-            suffixes=("", "_hfq"),
-        )
-        # adj_factor = 腾讯后复权收盘 / 不复权收盘 (腾讯自身算法, 区间自洽)
-        df["adj_factor"] = df["close_hfq"] / df["close"]
-        df["adj_factor"] = df["adj_factor"].ffill().fillna(1.0)
-        # 腾讯 hfq 对退市整理期首日暴跌股可能溢出为负 (实测 000004):
-        # 负值段之前数据有效, 尾段按接缝日因子延续 (退市整理期无除权先验)
-        if (df["adj_factor"] <= 0).any():
-            valid = df[df["adj_factor"] > 0]
-            if valid.empty:
-                raise RuntimeError(f"{symbol} 腾讯 hfq 复权数据全为负, 放弃重建")
-            cut_off = valid["date"].max()
-            seam_factor = valid["adj_factor"].iloc[-1]
-            tail_mask = df["date"] > cut_off
-            df.loc[tail_mask, "adj_factor"] = seam_factor
-            logger.warning(
-                f"{symbol} 腾讯 hfq 在 {cut_off} 后为负, "
-                f"尾段 {int(tail_mask.sum())} 天 adj_factor 按接缝因子 {seam_factor:.6f} 延续"
-            )
-
-        # 腾讯不提供成交额, 按 手*100*收盘价 估算
-        df["amount"] = df["volume"] * 100.0 * df["close"]
-        df["date"] = pd.to_datetime(df["date"]).dt.date
-        df["symbol"] = symbol
-        final_cols = [
-            "date",
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "amount",
-            "adj_factor",
-            "symbol",
-        ]
-        return df[final_cols].copy()
-
-    def _collect_delisted(self, symbol: str):
-        """退市股: 腾讯全量重建 (整体覆盖, 单一复权口径)"""
-        if get_last_sync_date(DATASET_KLINE, symbol) is not None:
-            logger.debug(f"{symbol} 退市股 K线已重建, 跳过")
-            return
-        df = self._fetch_tencent_full(symbol)
-        if df.empty:
-            raise RuntimeError(f"{symbol} 腾讯源未返回退市股行情数据")
-        self.store.save_partition(df, "daily_kline", symbol)
-        # 以腾讯真实最后交易日写入 last_trade_date (sync-stocks 标记退市时保持 NULL, 由本流程负责)
-        last_date = df["date"].max()
-        conn = db_manager.get_sqlite_conn()
-        conn.execute(
-            "UPDATE stocks SET last_trade_date = ? WHERE symbol = ?",
-            (last_date.strftime("%Y%m%d"), symbol),
-        )
-        conn.commit()
-        record_sync_success(DATASET_KLINE, symbol, date.today())
-        logger.info(f"{symbol} 退市股 K线腾讯全量重建完成: {len(df)} 条")
 
     def _get_local_max_date(self, symbol: str) -> str:
         """获取本地已存储的最新日期"""
@@ -253,20 +131,30 @@ class DailyKlineCollector:
             return original_get(*args, **kwargs)
 
         with patch("requests.get", side_effect=patched_get):
-            # 1. 抓取不复权数据
-            df_raw = ak.stock_zh_a_daily(
-                symbol=sina_symbol, start_date=start_date, end_date=end_date, adjust=""
-            )
-            if df_raw.empty:
-                return pd.DataFrame()
+            try:
+                # 1. 抓取不复权数据
+                df_raw = ak.stock_zh_a_daily(
+                    symbol=sina_symbol,
+                    start_date=start_date,
+                    end_date=end_date,
+                    adjust="",
+                )
+                if df_raw.empty:
+                    return pd.DataFrame()
 
-            # 2. 抓取后复权数据
-            df_hfq = ak.stock_zh_a_daily(
-                symbol=sina_symbol,
-                start_date=start_date,
-                end_date=end_date,
-                adjust="hfq",
-            )
+                # 2. 抓取后复权数据
+                df_hfq = ak.stock_zh_a_daily(
+                    symbol=sina_symbol,
+                    start_date=start_date,
+                    end_date=end_date,
+                    adjust="hfq",
+                )
+            except Exception as e:
+                logger.warning(
+                    f"{symbol} akshare 新浪解析失败 ({type(e).__name__}), "
+                    f"切换 CDR 专用接口"
+                )
+                return self._fetch_cdr_sina(sina_symbol, start_date, end_date)
 
         # 3. 标准化处理
         # 新浪接口列名已经是英文: date, open, high, low, close, volume, amount, ...
@@ -288,16 +176,52 @@ class DailyKlineCollector:
 
         return df_merge
 
+    def _fetch_sina_klc(
+        self, sina_symbol: str, start_date: str = "19900101", end_date: str = None
+    ) -> pd.DataFrame:
+        """直接调用 klc_kl.js 解密获取 K 线, 绕过 akshare StockService.getAmountBySymbol 缺陷"""
+        from utils.sina_klc import SinaKlcFetcher
+
+        return SinaKlcFetcher.fetch_klc_data(sina_symbol, start_date, end_date)
+
+    def _fetch_cdr_sina(
+        self, sina_symbol: str, start_date: str, end_date: str
+    ) -> pd.DataFrame:
+        """CDR 股票专用 fallback"""
+        return self._fetch_sina_klc(sina_symbol, start_date, end_date)
+
     @retry(max_retries=2, delay=2.0)
     def collect_kline(self, symbol: str, start_date: str = None, end_date: str = None):
         """
         同步日线行情
         :param symbol: 纯数字代码 (如 600519)
+        :return: True 表示实际抓取了数据, False 表示已是最新无需同步
         """
-        # 退市股: 腾讯全量重建 (单一复权口径, 现有新浪源已无退市股数据)
+        # 退市股: Sina klc_kl.js 全量重建, 建后永久跳过
         if self._is_delisted(symbol):
-            self._collect_delisted(symbol)
-            return
+            if get_last_sync_date(DATASET_KLINE, symbol) is not None:
+                return False
+            sina = to_sina_symbol(symbol)
+            df = self._fetch_sina_klc(sina)
+            if df.empty:
+                logger.error(f"{symbol} 退市股 Sina 无行情数据")
+                return False
+            self.store.save_partition(df, "daily_kline", symbol)
+            last_date = df["date"].max()
+            last_date_str = (
+                last_date.strftime("%Y%m%d")
+                if hasattr(last_date, "strftime")
+                else str(last_date).replace("-", "")
+            )
+            conn = db_manager.get_sqlite_conn()
+            conn.execute(
+                "UPDATE stocks SET last_trade_date = ? WHERE symbol = ?",
+                (last_date_str, symbol),
+            )
+            conn.commit()
+            record_sync_success(DATASET_KLINE, symbol, date.today())
+            logger.info(f"{symbol} 退市股 K线全量重建完成: {len(df)} 条")
+            return True
 
         # 获取最新的有效交易日作为基准
         latest_trade_date = get_latest_trade_date().strftime("%Y%m%d")
@@ -316,7 +240,11 @@ class DailyKlineCollector:
 
         if start_date > end_date:
             logger.debug(f"{symbol} 已是最新 (目标: {end_date})，无需同步")
-            return
+            return False
+
+        if is_synced_today(DATASET_KLINE_DAILY, symbol):
+            logger.debug(f"{symbol} 当日已尝试同步且无新数据 (停牌/无交易)，跳过")
+            return False
 
         # --- 智能多源决策 ---
         market = get_market_label(symbol)
@@ -339,8 +267,11 @@ class DailyKlineCollector:
                 df_merge = self._fetch_from_em(symbol, start_date, end_date)
 
             if df_merge.empty:
-                logger.warning(f"{symbol} 抓取数据为空 (Source: {active_source})")
-                return
+                logger.warning(
+                    f"{symbol} 抓取数据为空 (Source: {active_source})，可能停牌"
+                )
+                record_sync_success(DATASET_KLINE_DAILY, symbol, date.today())
+                return False
 
             # 最终清洗
             df_merge["symbol"] = symbol
@@ -363,6 +294,7 @@ class DailyKlineCollector:
 
             # 5. 存储 (增量合并逻辑)
             self._save_incremental(df_final, symbol)
+            return True
 
         except Exception as e:
             # Re-raise 让 @retry 装饰器捕捉并重试

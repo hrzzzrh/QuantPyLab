@@ -575,15 +575,23 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     logger.info(
         f"开始同步 {len(target_tasks)} 只股票的日线行情 (基准日期: {latest_date})..."
     )
+    skipped = 0
     pbar = tqdm(target_tasks, desc="K线同步")
     for code, name in pbar:
         pbar.set_description(f"K线同步: {code} {name}")
         try:
-            collector.collect_kline(code, start_date=start_date, end_date=latest_date)
+            synced = collector.collect_kline(
+                code, start_date=start_date, end_date=latest_date
+            )
+            if synced:
+                time.sleep(random.uniform(2.0, 4.0))
+            else:
+                skipped += 1
         except Exception:
             logger.error(f"{code} {name} K线同步最终失败 (已重试)")
-        time.sleep(random.uniform(2.0, 4.0))
-    logger.info("K线同步完成")
+    logger.info(
+        f"K线同步完成 (本次同步 {len(target_tasks) - skipped} 只, 跳过 {skipped} 只已为最新)"
+    )
 
 
 def sync_etf_list():
