@@ -1,7 +1,6 @@
 ---
 description: 将个股财报 PDF 转换为文本并进行针对性信息提取，输出结构化提取笔记供深度研报使用。当用户要求研读财报、提取年报/半年报关键信息、或需要将财报 PDF 转文本时使用。
 mode: subagent
-model: opencode-go/deepseek-v4-flash
 temperature: 0.2
 permission:
   edit: allow

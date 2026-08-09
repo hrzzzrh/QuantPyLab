@@ -1,7 +1,6 @@
 ---
 description: 独立审查 investigation/ 下研报、跟踪手册与投研汇总，核验其是否符合 deep_investment_analysis_framework.md 框架要求，并识别乐观偏差、遗漏利空、逻辑缺陷与事实错误。当用户要求审查、复核或评估研报及跟踪手册质量时使用。
 mode: subagent
-model: opencode-go/deepseek-v4-flash
 temperature: 0.2
 permission:
   edit: deny

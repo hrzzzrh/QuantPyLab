@@ -7,7 +7,7 @@ argument-hint: [company]
 ## 阶段零：材料定位
 
 1. 确认目标公司目录 `investigation/equities/<公司>/` 及其下 `reports/` 全部章节与跟踪手册存在，列出清单，并全量阅读研报章节与跟踪手册，为后续审查意见裁决做准备。
-2. 阅读 `investigation/equities/deep_investment_analysis_framework.md`（框架基准）与 `docs/workflows/equity-research.md` 的独立复核小节。
+2. 阅读 `investigation/equities/deep_investment_analysis_framework.md`（框架基准）与 `.opencode/commands/investmentAnalysis/redoStandard.md`（标准研报流程基准）。
 3. 从 `investigation/equities/note.md` 定位该公司的汇总行与跟踪审计日历行。
 4. 若有疑问先规划步骤，禁止跳过材料直接审查。
 
