@@ -251,9 +251,20 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
 
     if run_list_info:
         logger.info("--- 正在补全个股上市详情 (地域、日期, 雪球并发) ---")
+        from storage.database.sync_status import (
+            DATASET_STOCK_METADATA,
+            record_sync_success,
+        )
+
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT symbol, code FROM stocks WHERE area IS NULL OR list_date IS NULL"
+            "SELECT s.symbol, s.code FROM stocks s"
+            " WHERE (s.area IS NULL OR s.list_date IS NULL)"
+            " AND NOT EXISTS ("
+            "   SELECT 1 FROM sync_status ss"
+            "   WHERE ss.dataset = ? AND ss.symbol = s.symbol"
+            " )",
+            (DATASET_STOCK_METADATA,),
         )
         pending = cursor.fetchall()
         if not pending:
@@ -264,20 +275,21 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
         from utils.financial import get_market_label
 
         def fetch_detail(symbol, code):
-            """并发 worker: 仅做网络抓取, 不触碰数据库连接。"""
+            """并发 worker: 仅做网络抓取, 不触碰数据库连接。
+
+            巨潮兜底不得在 worker 内执行: akshare 的巨潮接口依赖 V8 引擎
+            (py_mini_racer.MiniRacer), 其构造/使用非线程安全, 并发触发
+            FATAL 崩溃 (Check failed: !pool->IsInitialized()), 故兜底统一
+            放到主线程串行执行。
+            """
             label = get_market_label(code).value.lower()
             info = detail_collector.fetch_from_xueqiu(f"{label}{code}")
             if not info.get("list_date"):
                 info["list_date"] = detail_collector.fetch_from_eastmoney(code).get(
                     "list_date"
                 )
-            if not info.get("list_date") or not info.get("area"):
-                # 雪球对部分股票 (境外注册/部分北交所) 返回空资料, 巨潮兜底 (官方披露平台)
-                cninfo = detail_collector.fetch_from_cninfo(code)
-                info["area"] = info.get("area") or cninfo.get("area")
-                info["list_date"] = info.get("list_date") or cninfo.get("list_date")
             time.sleep(random.uniform(0.05, 0.1))
-            return symbol, info
+            return symbol, code, info
 
         # 串行请求是主要瓶颈 (网络延迟 ~0.7s/只), 采用 2 并发 + 主线程串行写库,
         # 兼顾速度与雪球风控; 每 COMMIT_EVERY 只提交一次, 中断不丢已写入数据。
@@ -291,13 +303,27 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                 as_completed(futures), total=len(futures), desc="补全详情"
             ):
                 try:
-                    symbol, info = future.result()
+                    symbol, code, info = future.result()
                 except Exception:
                     failed += 1
                     continue
                 if not info:
                     failed += 1
                     continue
+                if not info.get("list_date") or not info.get("area"):
+                    # 雪球对部分股票 (境外注册/部分北交所) 返回空资料, 巨潮兜底
+                    # (官方披露平台)。此处位于主线程, 避免 V8 引擎并发崩溃。
+                    cninfo = detail_collector.fetch_from_cninfo(code)
+                    info["area"] = info.get("area") or cninfo.get("area")
+                    info["list_date"] = info.get("list_date") or cninfo.get("list_date")
+                if not info.get("list_date"):
+                    # 老退市股兜底: 雪球/东财/巨潮均无元数据, 用新浪 klc_kl.js
+                    # 首条记录日期作为上市日 (V8 解密, 须主线程串行)。
+                    from utils.sina_klc import SinaKlcFetcher
+
+                    list_date = SinaKlcFetcher.fetch_list_date(code)
+                    if list_date:
+                        info["list_date"] = list_date
                 cursor.execute(
                     "UPDATE stocks SET area = ?, list_date = ?,"
                     " industry = COALESCE(industry, ?), updated_at = CURRENT_TIMESTAMP"
@@ -308,6 +334,9 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                         info.get("industry_xq"),
                         symbol,
                     ),
+                )
+                record_sync_success(
+                    DATASET_STOCK_METADATA, symbol, datetime.now().date()
                 )
                 updated += 1
                 if updated % commit_every == 0:

@@ -6,6 +6,7 @@ from utils.logger import logger
 DATASET_SHARE_CAPITAL = "share_capital"
 DATASET_KLINE = "kline"
 DATASET_KLINE_DAILY = "kline_daily"
+DATASET_STOCK_METADATA = "stock_metadata"
 
 
 def record_sync_success(dataset: str, symbol: str, sync_date: date) -> None:
