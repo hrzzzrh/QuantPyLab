@@ -36,6 +36,7 @@ print(ld)  # 输出: 2025-02-07
 全局统一的日志对象。
 
 - **功能**: 同时输出到控制台 (Console) 和文件 (`logs/app.log`)。
+- **文件轮转**: 日志文件按天轮转 (`when="midnight"`)，当日写入 `logs/app.log`，次日自动归档为 `logs/app.log.YYYY-MM-DD`；`logs/error.log` (仅 Error) 同样按天轮转。保留天数由 `config/settings.py` 的 `LOG_RETENTION_DAYS` 控制 (默认 30 天)，超期备份自动删除。
 - **级别**: 默认 INFO，可根据需要调整。
 - **示例**:
 ```python

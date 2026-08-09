@@ -108,3 +108,47 @@ class TestNoDataOverride:
     def test_whitelist_contains_expected_entry(self):
         """白名单确证只含 000508 的 cashflow (1998 年前退市唯一实例)"""
         assert _SINA_NO_DATA_OVERRIDES == {("000508", "cashflow")}
+
+
+class TestGetDisclosurePlans:
+    """披露计划获取: 双市场聚合 + 调用前 INFO 日志说明 (为 akshare 内部分页进度条提供上下文)"""
+
+    def _fake_yysj(self, calls):
+        def fake(symbol: str, date: str):
+            calls.append((symbol, date))
+            return pd.DataFrame(
+                {
+                    "股票代码": ["000001", "600519"]
+                    if symbol == "沪深A股"
+                    else ["830001"],
+                    "实际披露时间": ["2026-08-10", "2026-08-11"]
+                    if symbol == "沪深A股"
+                    else ["2026-08-12"],
+                }
+            )
+
+        return fake
+
+    def test_aggregates_both_markets(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr("akshare.stock_yysj_em", self._fake_yysj(calls))
+        df = FinancialCollector().get_disclosure_plans("20260630")
+
+        assert set(calls) == {("沪深A股", "20260630"), ("京市A股", "20260630")}
+        assert set(df["code"]) == {"000001", "600519", "830001"}
+        assert "actual_date" in df.columns
+        assert "股票代码" not in df.columns
+
+    def test_logs_info_before_fetch(self, monkeypatch, caplog):
+        caplog.set_level("INFO", logger="QuantPyLab")
+        calls = []
+        monkeypatch.setattr("akshare.stock_yysj_em", self._fake_yysj(calls))
+        FinancialCollector().get_disclosure_plans("20260630")
+
+        infos = [r.message for r in caplog.records if r.levelname == "INFO"]
+        assert any("20260630" in m and "沪深A股" in m for m in infos)
+        assert any("20260630" in m and "京市A股" in m for m in infos)
+
+    def test_empty_plan_returns_empty_df(self, monkeypatch):
+        monkeypatch.setattr("akshare.stock_yysj_em", lambda **kw: pd.DataFrame())
+        assert FinancialCollector().get_disclosure_plans("20260630").empty

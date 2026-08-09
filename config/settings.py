@@ -18,6 +18,9 @@ WAREHOUSE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+# 日志文件按天轮转, 保留最近 N 天的历史备份文件 (当天文件不计入)
+LOG_RETENTION_DAYS = 30
+
 # 数据获取配置
 AKSHARE_TIMEOUT = 30
 MAX_RETRIES = 3

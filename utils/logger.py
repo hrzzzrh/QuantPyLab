@@ -1,8 +1,9 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 from tqdm import tqdm
 
-from config.settings import LOG_DIR
+from config.settings import LOG_DIR, LOG_RETENTION_DAYS
 
 
 class TqdmLoggingHandler(logging.Handler):
@@ -44,13 +45,23 @@ def setup_logger(
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # 输出到文件 (全量)
-    file_handler = logging.FileHandler(LOG_DIR / log_file)
+    # 输出到文件 (全量, 按天轮转, 保留最近 LOG_RETENTION_DAYS 天)
+    file_handler = TimedRotatingFileHandler(
+        LOG_DIR / log_file,
+        when="midnight",
+        backupCount=LOG_RETENTION_DAYS,
+        encoding="utf-8",
+    )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    # 输出到文件 (仅 Error)
-    error_file_handler = logging.FileHandler(LOG_DIR / "error.log")
+    # 输出到文件 (仅 Error, 按天轮转)
+    error_file_handler = TimedRotatingFileHandler(
+        LOG_DIR / "error.log",
+        when="midnight",
+        backupCount=LOG_RETENTION_DAYS,
+        encoding="utf-8",
+    )
     error_file_handler.setLevel(logging.ERROR)
     error_file_handler.setFormatter(formatter)
     logger.addHandler(error_file_handler)

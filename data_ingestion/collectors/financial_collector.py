@@ -196,7 +196,11 @@ class FinancialCollector:
         # 组合查询：沪深A股 + 京市A股
         for sym in ["沪深A股", "京市A股"]:
             try:
-                logger.debug(f"正在获取 {sym} 的 {date} 披露计划...")
+                # akshare 该接口内部用 tqdm 逐页抓取 (约 500 行/页), 日志先行说明,
+                # 避免用户看到无文字描述的裸进度条时产生困惑
+                logger.info(
+                    f"正在获取 {date} {sym} 披露计划 (东财分页接口, 进度条为翻页进度)..."
+                )
                 df = ak.stock_yysj_em(symbol=sym, date=date)
                 if not df.empty:
                     all_plans.append(df)
