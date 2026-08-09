@@ -5,11 +5,13 @@
 K 线采集、退市股重建、元数据补全等场景可任意复用。
 """
 
+from ast import literal_eval
 from datetime import datetime
 
 import pandas as pd
 
 from utils.financial import to_sina_symbol
+from utils.requests_protection import SinaBlockedError
 
 _USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -64,7 +66,9 @@ class SinaKlcFetcher:
                 headers={"User-Agent": _USER_AGENT},
                 timeout=10,
             )
-            hfq_json = eval(r.text.split("=")[1].split("\n")[0])
+            hfq_json = literal_eval(r.text.split("=")[1].split("\n")[0])
+        except SinaBlockedError:
+            raise
         except Exception:
             return None
         if not hfq_json.get("total", 0) > 0:

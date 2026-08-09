@@ -264,6 +264,32 @@ def test_collect_kline_retries_after_cooldown_expires(monkeypatch):
     assert fetched[0] is True
 
 
+def test_collect_kline_does_not_retry_sina_blocked(monkeypatch):
+    """新浪风控命中 fatal_exceptions 后公共入口只调用一次"""
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils.requests_protection import SinaBlockedError
+
+    collector = DailyKlineCollector()
+    calls = []
+    monkeypatch.setattr(collector, "_is_delisted", lambda symbol: False)
+    monkeypatch.setattr(
+        kline_mod,
+        "get_latest_trade_date",
+        lambda: type("TradeDate", (), {"strftime": lambda self, fmt: "20260807"})(),
+    )
+    monkeypatch.setattr(collector, "_get_local_max_date", lambda symbol: "19900101")
+    monkeypatch.setattr(kline_mod, "is_synced_today", lambda *args: False)
+
+    def blocked(*args, **kwargs):
+        calls.append(1)
+        raise SinaBlockedError("IP 风控测试")
+
+    monkeypatch.setattr(collector, "_fetch_from_sina", blocked)
+    with pytest.raises(SinaBlockedError, match="IP 风控测试"):
+        collector.collect_kline("600519", end_date="20260807")
+    assert calls == [1]
+
+
 # ──────────────────── CDR fallback ────────────────────
 
 
@@ -298,6 +324,39 @@ def test_fetch_from_sina_falls_back_to_cdr_on_error(monkeypatch):
 
     collector._fetch_from_sina("689009", "20260801", "20260807")
     assert fallback_called[0] is True
+
+
+def test_fetch_from_sina_sina_blocked_propagates_without_cdr(monkeypatch):
+    """IP 风控时立即传播 SinaBlockedError, 不降级 CDR (同域接口, 降级放大封禁)"""
+    from utils.requests_protection import SinaBlockedError
+
+    collector = DailyKlineCollector()
+
+    cdr_called = []
+    monkeypatch.setattr(
+        collector,
+        "_fetch_cdr_sina",
+        lambda *args, **kwargs: cdr_called.append(1) or pd.DataFrame(),
+    )
+
+    import akshare as ak
+
+    def fake_daily(*args, **kwargs):
+        raise SinaBlockedError("IP 风控测试")
+
+    monkeypatch.setattr(ak, "stock_zh_a_daily", fake_daily)
+
+    import requests
+
+    class FakeResp:
+        status_code = 200
+        text = ""
+
+    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: FakeResp())
+
+    with pytest.raises(SinaBlockedError, match="IP 风控测试"):
+        collector._fetch_from_sina("689009", "20260801", "20260807")
+    assert cdr_called == []
 
 
 def test_fetch_from_sina_normal_path_not_affected(monkeypatch):

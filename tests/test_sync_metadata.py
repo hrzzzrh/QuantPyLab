@@ -59,12 +59,22 @@ def test_sync_industries_fills_missing_active_only(monkeypatch):
 
 
 def test_sync_industries_skips_failed(monkeypatch):
-    """雪球无资料 (退市股/北交所) 计入失败, 不写入"""
+    """雪球无资料 (退市股/北交所) 不计异常失败, 不写入"""
     _fake_collector(monkeypatch, {})
     conn = manager_mod.db_manager.get_sqlite_conn()
-    main_mod._sync_industries_via_xueqiu(conn)
+    assert main_mod._sync_industries_via_xueqiu(conn) == (1, 0)
     rows = dict(conn.execute("SELECT symbol, industry FROM stocks").fetchall())
     assert rows["600519"] is None
+
+
+def test_sync_industries_counts_worker_exception(monkeypatch):
+    class FakeDetailCollector:
+        def fetch_from_xueqiu(self, symbol):
+            raise RuntimeError("雪球接口异常")
+
+    monkeypatch.setattr(main_mod, "StockDetailCollector", FakeDetailCollector)
+    conn = manager_mod.db_manager.get_sqlite_conn()
+    assert main_mod._sync_industries_via_xueqiu(conn) == (1, 1)
 
 
 def test_sync_list_info_falls_back_to_cninfo_on_main_thread(monkeypatch):
@@ -117,7 +127,7 @@ def test_list_info_falls_back_to_sina_klc_for_list_date(monkeypatch):
             return {}
 
         def fetch_from_cninfo(self, code):
-            return {}
+            return {"area": "贵州"}
 
     monkeypatch.setattr(main_mod, "StockDetailCollector", FakeDetailCollector)
     monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
@@ -130,18 +140,51 @@ def test_list_info_falls_back_to_sina_klc_for_list_date(monkeypatch):
     conn = manager_mod.db_manager.get_sqlite_conn()
     main_mod.sync_stock_metadata(run_industry=False, run_list_info=True)
 
-    rows = conn.execute("SELECT symbol, list_date FROM stocks").fetchall()
-    row_map = {r[0]: r[1] for r in rows}
-    assert row_map["600519"] == "19930607"
+    rows = conn.execute("SELECT symbol, area, list_date FROM stocks").fetchall()
+    row_map = {r[0]: (r[1], r[2]) for r in rows}
+    assert row_map["600519"] == ("贵州", "19930607")
     assert get_last_sync_date(DATASET_STOCK_METADATA, "600519") == date.today()
 
 
-def test_list_info_skips_synced_stocks(monkeypatch):
-    """已记录 sync_status 的股票不再重复补全"""
+def test_list_info_does_not_record_incomplete_metadata(monkeypatch):
+    """仍缺少必需字段时不得记录成功, 下次同步应继续补全"""
+    from storage.database.sync_status import DATASET_STOCK_METADATA, get_last_sync_date
+
+    class FakeDetailCollector:
+        def fetch_from_xueqiu(self, symbol):
+            return {"area": "贵州"}
+
+        def fetch_from_eastmoney(self, code):
+            return {}
+
+        def fetch_from_cninfo(self, code):
+            return {}
+
+    import utils.sina_klc as sina_klc_mod
+
+    monkeypatch.setattr(main_mod, "StockDetailCollector", FakeDetailCollector)
+    monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
+    monkeypatch.setattr(
+        sina_klc_mod.SinaKlcFetcher, "fetch_list_date", lambda code: None
+    )
+
+    main_mod.sync_stock_metadata(run_industry=False, run_list_info=True)
+
+    assert get_last_sync_date(DATASET_STOCK_METADATA, "600519") is None
+
+
+def test_list_info_retries_missing_metadata_even_if_synced(monkeypatch):
+    """元数据不完整时即使有历史成功记录也必须继续补全"""
     from datetime import date
 
     from storage.database.sync_status import DATASET_STOCK_METADATA, record_sync_success
 
+    conn = manager_mod.db_manager.get_sqlite_conn()
+    conn.execute(
+        "UPDATE stocks SET area = '上海', list_date = '19910403'"
+        " WHERE symbol = '000001'"
+    )
+    conn.commit()
     for sym in ("600519", "000001", "600421"):
         record_sync_success(DATASET_STOCK_METADATA, sym, date.today())
 
@@ -161,10 +204,41 @@ def test_list_info_skips_synced_stocks(monkeypatch):
     monkeypatch.setattr(main_mod, "StockDetailCollector", FakeDetailCollector)
     monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
 
+    main_mod.sync_stock_metadata(run_industry=False, run_list_info=True)
+
+    assert set(called) == {"sh600519", "sh600421"}
+    rows = conn.execute("SELECT symbol, area, list_date FROM stocks").fetchall()
+    row_map = {r[0]: (r[1], r[2]) for r in rows}
+    assert row_map["600519"] == ("贵州", "20200101")
+    assert row_map["000001"] == ("上海", "19910403")
+
+
+def test_list_info_normalizes_blank_and_nan_values(monkeypatch):
+    """空字符串和 NaN 必须按缺失值保存, 且不得记录同步成功"""
+    from storage.database.sync_status import DATASET_STOCK_METADATA, get_last_sync_date
+
+    class FakeDetailCollector:
+        def fetch_from_xueqiu(self, symbol):
+            return {
+                "area": " ",
+                "list_date": float("nan"),
+                "industry_xq": float("nan"),
+            }
+
+        def fetch_from_eastmoney(self, code):
+            return {}
+
+        def fetch_from_cninfo(self, code):
+            return {}
+
+    monkeypatch.setattr(main_mod, "StockDetailCollector", FakeDetailCollector)
+    monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
+
     conn = manager_mod.db_manager.get_sqlite_conn()
     main_mod.sync_stock_metadata(run_industry=False, run_list_info=True)
 
-    assert called == [], f"已同步股票不应再次请求, 实际请求: {called}"
-    rows = conn.execute("SELECT symbol, area, list_date FROM stocks").fetchall()
-    row_map = {r[0]: (r[1], r[2]) for r in rows}
-    assert row_map["600519"] == (None, None)
+    row = conn.execute(
+        "SELECT area, list_date, industry FROM stocks WHERE symbol = '600519'"
+    ).fetchone()
+    assert row == (None, None, None)
+    assert get_last_sync_date(DATASET_STOCK_METADATA, "600519") is None

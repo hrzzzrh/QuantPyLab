@@ -193,6 +193,7 @@ class FinancialCollector:
         date: 格式如 '20251231'
         """
         all_plans = []
+        failed_markets = []
         # 组合查询：沪深A股 + 京市A股
         for sym in ["沪深A股", "京市A股"]:
             try:
@@ -206,6 +207,10 @@ class FinancialCollector:
                     all_plans.append(df)
             except Exception:
                 logger.warning(f"获取 {sym} 披露计划失败", exc_info=True)
+                failed_markets.append(sym)
+
+        if failed_markets:
+            raise RuntimeError(f"披露计划获取失败: {', '.join(failed_markets)}")
 
         if not all_plans:
             return pd.DataFrame()

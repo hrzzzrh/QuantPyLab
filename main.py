@@ -1,5 +1,6 @@
 import argparse
 import random
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -60,6 +61,11 @@ def get_orphan_codes(category: str, all_codes: list) -> list:
 
 # --- 业务逻辑函数 ---
 
+# sync-all 流水线返回状态 (三态)
+SYNC_ALL_SUCCESS = "success"
+SYNC_ALL_RETRYABLE = "retryable"
+SYNC_ALL_BLOCKED = "blocked"
+
 
 def sync_stock_list():
     """同步股票列表: 差量 diff 更新 (新增插入, 存量更新, 消失标记退市)
@@ -70,12 +76,15 @@ def sync_stock_list():
     - 库中有、新列表无   -> UPDATE is_active=0 (last_trade_date 保持 NULL,
       由退市股 K 线腾讯重建流程写入真实最后交易日)
     接口返回空列表时跳过, 防止数据源异常导致全库误标退市。
+
+    返回 (processed, failed): processed=1, failed=0 表示名单同步成功
+    (含退市清单合并), failed=1 表示退市清单接口异常。
     """
     collector = StockListCollector()
     df = collector.fetch_all_stocks()
     if df.empty:
-        logger.warning("股票列表接口返回为空, 跳过 diff 更新 (防止误标退市)")
-        return
+        logger.error("股票列表接口返回为空, 跳过 diff 更新并判定失败 (防止误标退市)")
+        return 1, 1
 
     conn = db_manager.get_sqlite_conn()
     cursor = conn.cursor()
@@ -134,14 +143,17 @@ def sync_stock_list():
         f" 库内总数 {total} (其中退市 {inactive_total})"
     )
 
-    merge_delisted_stocks()
+    merge_ok = merge_delisted_stocks()
+    return 1, 0 if merge_ok else 1
 
 
-def merge_delisted_stocks():
+def merge_delisted_stocks() -> bool:
     """从沪深交易所退市股清单合并历史退市股 (仅插入缺失, 不修改已有行)
 
     重建场景必需: 当前在市列表不含历史退市股, 仅靠 diff 无法恢复退市股清单,
     会导致退市股数据 (K线/财务/股本) 永远无法同步。北交所退市股无清单接口, 暂不覆盖。
+
+    返回 True 表示清单接口正常 (含正常返回空清单), False 表示接口异常 (跳过合并)。
     """
     import akshare as ak
 
@@ -153,7 +165,7 @@ def merge_delisted_stocks():
         sz = ak.stock_info_sz_delist()
     except Exception as e:
         logger.warning(f"退市股清单接口获取失败, 跳过合并: {e}")
-        return
+        return False
 
     def _candidates(df, code_col, name_col, date_col):
         rows = []
@@ -189,12 +201,15 @@ def merge_delisted_stocks():
     conn.commit()
     if merged:
         logger.info(f"合并退市股清单: 新增 {merged} 只退市股 (is_active=0)")
+    return True
 
 
 def _sync_industries_via_xueqiu(conn):
     """雪球并发补全行业 (industry 为 NULL 的活跃股; 退市股雪球无资料, 不请求)
 
     东财批量接口 (push2) 已风控不可用, 行业改用雪球个股资料 (affiliate_industry.ind_name)。
+
+    返回 (processed, failed): failed 仅计异常性失败; 雪球无行业资料属正常情况, 不计失败。
     """
     cursor = conn.cursor()
     cursor.execute(
@@ -203,7 +218,7 @@ def _sync_industries_via_xueqiu(conn):
     pending = cursor.fetchall()
     if not pending:
         logger.info("行业无需补全")
-        return
+        return 0, 0
 
     detail_collector = StockDetailCollector()
     from utils.financial import get_market_label
@@ -219,6 +234,7 @@ def _sync_industries_via_xueqiu(conn):
     commit_every = 20
     updated = 0
     failed = 0
+    no_data = 0
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = [pool.submit(fetch_industry, s, c) for s, c in pending]
         for future in tqdm(as_completed(futures), total=len(futures), desc="补全行业"):
@@ -228,7 +244,7 @@ def _sync_industries_via_xueqiu(conn):
                 failed += 1
                 continue
             if not industry:
-                failed += 1
+                no_data += 1
                 continue
             cursor.execute(
                 "UPDATE stocks SET industry = ?, updated_at = CURRENT_TIMESTAMP"
@@ -239,15 +255,26 @@ def _sync_industries_via_xueqiu(conn):
             if updated % commit_every == 0:
                 conn.commit()
     conn.commit()
-    logger.info(f"行业补全完成: 更新 {updated} 只, 失败 {failed} 只")
+    logger.info(
+        f"行业补全完成: 更新 {updated} 只, 失败 {failed} 只, 无资料 {no_data} 只"
+    )
+    return len(pending), failed
 
 
 def sync_stock_metadata(run_industry=True, run_list_info=True):
-    """补全股票元数据 (行业、上市日期等)"""
+    """补全股票元数据 (行业、上市日期等)
+
+    返回 (processed, failed): failed 仅计异常性失败 (网络/解析错误);
+    数据源无资料属正常情况 (已走巨潮/新浪 klc 兜底), 不计入失败。
+    """
     conn = db_manager.get_sqlite_conn()
+    total_processed = 0
+    total_failed = 0
     if run_industry:
         logger.info("--- 正在批量同步行业信息 (雪球源) ---")
-        _sync_industries_via_xueqiu(conn)
+        processed, failed = _sync_industries_via_xueqiu(conn)
+        total_processed += processed
+        total_failed += failed
 
     if run_list_info:
         logger.info("--- 正在补全个股上市详情 (地域、日期, 雪球并发) ---")
@@ -259,17 +286,13 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
         cursor = conn.cursor()
         cursor.execute(
             "SELECT s.symbol, s.code FROM stocks s"
-            " WHERE (s.area IS NULL OR s.list_date IS NULL)"
-            " AND NOT EXISTS ("
-            "   SELECT 1 FROM sync_status ss"
-            "   WHERE ss.dataset = ? AND ss.symbol = s.symbol"
-            " )",
-            (DATASET_STOCK_METADATA,),
+            " WHERE (s.area IS NULL OR TRIM(s.area) = ''"
+            " OR s.list_date IS NULL OR TRIM(s.list_date) = '')"
         )
         pending = cursor.fetchall()
         if not pending:
             logger.info("个股详情无需补全")
-            return
+            return total_processed, total_failed
 
         detail_collector = StockDetailCollector()
         from utils.financial import get_market_label
@@ -293,10 +316,24 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
 
         # 串行请求是主要瓶颈 (网络延迟 ~0.7s/只), 采用 2 并发 + 主线程串行写库,
         # 兼顾速度与雪球风控; 每 COMMIT_EVERY 只提交一次, 中断不丢已写入数据。
+        def normalize_metadata_value(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                value = value.strip()
+                return value or None
+            try:
+                if pd.isna(value):
+                    return None
+            except (TypeError, ValueError):
+                pass
+            return value
+
         max_workers = 2
         commit_every = 20
         updated = 0
         failed = 0
+        no_data = 0
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             futures = [pool.submit(fetch_detail, s, c) for s, c in pending]
             for future in tqdm(
@@ -308,7 +345,7 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                     failed += 1
                     continue
                 if not info:
-                    failed += 1
+                    no_data += 1
                     continue
                 if not info.get("list_date") or not info.get("area"):
                     # 雪球对部分股票 (境外注册/部分北交所) 返回空资料, 巨潮兜底
@@ -324,25 +361,41 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                     list_date = SinaKlcFetcher.fetch_list_date(code)
                     if list_date:
                         info["list_date"] = list_date
+                area = normalize_metadata_value(info.get("area"))
+                list_date = normalize_metadata_value(info.get("list_date"))
+                industry = normalize_metadata_value(info.get("industry_xq"))
+                metadata_complete = bool(area and list_date)
+                if not metadata_complete:
+                    no_data += 1
                 cursor.execute(
                     "UPDATE stocks SET area = ?, list_date = ?,"
                     " industry = COALESCE(industry, ?), updated_at = CURRENT_TIMESTAMP"
                     " WHERE symbol = ?",
                     (
-                        info.get("area"),
-                        info.get("list_date"),
-                        info.get("industry_xq"),
+                        area,
+                        list_date,
+                        industry,
                         symbol,
                     ),
                 )
-                record_sync_success(
-                    DATASET_STOCK_METADATA, symbol, datetime.now().date()
-                )
+                if metadata_complete:
+                    record_sync_success(
+                        DATASET_STOCK_METADATA, symbol, datetime.now().date()
+                    )
+                else:
+                    logger.warning(
+                        f"{symbol} 个股详情仍缺少地域或上市日期, 下次同步继续补全"
+                    )
                 updated += 1
                 if updated % commit_every == 0:
                     conn.commit()
         conn.commit()
-        logger.info(f"个股详情补全完成: 更新 {updated} 只, 失败 {failed} 只")
+        logger.info(
+            f"个股详情补全完成: 更新 {updated} 只, 失败 {failed} 只, 无资料 {no_data} 只"
+        )
+        total_processed += len(pending)
+        total_failed += failed
+    return total_processed, total_failed
 
 
 def get_target_report_dates():
@@ -359,7 +412,11 @@ def get_target_report_dates():
 
 
 def sync_financial_statements(symbol=None, force_all=False):
-    """同步财务三大报表"""
+    """同步财务三大报表
+
+    返回 (processed, failed): failed 为单股同步异常数 (网络/解析/存储错误,
+    重试耗尽后计入); SinaBlockedError 不在此计数, 直接向上传播由调用方判定中止。
+    """
     from data_ingestion.collectors.financial_collector import _SINA_NO_DATA_OVERRIDES
     from storage.database.sync_status import (
         DATASET_FINANCIAL_INCOMPLETE,
@@ -397,10 +454,11 @@ def sync_financial_statements(symbol=None, force_all=False):
 
     if not target_codes:
         logger.info("财务报表数据已是最新。")
-        return
+        return 0, 0
 
     symbol_name_map = {s[0]: s[1] for s in all_stocks}
     pbar = tqdm(list(target_codes), desc="报表同步")
+    failed = 0
     for code in pbar:
         name = symbol_name_map.get(code, "")
         pbar.set_description(f"报表同步: {code} {name}")
@@ -419,6 +477,7 @@ def sync_financial_statements(symbol=None, force_all=False):
             logger.error(f"新浪接口 IP 风控，中止报表同步: {e}")
             raise
         except Exception:
+            failed += 1
             logger.exception(f"{code} 报表同步失败")
         # 该股存在确证缺表的报表类型 → 记录标记, 孤儿补全不再选中
         if any((code, st) in _SINA_NO_DATA_OVERRIDES for st in stat_map):
@@ -427,9 +486,14 @@ def sync_financial_statements(symbol=None, force_all=False):
             )
             logger.info(f"{code} 已确认财务数据不完整, 记录标记")
 
+    return len(target_codes), failed
+
 
 def sync_financial_indicators(symbol=None, force_all=False):
-    """同步东财财务指标"""
+    """同步东财财务指标
+
+    返回 (processed, failed): failed 为单股同步异常数 (网络/解析/存储错误)。
+    """
     store = IndicatorStore()
     collector = FinancialCollector()
     all_stocks = get_all_stocks()
@@ -456,11 +520,12 @@ def sync_financial_indicators(symbol=None, force_all=False):
 
     if not target_tasks:
         logger.info("指标数据已是最新。")
-        return
+        return 0, 0
 
     pbar = tqdm(target_tasks, desc="指标同步")
     from utils.financial import get_market_label
 
+    failed = 0
     for code, name in pbar:
         pbar.set_description(f"指标同步: {code} {name}")
         try:
@@ -470,7 +535,10 @@ def sync_financial_indicators(symbol=None, force_all=False):
             collector.collect_indicators(code, fmt_symbol)
             time.sleep(random.uniform(0.5, 1.0))
         except Exception:
+            failed += 1
             logger.exception(f"{code} 指标同步失败")
+
+    return len(target_tasks), failed
 
 
 def calculate_ttm_metrics(symbol=None, force_all=False):
@@ -482,6 +550,8 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
     - 退市股的历史财务报表保留在 Parquet 数据湖中 (孤儿股);
     - 因此 TTM 候选集必须以"数据湖实际存在的报表"为准 (fin_income_statement),
       而非仅 stocks 表, 否则孤儿股的 TTM 永远不会被批量重算。
+
+    返回 (processed, failed): failed 为单股计算异常数。
     """
     from analysis.processors.ttm_calculator import TTMCalculator
 
@@ -494,10 +564,14 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
         # 单只模式: 不依赖 stocks 表, 直接按数据湖中是否存在报表判断
         if symbol not in get_financial_symbols():
             logger.warning(f"数据湖中无 {symbol} 的财务报表, 跳过")
-            return
+            return 0, 0
         logger.info(f"单只同步模式: {symbol}")
-        calculator.calculate_for_symbol(symbol)
-        return
+        try:
+            calculator.calculate_for_symbol(symbol)
+        except Exception:
+            logger.exception(f"{symbol} TTM 计算失败")
+            return 1, 1
+        return 1, 0
 
     duckdb_conn = db_manager.get_duckdb_conn()
     db_manager.ensure_views("fin_income_statement", "fin_ttm")
@@ -525,7 +599,7 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
 
     if not candidates:
         logger.info("所有 TTM 数据已是最新。")
-        return
+        return 0, 0
 
     target_symbols = []
     for code, max_date in candidates:
@@ -544,22 +618,29 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
 
     if not target_symbols:
         logger.info("数据完整性未达标，无需计算。")
-        return
+        return 0, 0
 
     symbol_name_map = {s[0]: s[1] for s in all_stocks}
     logger.info(f"开始为 {len(target_symbols)} 只股票同步 TTM 指标...")
     pbar = tqdm(target_symbols, desc="TTM 计算")
+    failed = 0
     for code in pbar:
         name = symbol_name_map.get(code, "")
         pbar.set_description(f"TTM 计算: {code} {name}")
         try:
             calculator.calculate_for_symbol(code)
         except Exception:
+            failed += 1
             logger.exception(f"{code} TTM 计算失败")
+
+    return len(target_symbols), failed
 
 
 def sync_share_capital(symbol=None, force_all=False, start_date=None):
-    """同步股本变动记录"""
+    """同步股本变动记录
+
+    返回 (processed, failed): failed 为单股同步异常数 (重试耗尽后计入)。
+    """
     from data_ingestion.collectors.share_collector import ShareCollector
     from storage.database.sync_status import (
         DATASET_SHARE_CAPITAL,
@@ -594,6 +675,9 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
             continue
         try:
             collector.collect_share_capital(code, start_date=start_date)
+        except SinaBlockedError:
+            # 新浪 IP 风控: 重试无意义, 立即中止整个流水线 (由调用方判定 BLOCKED)
+            raise
         except Exception:
             failed += 1
             logger.error(f"{code} {name} 股本同步最终失败 (已重试)")
@@ -603,10 +687,14 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
         f"股本同步完成: 共 {len(target_tasks)} 只, 本次同步 {len(target_tasks) - skipped - failed} 只, "
         f"跳过 {skipped} 只 (今日已同步), 失败 {failed} 只"
     )
+    return len(target_tasks), failed
 
 
 def sync_daily_kline(symbol=None, force_all=False, start_date=None):
-    """同步日线行情数据 (新浪源, 串行 + 保守节奏)"""
+    """同步日线行情数据 (新浪源, 串行 + 保守节奏)
+
+    返回 (processed, failed): failed 为单股同步异常数 (重试耗尽后计入)。
+    """
     from data_ingestion.collectors.kline_collector import DailyKlineCollector
     from utils.trade_date import get_latest_trade_date
 
@@ -623,6 +711,7 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
         f"开始同步 {len(target_tasks)} 只股票的日线行情 (基准日期: {latest_date})..."
     )
     skipped = 0
+    failed = 0
     pbar = tqdm(target_tasks, desc="K线同步")
     for code, name in pbar:
         pbar.set_description(f"K线同步: {code} {name}")
@@ -634,11 +723,17 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
                 time.sleep(random.uniform(2.0, 4.0))
             else:
                 skipped += 1
+        except SinaBlockedError:
+            # 新浪 IP 风控: 重试无意义, 立即中止整个流水线 (由调用方判定 BLOCKED)
+            raise
         except Exception:
+            failed += 1
             logger.error(f"{code} {name} K线同步最终失败 (已重试)")
     logger.info(
-        f"K线同步完成 (本次同步 {len(target_tasks) - skipped} 只, 跳过 {skipped} 只已为最新)"
+        f"K线同步完成 (本次同步 {len(target_tasks) - skipped - failed} 只, "
+        f"跳过 {skipped} 只已为最新, 失败 {failed} 只)"
     )
+    return len(target_tasks), failed
 
 
 def sync_etf_list():
@@ -692,27 +787,49 @@ def sync_etf_kline(symbol=None, force_all=False, start_date=None):
         time.sleep(random.uniform(0.5, 1.0))
 
 
-def sync_all_data_flow(symbol=None, force_all=False):
-    """执行全量数据同步流水线 (含名单/元数据; 单股模式跳过名单与元数据)"""
+def sync_all_data_flow(symbol=None, force_all=False) -> str:
+    """执行全量数据同步流水线 (含名单/元数据; 单股模式跳过名单与元数据)
+
+    返回三态:
+    - SYNC_ALL_SUCCESS: 全部 7 环节失败计数均为 0
+    - SYNC_ALL_RETRYABLE: 存在环节失败 (可整体重试, 增量机制自动跳过已完成部分)
+    - SYNC_ALL_BLOCKED: 新浪 IP 风控中止 (重试无意义, 需等待解封)
+    """
     logger.info(">>> 开始执行一键数据同步流水线 <<<")
+    stage_stats: dict[str, tuple[int, int]] = {}
     try:
         if not symbol:
             # 名单与元数据是全市场操作, 单股模式跳过
-            sync_stock_list()
-            sync_stock_metadata()
+            stage_stats["stocks"] = sync_stock_list()
+            stage_stats["metadata"] = sync_stock_metadata()
         # 先同步指标，因为指标表（东财源）的公告日期和更新日期更准确，用于后续修复三张表
-        sync_financial_indicators(symbol=symbol, force_all=force_all)
-        sync_financial_statements(symbol=symbol, force_all=force_all)
-        calculate_ttm_metrics(symbol=symbol, force_all=force_all)
-        sync_share_capital(symbol=symbol, force_all=force_all)
-        sync_daily_kline(symbol=symbol, force_all=force_all)
+        stage_stats["indicators"] = sync_financial_indicators(
+            symbol=symbol, force_all=force_all
+        )
+        stage_stats["financial"] = sync_financial_statements(
+            symbol=symbol, force_all=force_all
+        )
+        stage_stats["ttm"] = calculate_ttm_metrics(symbol=symbol, force_all=force_all)
+        stage_stats["share"] = sync_share_capital(symbol=symbol, force_all=force_all)
+        stage_stats["kline"] = sync_daily_kline(symbol=symbol, force_all=force_all)
     except SinaBlockedError as e:
         logger.error(f">>> 新浪接口 IP 风控，数据同步流水线中止 (已同步数据保留): {e}")
         logger.error(
             ">>> 请等待 5~60 分钟封禁解除后重试 (增量同步会自动跳过已完成部分) <<<"
         )
-        return
-    logger.info(">>> 数据同步流水线执行完成 <<<")
+        return SYNC_ALL_BLOCKED
+
+    total_failed = 0
+    for name, (processed, failed) in stage_stats.items():
+        logger.info(f"流水线环节 {name}: 处理 {processed} 项, 失败 {failed} 项")
+        total_failed += failed
+    if total_failed > 0:
+        logger.error(
+            f">>> 数据同步流水线存在失败: 合计失败 {total_failed} 项, 判定为可重试 <<<"
+        )
+        return SYNC_ALL_RETRYABLE
+    logger.info(">>> 数据同步流水线执行完成 (全部环节成功) <<<")
+    return SYNC_ALL_SUCCESS
 
 
 def export_duckdb_views(output_path: str):
@@ -839,7 +956,9 @@ def main():
     etf_kline_p.add_argument("--force-all", action="store_true", help="扫描所有活跃ETF")
 
     # 10. sync-all
-    all_p = subparsers.add_parser("sync-all", help="一键同步全流程数据 (除元数据)")
+    all_p = subparsers.add_parser(
+        "sync-all", help="一键同步全流程数据 (含名单与元数据)"
+    )
     all_p.add_argument("--symbol", type=str, help="指定单只股票代码")
     all_p.add_argument("--force-all", action="store_true", help="全量强制同步")
 
@@ -907,7 +1026,17 @@ def main():
             symbol=args.symbol, force_all=args.force_all, start_date=args.start_date
         )
     elif args.command == "sync-all":
-        sync_all_data_flow(symbol=args.symbol, force_all=args.force_all)
+        try:
+            status = sync_all_data_flow(symbol=args.symbol, force_all=args.force_all)
+        except Exception:
+            logger.exception("sync-all 流水线异常中止, 退出码 1")
+            sys.exit(1)
+        if status == SYNC_ALL_BLOCKED:
+            logger.error("sync-all 因新浪 IP 风控中止 (未全部成功), 退出码 1")
+            sys.exit(1)
+        elif status == SYNC_ALL_RETRYABLE:
+            logger.warning("sync-all 存在环节失败, 可稍后重跑 (增量同步会自动补缺)")
+            sys.exit(1)
     elif args.command == "export-views":
         export_duckdb_views(args.output)
     elif args.command == "show-views":

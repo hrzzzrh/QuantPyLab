@@ -8,6 +8,9 @@ DATASET_KLINE = "kline"
 DATASET_KLINE_DAILY = "kline_daily"
 DATASET_STOCK_METADATA = "stock_metadata"
 DATASET_FINANCIAL_INCOMPLETE = "financial_incomplete"
+DATASET_SYNC_ALL = "sync_all"
+# sync-all 全流程记录为单条记录, symbol 固定占位符
+SYMBOL_SYNC_ALL = "ALL"
 
 
 def record_sync_success(dataset: str, symbol: str, sync_date: date) -> None:

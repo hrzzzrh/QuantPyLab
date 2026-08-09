@@ -6,7 +6,12 @@ import pandas as pd
 import pytest
 
 import utils.trade_date as trade_date_mod
-from utils.trade_date import _get_all_trade_dates, get_latest_trade_date
+from utils.trade_date import (
+    TradeCalendarUnavailableError,
+    _get_all_trade_dates,
+    get_latest_trade_date,
+    is_trade_date,
+)
 
 # 2026-08-03(周一) ~ 2026-08-07(周五)
 MOCK_TRADE_DATES = [
@@ -18,12 +23,21 @@ MOCK_TRADE_DATES = [
 ]
 
 
+# 固定"今天"为 MOCK_TRADE_DATES 末位, 使缓存新鲜度判定 (trade_dates[-1] < today)
+# 与 mock 数据一致, 避免真实日期越过 mock 范围后测试语义漂移
+class _FakeToday(date):
+    @classmethod
+    def today(cls):
+        return date(2026, 8, 7)
+
+
 @pytest.fixture(autouse=True)
 def _isolate_cache(tmp_path, monkeypatch):
-    """每个测试使用独立的缓存文件并清空内存缓存"""
+    """每个测试使用独立的缓存文件、固定"今天"并清空内存缓存"""
     monkeypatch.setattr(
         trade_date_mod, "CACHE_FILE", tmp_path / "trade_calendar.parquet"
     )
+    monkeypatch.setattr(trade_date_mod, "date", _FakeToday)
     _get_all_trade_dates.cache_clear()
     yield
     _get_all_trade_dates.cache_clear()
@@ -33,7 +47,8 @@ def _mock_ak_fetch(monkeypatch, trade_dates=None, raises=None):
     def fake_fetch():
         if raises:
             raise raises
-        return pd.DataFrame({"trade_date": trade_dates or MOCK_TRADE_DATES})
+        dates = MOCK_TRADE_DATES if trade_dates is None else trade_dates
+        return pd.DataFrame({"trade_date": dates})
 
     monkeypatch.setattr(trade_date_mod.ak, "tool_trade_date_hist_sina", fake_fetch)
 
@@ -86,14 +101,15 @@ class TestTradeCalendarCache:
         _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
         assert _get_all_trade_dates() == MOCK_TRADE_DATES
 
-    def test_stale_cache_fallback(self, monkeypatch, tmp_path):
-        """网络失败但存在旧缓存时应兜底返回旧缓存"""
+    def test_stale_cache_and_network_failure_raises(self, monkeypatch, tmp_path):
+        """网络失败且缓存过期时应抛出可识别异常, 不返回过期日历"""
         stale_dates = [date(2025, 2, 7)]
         pd.DataFrame({"trade_date": stale_dates}).to_parquet(
             tmp_path / "trade_calendar.parquet", index=False
         )
         _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
-        assert _get_all_trade_dates() == stale_dates
+        with pytest.raises(TradeCalendarUnavailableError):
+            _get_all_trade_dates()
 
     def test_stale_cache_triggers_refresh(self, monkeypatch, tmp_path):
         """缓存过期时应触发网络同步"""
@@ -106,5 +122,69 @@ class TestTradeCalendarCache:
     def test_no_cache_and_network_fail_raises(self, monkeypatch):
         """无缓存且网络失败时应抛出异常（不静默返回错误数据）"""
         _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
-        with pytest.raises(RuntimeError):
+        with pytest.raises(TradeCalendarUnavailableError):
             _get_all_trade_dates()
+
+    def test_empty_cache_and_network_fail_raises(self, monkeypatch, tmp_path):
+        """空缓存不能被当作非交易日"""
+        pd.DataFrame({"trade_date": []}).to_parquet(
+            tmp_path / "trade_calendar.parquet", index=False
+        )
+        _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
+        with pytest.raises(TradeCalendarUnavailableError):
+            _get_all_trade_dates()
+
+    def test_invalid_cache_and_network_fail_raises(self, monkeypatch, tmp_path):
+        """无效日期缓存不能被当作非交易日"""
+        pd.DataFrame({"trade_date": ["not-a-date"]}).to_parquet(
+            tmp_path / "trade_calendar.parquet", index=False
+        )
+        _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
+        with pytest.raises(TradeCalendarUnavailableError):
+            _get_all_trade_dates()
+
+    def test_latest_trade_date_network_failure_raises(self, monkeypatch):
+        """最近交易日查询失败时不得返回当前系统日期"""
+        _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
+        with pytest.raises(TradeCalendarUnavailableError):
+            get_latest_trade_date(datetime(2026, 8, 8, 10, 0))
+
+    def test_empty_network_response_raises(self, monkeypatch):
+        """交易日历接口返回空表时应抛出异常"""
+        _mock_ak_fetch(monkeypatch, trade_dates=[])
+        with pytest.raises(TradeCalendarUnavailableError):
+            _get_all_trade_dates()
+
+    def test_invalid_network_response_raises(self, monkeypatch):
+        """交易日历接口返回非法日期时应抛出异常"""
+        _mock_ak_fetch(monkeypatch, trade_dates=["not-a-date"])
+        with pytest.raises(TradeCalendarUnavailableError):
+            _get_all_trade_dates()
+
+
+class TestIsTradeDate:
+    def test_trade_day_returns_true(self, monkeypatch):
+        _mock_ak_fetch(monkeypatch)
+        assert is_trade_date(date(2026, 8, 5))
+
+    def test_weekend_returns_false(self, monkeypatch):
+        _mock_ak_fetch(monkeypatch)
+        assert not is_trade_date(date(2026, 8, 8))  # 周六
+
+    def test_default_arg_is_today(self, monkeypatch):
+        """不传参数时默认取今天, 今天是交易日则返回 True"""
+
+        class _FakeDate(date):
+            @classmethod
+            def today(cls):
+                return date(2026, 8, 5)
+
+        monkeypatch.setattr(trade_date_mod, "date", _FakeDate)
+        _mock_ak_fetch(monkeypatch)
+        assert is_trade_date()
+
+    def test_calendar_failure_returns_false(self, monkeypatch):
+        """交易日历不可用时抛出可识别异常, 不伪装成非交易日"""
+        _mock_ak_fetch(monkeypatch, raises=RuntimeError("network down"))
+        with pytest.raises(TradeCalendarUnavailableError):
+            is_trade_date(date(2026, 8, 5))

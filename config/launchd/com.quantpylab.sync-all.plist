@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.quantpylab.sync-all</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>PROJECT_ROOT="/Volumes/wdblack/some_project/QuantPyLab"; FALLBACK_LOG="$HOME/Library/Logs/QuantPyLab"; mkdir -p "$FALLBACK_LOG"; if [ ! -d "$PROJECT_ROOT" ]; then printf '%s project volume is not mounted\n' "$(date '+%Y-%m-%d %H:%M:%S')" &gt;&gt; "$FALLBACK_LOG/launcher.log"; exit 1; fi; cd "$PROJECT_ROOT" || exit 1; exec "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/tools/schedule_sync_all.py"</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/quantpylab-sync-all.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/quantpylab-sync-all.err.log</string>
+</dict>
+</plist>

@@ -12,6 +12,7 @@ from storage.database.sync_status import (
 )
 from storage.file_store.parquet_store import ParquetStore
 from utils.logger import logger
+from utils.requests_protection import SinaBlockedError
 from utils.retry import retry
 
 
@@ -99,7 +100,11 @@ class ShareCollector:
             # 向上抛出异常，触发 @retry
             raise e
 
-    @retry(max_retries=2, delay=2.0)
+    @retry(
+        max_retries=2,
+        delay=2.0,
+        fatal_exceptions=(SinaBlockedError,),
+    )
     def collect_share_capital(self, symbol: str, start_date: str = None):
         """
         同步股本变动记录

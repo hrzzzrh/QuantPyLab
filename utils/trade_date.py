@@ -12,6 +12,10 @@ from utils.logger import logger
 CACHE_FILE = Path(WAREHOUSE_DIR) / "metadata" / "trade_calendar.parquet"
 
 
+class TradeCalendarUnavailableError(RuntimeError):
+    """交易日历无法获取且没有可用缓存。"""
+
+
 @lru_cache(maxsize=1)
 def _get_all_trade_dates() -> list[date]:
     """获取所有交易日历列表（带缓存）"""
@@ -20,7 +24,13 @@ def _get_all_trade_dates() -> list[date]:
     if CACHE_FILE.exists():
         try:
             df = pd.read_parquet(CACHE_FILE)
-            trade_dates = pd.to_datetime(df["trade_date"]).dt.date.tolist()
+            parsed_dates = pd.to_datetime(df["trade_date"], errors="coerce")
+            if parsed_dates.isna().any():
+                raise TradeCalendarUnavailableError("交易日历缓存包含无效日期")
+            trade_dates = sorted(parsed_dates.dt.date.tolist())
+
+            if not trade_dates:
+                raise TradeCalendarUnavailableError("交易日历缓存为空")
 
             # 检查缓存是否足够新
             # 如果最新日期早于今天，可能需要更新（akshare 通常提供未来日期）
@@ -41,8 +51,12 @@ def _get_all_trade_dates() -> list[date]:
         try:
             # 获取新浪财经的所有历史交易日
             df = ak.tool_trade_date_hist_sina()
-            df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
-            trade_dates = sorted(df["trade_date"].tolist())
+            parsed_dates = pd.to_datetime(df["trade_date"], errors="coerce")
+            if parsed_dates.isna().any():
+                raise TradeCalendarUnavailableError("交易日历接口返回无效日期")
+            trade_dates = sorted(parsed_dates.dt.date.tolist())
+            if not trade_dates:
+                raise TradeCalendarUnavailableError("交易日历接口返回为空")
 
             # 持久化到本地
             os.makedirs(CACHE_FILE.parent, exist_ok=True)
@@ -52,14 +66,27 @@ def _get_all_trade_dates() -> list[date]:
             logger.info(f"交易日历已同步并缓存至: {CACHE_FILE}")
 
             return trade_dates
+        except TradeCalendarUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"从网络获取交易日历失败: {e}")
-            if CACHE_FILE.exists():
-                logger.info("将使用旧的本地缓存作为兜底。")
-                return pd.to_datetime(
-                    pd.read_parquet(CACHE_FILE)["trade_date"]
-                ).dt.date.tolist()
-            raise
+            raise TradeCalendarUnavailableError("交易日历同步失败") from e
+
+
+def is_trade_date(d: date | None = None) -> bool:
+    """判断指定日期 (默认今天) 是否为 A 股交易日
+
+    交易日历获取失败且无可用缓存时抛出异常, 由调度器按失败处理。
+    """
+    if d is None:
+        d = date.today()
+    try:
+        return d in set(_get_all_trade_dates())
+    except TradeCalendarUnavailableError:
+        raise
+    except Exception as e:
+        logger.error(f"获取交易日历失败, 无法确认 {d} 是否为交易日: {e}")
+        raise TradeCalendarUnavailableError(f"无法确认 {d} 是否为交易日") from e
 
 
 def get_latest_trade_date(ref_date: datetime = None) -> date:
@@ -78,7 +105,9 @@ def get_latest_trade_date(ref_date: datetime = None) -> date:
         past_trade_dates = [d for d in trade_dates if d <= ref_date.date()]
 
         if not past_trade_dates:
-            return ref_date.date()
+            raise TradeCalendarUnavailableError(
+                f"交易日历中没有早于 {ref_date.date()} 的交易日"
+            )
 
         latest = past_trade_dates[-1]
 
@@ -92,9 +121,11 @@ def get_latest_trade_date(ref_date: datetime = None) -> date:
 
         return latest
 
+    except TradeCalendarUnavailableError:
+        raise
     except Exception as e:
-        logger.warning(f"获取交易日历失败: {e}，将返回当前系统日期作为兜底。")
-        return ref_date.date()
+        logger.error(f"获取交易日历失败: {e}")
+        raise TradeCalendarUnavailableError("无法获取最近交易日") from e
 
 
 if __name__ == "__main__":

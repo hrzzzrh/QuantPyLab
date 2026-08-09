@@ -7,6 +7,8 @@ import pytest
 
 import storage.database.sync_status as sync_status_mod
 from storage.database.sync_status import (
+    DATASET_SYNC_ALL,
+    SYMBOL_SYNC_ALL,
     get_last_sync_date,
     is_synced_today,
     record_sync_success,
@@ -71,3 +73,17 @@ def test_is_synced_today():
     assert is_synced_today("share_capital", "600519", today=today)
     assert not is_synced_today("share_capital", "600519", today=date(2026, 8, 9))
     assert not is_synced_today("kline", "600519", today=today)
+
+
+def test_sync_all_roundtrip():
+    """sync-all 全流程状态记录 (dataset=sync_all, symbol=ALL 固定占位符)"""
+    assert get_last_sync_date(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL) is None
+    record_sync_success(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, date(2026, 8, 8))
+    assert get_last_sync_date(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL) == date(2026, 8, 8)
+    record_sync_success(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, date(2026, 8, 9))
+    conn = sync_status_mod.db_manager.get_sqlite_conn()
+    rows = conn.execute(
+        "SELECT COUNT(*) FROM sync_status"
+        f" WHERE dataset='{DATASET_SYNC_ALL}' AND symbol='{SYMBOL_SYNC_ALL}'"
+    ).fetchone()
+    assert rows[0] == 1

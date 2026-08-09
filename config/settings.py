@@ -24,3 +24,9 @@ LOG_RETENTION_DAYS = 30
 # 数据获取配置
 AKSHARE_TIMEOUT = 30
 MAX_RETRIES = 3
+
+# 定时调度配置 (sync-all 重试策略)
+# 未全部成功时整体重试的最大次数 (总执行次数 = 1 + SYNC_ALL_MAX_RETRIES)
+SYNC_ALL_MAX_RETRIES = 3
+# 重试间隔秒数
+SYNC_ALL_RETRY_INTERVAL_SECONDS = 60

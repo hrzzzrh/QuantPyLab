@@ -127,6 +127,21 @@ def test_fetch_hfq_none_on_request_error(monkeypatch):
     assert SinaKlcFetcher.fetch_hfq("sh600519") is None
 
 
+def test_fetch_hfq_propagates_sina_blocked(monkeypatch):
+    """新浪风控不可降级为缺失复权因子, 必须原样传播"""
+    import requests
+
+    from utils.requests_protection import SinaBlockedError
+
+    monkeypatch.setattr(
+        requests,
+        "get",
+        lambda *args, **kwargs: (_ for _ in ()).throw(SinaBlockedError("IP 风控测试")),
+    )
+    with pytest.raises(SinaBlockedError, match="IP 风控测试"):
+        SinaKlcFetcher.fetch_hfq("sh600519")
+
+
 # ──────────────────── fetch_klc_data ────────────────────
 
 

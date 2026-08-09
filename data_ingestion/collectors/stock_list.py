@@ -56,7 +56,7 @@ class StockListCollector:
 
         except Exception:
             logger.exception("同步股票列表失败")
-            return pd.DataFrame()
+            raise
 
     def _generate_symbol(self, code: str) -> str:
         """直接返回纯数字代码作为 symbol"""

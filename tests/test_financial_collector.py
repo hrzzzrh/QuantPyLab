@@ -46,7 +46,10 @@ class TestFetchStatement:
         assert captured["stock"] == "300507"
         assert captured["symbol"] == "利润表"
 
-    def test_invalid_stat_type(self):
+    def test_invalid_stat_type(self, monkeypatch):
+        import utils.retry as retry_mod
+
+        monkeypatch.setattr(retry_mod.time, "sleep", lambda _: None)
         with pytest.raises(ValueError, match="无效的报表类型"):
             FinancialCollector().fetch_statement("300507", "xxx")
 
@@ -152,3 +155,15 @@ class TestGetDisclosurePlans:
     def test_empty_plan_returns_empty_df(self, monkeypatch):
         monkeypatch.setattr("akshare.stock_yysj_em", lambda **kw: pd.DataFrame())
         assert FinancialCollector().get_disclosure_plans("20260630").empty
+
+    def test_market_failure_raises_instead_of_returning_empty(self, monkeypatch):
+        """任一市场披露计划请求失败不能伪装成合法空计划"""
+
+        def fake_yysj(symbol: str, date: str):
+            if symbol == "沪深A股":
+                raise RuntimeError("东财接口异常")
+            return pd.DataFrame()
+
+        monkeypatch.setattr("akshare.stock_yysj_em", fake_yysj)
+        with pytest.raises(RuntimeError, match="披露计划获取失败"):
+            FinancialCollector().get_disclosure_plans("20260630")

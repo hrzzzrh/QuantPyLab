@@ -80,6 +80,53 @@ uv run main.py run-backtest \
 
 示例 TOML 位于 `config/backtest/`。将 `[run]` 中的 `benchmark_symbol` 设为空字符串可跳过 ETF 基准。每次运行会在 `workspace/backtest/results/` 创建独立目录，保存解析后的参数 JSON、每日净值、调仓目标、成交记录和摘要；该目录是实验产物，不纳入版本控制。完整的策略参数、数据口径与扩展边界见 [日频股票回测](backtest.md)。
 
+### 3.4 定时调度 (每日凌晨 sync-all)
+
+基于 **launchd LaunchAgent** 实现每日自动同步，入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。
+
+**触发与判定逻辑**（每日 03:00 触发一次 wrapper）：
+1. 项目根目录不存在（外置卷未挂载）→ 记日志并以失败退出
+2. 安装新浪源请求保护层（幂等，覆盖交易日历请求）
+3. 前一天 (today-1) 非交易日 → 退出（零同步请求）
+4. 前一天是交易日 且 已记录 sync-all 成功（`last_sync_date >= 前一天`）→ 退出
+5. 执行 sync-all 流水线；**未全部成功时整体重试**（增量机制自愈：重跑只补失败部分）
+6. 全部成功 → 记录状态 `sync_status` 表 (`dataset='sync_all', symbol='ALL'`, **日期=前一天数据日**)，保证每个交易日数据在次日凌晨入库、无延迟；失败/中止 → 不记录，次日自动补跑
+
+**成功判定（三态）**：`sync_all_data_flow` 汇总 7 个环节（stocks/metadata/indicators/financial/ttm/share/kline）的失败计数：
+- `success`：全部环节失败数为 0
+- `retryable`：任一环节存在失败 → 整体重试（次数 `SYNC_ALL_MAX_RETRIES`，间隔 `SYNC_ALL_RETRY_INTERVAL_SECONDS`，见 `config/settings.py`）
+- `blocked`：新浪 IP 风控（含 kline/share 环节传播）→ 不重试（等待解封），次日补跑
+
+**CLI 退出码**：手动执行 `uv run main.py sync-all` 时，`blocked` 和 `retryable` 状态均退出码为 1；全部成功才退出码为 0。`retryable` 可重跑，增量逻辑会自动补缺。
+
+**安装**：
+```bash
+cp config/launchd/com.quantpylab.sync-all.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.quantpylab.sync-all.plist
+```
+
+**卸载**：
+```bash
+launchctl unload ~/Library/LaunchAgents/com.quantpylab.sync-all.plist
+rm ~/Library/LaunchAgents/com.quantpylab.sync-all.plist
+```
+
+**查看运行状态与日志**：
+```bash
+launchctl list | grep quantpylab
+tail -f /tmp/quantpylab-sync-all.err.log # launchd stdout/stderr 捕获
+tail -f logs/app.log                     # 流水线日志
+sqlite3 data/metadata.db "SELECT * FROM sync_status WHERE dataset='sync_all'"
+```
+
+**手动试跑**（安全：非交易日或已成功会直接退出）：
+```bash
+uv run python tools/schedule_sync_all.py
+```
+（`tools/` 为项目核心脚本目录，此写法与 `uv run main.py` 同类，不违反"禁止命令行 uv run 包裹临时代码"规范；或直接执行 `/Volumes/wdblack/some_project/QuantPyLab/.venv/bin/python tools/schedule_sync_all.py`，与 launchd 调用方式一致。）
+
+> **注意**：launchd 先由本地 `/bin/sh` 检查项目外置卷，挂载后再以绝对路径调用项目 venv 的 python；卷未挂载时记录到 `~/Library/Logs/QuantPyLab/launcher.log` 并跳过。正常运行时流水线日志仍写入项目 `logs/app.log` / `logs/error.log`，launchd stdout/stderr 写入 `/tmp/quantpylab-sync-all.{out,err}.log`。
+
 ---
 
 ## 4. 数据查询指南 (Data Query Guide)

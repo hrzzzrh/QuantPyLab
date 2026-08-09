@@ -15,6 +15,7 @@ from storage.database.sync_status import (
 from storage.file_store.parquet_store import ParquetStore
 from utils.financial import MarketLabel, get_market_label, to_sina_symbol
 from utils.logger import logger
+from utils.requests_protection import SinaBlockedError
 from utils.retry import retry
 from utils.trade_date import get_latest_trade_date
 
@@ -149,6 +150,9 @@ class DailyKlineCollector:
                     end_date=end_date,
                     adjust="hfq",
                 )
+            except SinaBlockedError:
+                # IP 风控: 立即传播止损, 不得降级 CDR (同域接口, 降级等于再发一次被风控请求)
+                raise
             except Exception as e:
                 logger.warning(
                     f"{symbol} akshare 新浪解析失败 ({type(e).__name__}), "
@@ -190,7 +194,11 @@ class DailyKlineCollector:
         """CDR 股票专用 fallback"""
         return self._fetch_sina_klc(sina_symbol, start_date, end_date)
 
-    @retry(max_retries=2, delay=2.0)
+    @retry(
+        max_retries=2,
+        delay=2.0,
+        fatal_exceptions=(SinaBlockedError,),
+    )
     def collect_kline(self, symbol: str, start_date: str = None, end_date: str = None):
         """
         同步日线行情
@@ -298,7 +306,7 @@ class DailyKlineCollector:
 
         except Exception as e:
             # Re-raise 让 @retry 装饰器捕捉并重试
-            logger.warn(f"行情保存失败: {symbol}，active_source:{active_source}")
+            logger.warning(f"行情保存失败: {symbol}，active_source:{active_source}")
             raise e
 
     def _save_incremental(self, df_new: pd.DataFrame, symbol: str):

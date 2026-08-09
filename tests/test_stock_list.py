@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import main as main_mod
+from data_ingestion.collectors.stock_list import StockListCollector
 from storage.database import manager as manager_mod
 
 
@@ -43,6 +44,16 @@ def _fake_ak(monkeypatch, sh_df=None, sz_df=None, raises=None):
 
     monkeypatch.setattr(ak, "stock_info_sh_delist", fake_sh)
     monkeypatch.setattr(ak, "stock_info_sz_delist", fake_sz)
+
+
+def test_fetch_all_stocks_propagates_api_failure(monkeypatch):
+    """股票列表接口异常不能伪装成合法空列表"""
+    monkeypatch.setattr(
+        "akshare.stock_info_a_code_name",
+        lambda: (_ for _ in ()).throw(RuntimeError("接口异常")),
+    )
+    with pytest.raises(RuntimeError, match="接口异常"):
+        StockListCollector().fetch_all_stocks()
 
 
 def test_merge_inserts_missing_delisted(monkeypatch):
