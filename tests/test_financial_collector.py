@@ -3,7 +3,10 @@
 import pandas as pd
 import pytest
 
-from data_ingestion.collectors.financial_collector import FinancialCollector
+from data_ingestion.collectors.financial_collector import (
+    _SINA_NO_DATA_OVERRIDES,
+    FinancialCollector,
+)
 
 
 def fake_sina_report_df():
@@ -63,3 +66,45 @@ class TestFetchStatement:
         )
         with pytest.raises(SinaBlockedError, match="封禁"):
             FinancialCollector().fetch_statement("300507", "balance")
+
+
+class TestNoDataOverride:
+    """白名单防御: 仅对确证无数据的 (code, stat_type) 短路, 其余完全不受影响"""
+
+    def test_whitelist_hit_short_circuits_without_akshare(self, monkeypatch):
+        """白名单命中 → 返回空 DataFrame, akshare 不被调用"""
+        called = []
+
+        def fake_akshare(**kw):
+            called.append(kw)
+            return fake_sina_report_df()
+
+        monkeypatch.setattr("akshare.stock_financial_report_sina", fake_akshare)
+        df = FinancialCollector().fetch_statement("000508", "cashflow")
+        assert df.empty
+        assert called == [], f"白名单命中不应调用 akshare, 实际调用: {called}"
+
+    def test_same_code_other_stat_not_short_circuited(self, monkeypatch):
+        """同代码非白名单报表 (balance) 不受影响, 正常抓取"""
+        monkeypatch.setattr(
+            "akshare.stock_financial_report_sina", lambda **kw: fake_sina_report_df()
+        )
+        df = FinancialCollector().fetch_statement("000508", "balance")
+        assert not df.empty
+        assert "report_date" in df.columns
+
+    def test_other_code_same_stat_not_short_circuited(self, monkeypatch):
+        """其他代码的 cashflow 不受白名单影响, 异常照常抛出"""
+        import utils.retry as retry_mod
+
+        monkeypatch.setattr(retry_mod.time, "sleep", lambda _: None)
+        monkeypatch.setattr(
+            "akshare.stock_financial_report_sina",
+            lambda **kw: (_ for _ in ()).throw(TypeError("模拟其他问题")),
+        )
+        with pytest.raises(TypeError, match="模拟其他问题"):
+            FinancialCollector().fetch_statement("600519", "cashflow")
+
+    def test_whitelist_contains_expected_entry(self):
+        """白名单确证只含 000508 的 cashflow (1998 年前退市唯一实例)"""
+        assert _SINA_NO_DATA_OVERRIDES == {("000508", "cashflow")}

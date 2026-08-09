@@ -360,6 +360,13 @@ def get_target_report_dates():
 
 def sync_financial_statements(symbol=None, force_all=False):
     """同步财务三大报表"""
+    from data_ingestion.collectors.financial_collector import _SINA_NO_DATA_OVERRIDES
+    from storage.database.sync_status import (
+        DATASET_FINANCIAL_INCOMPLETE,
+        get_last_sync_date,
+        record_sync_success,
+    )
+
     store = FinancialStore()
     collector = FinancialCollector()
     all_stocks = get_all_stocks()
@@ -381,7 +388,12 @@ def sync_financial_statements(symbol=None, force_all=False):
                 for code in df[df["actual_date"].notna()]["code"]:
                     if f"{code}_{r_date}" not in existing:
                         target_codes.add(code)
-        target_codes.update(get_orphan_codes("financial", all_codes))
+        # 孤儿补全排除已确认财务不完整 (确证缺表) 的股票, 避免每轮重复补全
+        target_codes.update(
+            c
+            for c in get_orphan_codes("financial", all_codes)
+            if get_last_sync_date(DATASET_FINANCIAL_INCOMPLETE, c) is None
+        )
 
     if not target_codes:
         logger.info("财务报表数据已是最新。")
@@ -408,6 +420,12 @@ def sync_financial_statements(symbol=None, force_all=False):
             raise
         except Exception:
             logger.exception(f"{code} 报表同步失败")
+        # 该股存在确证缺表的报表类型 → 记录标记, 孤儿补全不再选中
+        if any((code, st) in _SINA_NO_DATA_OVERRIDES for st in stat_map):
+            record_sync_success(
+                DATASET_FINANCIAL_INCOMPLETE, code, datetime.now().date()
+            )
+            logger.info(f"{code} 已确认财务数据不完整, 记录标记")
 
 
 def sync_financial_indicators(symbol=None, force_all=False):

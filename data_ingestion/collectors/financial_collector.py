@@ -9,6 +9,11 @@ from utils.logger import logger
 from utils.requests_protection import SinaBlockedError
 from utils.retry import retry
 
+# 新浪源确证无数据的 (code, stat_type) 白名单:
+# 1998 年前退市股无现金流量表 (中国 1998 年起强制披露, 会计史事实, 集合封闭)。
+# 新浪 llb 接口返回 result.data=null, akshare 无防御直接崩溃; 实测全库仅此一只。
+_SINA_NO_DATA_OVERRIDES = {("000508", "cashflow")}
+
 
 class FinancialCollector:
     """
@@ -53,6 +58,11 @@ class FinancialCollector:
         stat_name = self.STATEMENTS.get(stat_type)
         if not stat_name:
             raise ValueError(f"无效的报表类型: {stat_type}")
+
+        # 已知新浪无数据的白名单命中: 直接短路, 不请求接口 (零崩溃/零重试)
+        if (code, stat_type) in _SINA_NO_DATA_OVERRIDES:
+            logger.warning(f"{code} {stat_name} 已知新浪无数据, 跳过抓取")
+            return pd.DataFrame()
 
         try:
             logger.debug(f"正在从新浪抓取 {code} 的 {stat_name}...")
