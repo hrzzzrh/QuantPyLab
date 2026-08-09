@@ -28,7 +28,8 @@
 所有数据查询必须通过视图完成。视图采用 Python 类定义 (`storage/database/views/`)，支持显式依赖 (DAG) 与自动可视化。
 7. **运行规范**：本项目统一使用 `uv` 进行环境管理。执行脚本格式：`uv run main.py <subcommand> [options]`。
 8. **代码质量检查 (Lint Gate)**：修改核心代码（`storage/`、`backtest/`、`data_ingestion/`、`utils/`、`config/`、`analysis/`、`tools/`、`main.py`、`tests/`，不含 `workspace/`）后，必须依次运行 `uv run ruff check .` 与 `uv run ruff format --check .`，两项全部通过方可完成任务；如需格式化运行 `uv run ruff format .`。规则与豁免配置见 `pyproject.toml` 的 `[tool.ruff]`。
-9. **禁止全量扫描数据目录 (Data Directory Guard)**：严禁使用 `ls` 或类似命令对 `data/` 目录进行全量或递归扫描（Parquet 分片数量巨大），必须使用精准路径、脚本查询或元数据库（`metadata.db`）定位目标。
+9. **测试覆盖要求 (Test Coverage Gate)**：代码变更必须有对应测试用例覆盖。修改核心代码（范围同 Lint Gate）后，须为变更的行为补充/更新单元测试（mock 网络与数据库，不触真实网络），并运行 `uv run pytest tests/` 确认全部通过方可完成任务；新增测试文件必须纳入提交，禁止出现"改代码无测试"的提交。测试规范：真实环境依赖（网络、外部接口、`data/` 数据湖）一律以 `monkeypatch` 或 mock 隔离，仅验证纯逻辑行为。
+10. **禁止全量扫描数据目录 (Data Directory Guard)**：严禁使用 `ls` 或类似命令对 `data/` 目录进行全量或递归扫描（Parquet 分片数量巨大），必须使用精准路径、脚本查询或元数据库（`metadata.db`）定位目标。
 
 ## 4. 项目进度
 - [x] **基础架构搭建**：完成 `uv` 环境配置，实现 SQLite/DuckDB 双引擎。
