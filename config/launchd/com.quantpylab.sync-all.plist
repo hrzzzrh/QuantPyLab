@@ -9,7 +9,7 @@
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>PROJECT_ROOT="/Volumes/wdblack/some_project/QuantPyLab"; FALLBACK_LOG="$HOME/Library/Logs/QuantPyLab"; mkdir -p "$FALLBACK_LOG"; if [ ! -d "$PROJECT_ROOT" ]; then printf '%s project volume is not mounted\n' "$(date '+%Y-%m-%d %H:%M:%S')" &gt;&gt; "$FALLBACK_LOG/launcher.log"; exit 1; fi; if ! mkdir -p "$PROJECT_ROOT/logs"; then printf '%s project logs directory is unavailable\n' "$(date '+%Y-%m-%d %H:%M:%S')" &gt;&gt; "$FALLBACK_LOG/launcher.log"; exit 1; fi; cd "$PROJECT_ROOT" || exit 1; if ! exec &gt;&gt; "$PROJECT_ROOT/logs/launchd_sync-all.out.log" 2&gt;&gt; "$PROJECT_ROOT/logs/launchd_sync-all.err.log"; then printf '%s project log redirection failed\n' "$(date '+%Y-%m-%d %H:%M:%S')" &gt;&gt; "$FALLBACK_LOG/launcher.log"; exit 1; fi; exec "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/tools/schedule_sync_all.py"</string>
+        <string>PROJECT_ROOT="/Volumes/wdblack/some_project/QuantPyLab"; FALLBACK_LOG="$HOME/Library/Logs/QuantPyLab"; mkdir -p "$FALLBACK_LOG"; if [ ! -d "$PROJECT_ROOT" ]; then printf '%s project volume is not mounted\n' "$(date '+%Y-%m-%d %H:%M:%S')" &gt;&gt; "$FALLBACK_LOG/launcher.log"; exit 1; fi; if ! mkdir -p "$PROJECT_ROOT/logs"; then printf '%s project logs directory is unavailable\n' "$(date '+%Y-%m-%d %H:%M:%S')" &gt;&gt; "$FALLBACK_LOG/launcher.log"; exit 1; fi; cd "$PROJECT_ROOT" || exit 1; exec "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/tools/schedule_sync_all.py"</string>
     </array>
 
     <key>WorkingDirectory</key>
@@ -18,9 +18,9 @@
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>3</integer>
+        <integer>20</integer>
         <key>Minute</key>
-        <integer>0</integer>
+        <integer>30</integer>
     </dict>
 
     <key>StandardOutPath</key>

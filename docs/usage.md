@@ -80,11 +80,11 @@ uv run main.py run-backtest \
 
 示例 TOML 位于 `config/backtest/`。将 `[run]` 中的 `benchmark_symbol` 设为空字符串可跳过 ETF 基准。每次运行会在 `workspace/backtest/results/` 创建独立目录，保存解析后的参数 JSON、每日净值、调仓目标、成交记录和摘要；该目录是实验产物，不纳入版本控制。完整的策略参数、数据口径与扩展边界见 [日频股票回测](backtest.md)。
 
-### 3.4 定时调度 (每日凌晨 sync-all)
+### 3.4 定时调度 (每日 20:30 sync-all)
 
 基于 **launchd LaunchAgent** 实现每日自动同步，入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。
 
-**触发与判定逻辑**（每日 03:00 触发一次 wrapper）：
+**触发与判定逻辑**（每日 20:30 触发一次 wrapper）：
 1. 项目根目录不存在（外置卷未挂载）→ 记日志并以失败退出
 2. 安装新浪源请求保护层（幂等，覆盖交易日历请求）
 3. 前一天 (today-1) 非交易日 → 退出（零同步请求）
@@ -114,7 +114,7 @@ rm ~/Library/LaunchAgents/com.quantpylab.sync-all.plist
 **查看运行状态与日志**：
 ```bash
 launchctl list | grep quantpylab
-tail -f logs/launchd_sync-all.err.log    # launchd stdout/stderr 捕获
+tail -f logs/error.log                   # 错误日志
 tail -f logs/app.log                     # 流水线日志
 sqlite3 data/metadata.db "SELECT * FROM sync_status WHERE dataset='sync_all'"
 ```
@@ -125,7 +125,7 @@ uv run python tools/schedule_sync_all.py
 ```
 （`tools/` 为项目核心脚本目录，此写法与 `uv run main.py` 同类，不违反"禁止命令行 uv run 包裹临时代码"规范；或直接执行 `/Volumes/wdblack/some_project/QuantPyLab/.venv/bin/python tools/schedule_sync_all.py`，与 launchd 调用方式一致。）
 
-> **注意**：launchd 的初始 stdout/stderr 管道为始终存在的 `/dev/null`；本地 `/bin/sh` 确认项目外置卷和 `logs/` 可用后，再将 Python stdout/stderr 重定向到项目 `logs/launchd_sync-all.{out,err}.log`。卷未挂载或日志重定向失败时记录到 `~/Library/Logs/QuantPyLab/launcher.log` 并失败退出。流水线自身日志写入项目 `logs/app.log` / `logs/error.log`。
+> **注意**：launchd 的 stdout/stderr 管道为始终存在的 `/dev/null`；本地 `/bin/sh` 只负责确认项目外置卷和 `logs/` 可用，再以绝对路径启动 Python。卷未挂载时记录到 `~/Library/Logs/QuantPyLab/launcher.log` 并失败退出；正常运行的流水线日志由项目日志器写入 `logs/app.log` / `logs/error.log`。
 
 ---
 

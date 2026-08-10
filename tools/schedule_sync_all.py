@@ -1,4 +1,4 @@
-"""launchd 定时调度入口: 每日凌晨执行 sync-all 全流程数据同步。
+"""launchd 定时调度入口: 每日 20:30 执行 sync-all 全流程数据同步。
 
 判定与执行逻辑:
 1. 项目根目录不存在 (外置卷未挂载) -> 记日志退出
@@ -82,7 +82,7 @@ def run_sync_all_with_retry() -> int:
             logger.exception("sync-all 流水线异常中止 (视为未成功)")
             status = None
         if status == sync_main.SYNC_ALL_SUCCESS:
-            # 记录数据日 (前一天): 保证下一个交易日凌晨判定时 last < 新 prev_day,
+            # 记录数据日 (前一天): 保证下一个交易日定时判定时 last < 新 prev_day,
             # 每日数据零延迟入库; 同日重复触发时 last == prev_day 正常跳过
             status_write_ok, _ = _execute_sync_status_with_retry(
                 lambda: record_sync_success(
