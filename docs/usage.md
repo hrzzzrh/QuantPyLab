@@ -114,7 +114,7 @@ rm ~/Library/LaunchAgents/com.quantpylab.sync-all.plist
 **查看运行状态与日志**：
 ```bash
 launchctl list | grep quantpylab
-tail -f /tmp/quantpylab-sync-all.err.log # launchd stdout/stderr 捕获
+tail -f logs/launchd_sync-all.err.log    # launchd stdout/stderr 捕获
 tail -f logs/app.log                     # 流水线日志
 sqlite3 data/metadata.db "SELECT * FROM sync_status WHERE dataset='sync_all'"
 ```
@@ -125,7 +125,7 @@ uv run python tools/schedule_sync_all.py
 ```
 （`tools/` 为项目核心脚本目录，此写法与 `uv run main.py` 同类，不违反"禁止命令行 uv run 包裹临时代码"规范；或直接执行 `/Volumes/wdblack/some_project/QuantPyLab/.venv/bin/python tools/schedule_sync_all.py`，与 launchd 调用方式一致。）
 
-> **注意**：launchd 先由本地 `/bin/sh` 检查项目外置卷，挂载后再以绝对路径调用项目 venv 的 python；卷未挂载时记录到 `~/Library/Logs/QuantPyLab/launcher.log` 并跳过。正常运行时流水线日志仍写入项目 `logs/app.log` / `logs/error.log`，launchd stdout/stderr 写入 `/tmp/quantpylab-sync-all.{out,err}.log`。
+> **注意**：launchd 的初始 stdout/stderr 管道为始终存在的 `/dev/null`；本地 `/bin/sh` 确认项目外置卷和 `logs/` 可用后，再将 Python stdout/stderr 重定向到项目 `logs/launchd_sync-all.{out,err}.log`。卷未挂载或日志重定向失败时记录到 `~/Library/Logs/QuantPyLab/launcher.log` 并失败退出。流水线自身日志写入项目 `logs/app.log` / `logs/error.log`。
 
 ---
 

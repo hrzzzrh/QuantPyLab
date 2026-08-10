@@ -1,6 +1,7 @@
 # Data and Logs
 data/
-logs/
+logs/*
+!logs/.gitkeep
 *.db
 *.duckdb
 *.parquet
