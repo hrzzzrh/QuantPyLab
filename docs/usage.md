@@ -80,11 +80,11 @@ uv run main.py run-backtest \
 
 示例 TOML 位于 `config/backtest/`。将 `[run]` 中的 `benchmark_symbol` 设为空字符串可跳过 ETF 基准。每次运行会在 `workspace/backtest/results/` 创建独立目录，保存解析后的参数 JSON、每日净值、调仓目标、成交记录和摘要；该目录是实验产物，不纳入版本控制。完整的策略参数、数据口径与扩展边界见 [日频股票回测](backtest.md)。
 
-### 3.4 定时调度 (每日 20:30 sync-all)
+### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 
 基于 **launchd LaunchAgent** 实现每日自动同步，入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。
 
-**触发与判定逻辑**（每日 20:30 触发一次 wrapper）：
+**触发与判定逻辑**（每日 03:00 触发一次 wrapper）：
 1. 项目根目录不存在（外置卷未挂载）→ 记日志并以失败退出
 2. 安装新浪源请求保护层（幂等，覆盖交易日历请求）
 3. 前一天 (today-1) 非交易日 → 退出（零同步请求）

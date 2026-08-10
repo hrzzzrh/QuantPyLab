@@ -16,7 +16,7 @@ def test_launchd_sync_all_changes_to_project_root_before_running():
 
     assert arguments[:2] == ["/bin/sh", "-c"]
     assert config["WorkingDirectory"] == "/"
-    assert config["StartCalendarInterval"] == {"Hour": 20, "Minute": 30}
+    assert config["StartCalendarInterval"] == {"Hour": 3, "Minute": 0}
     command = arguments[2]
     assert "project volume is not mounted" in command
     assert "exit 1; fi" in command
