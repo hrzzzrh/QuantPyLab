@@ -1,0 +1,4 @@
+interface:
+  display_name: "下载定期财报"
+  short_description: "从交易所和巨潮资讯下载上市公司定期报告 PDF"
+  default_prompt: "使用 $financial-report-downloader 下载指定公司的定期财报。"

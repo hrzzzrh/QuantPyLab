@@ -1,0 +1,4 @@
+interface:
+  display_name: "生成技术面统计快照"
+  short_description: "按后复权口径生成均线、RSI、MACD 和量价统计"
+  default_prompt: "使用 $technical-analysis 生成指定股票的技术面统计快照。"

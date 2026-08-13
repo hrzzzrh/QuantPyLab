@@ -1,0 +1,4 @@
+interface:
+  display_name: "深度个股讨论"
+  short_description: "同步公司数据并加载全部投研资产开展深度价值讨论"
+  default_prompt: "使用 $research-discuss-company 讨论指定公司。"

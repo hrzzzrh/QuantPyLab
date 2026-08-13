@@ -1,0 +1,4 @@
+interface:
+  display_name: "同步个股情报"
+  short_description: "执行完整情报同步、证据核验和投研资产演进工作流"
+  default_prompt: "使用 $research-sync-intel 同步指定公司情报。"

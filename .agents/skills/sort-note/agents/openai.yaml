@@ -1,0 +1,4 @@
+interface:
+  display_name: "规范并整理投研汇总"
+  short_description: "校验跟踪审计日期格式并排序 note.md 两个主表格"
+  default_prompt: "使用 $sort-note 整理投研汇总表。"

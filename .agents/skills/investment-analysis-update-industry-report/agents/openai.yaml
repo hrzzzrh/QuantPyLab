@@ -1,0 +1,4 @@
+interface:
+  display_name: "更新行业研报"
+  short_description: "按持续跟踪框架更新行业研报数据和研判结论"
+  default_prompt: "使用 $investment-analysis-update-industry-report 更新指定研报。"

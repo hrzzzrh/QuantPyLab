@@ -1,0 +1,4 @@
+interface:
+  display_name: "审查并修正研报"
+  short_description: "独立审查研报、裁决问题并执行手术式修正闭环"
+  default_prompt: "使用 $investment-analysis-review-and-fix 审查指定公司。"

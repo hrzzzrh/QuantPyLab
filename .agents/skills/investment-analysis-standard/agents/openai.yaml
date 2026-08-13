@@ -1,0 +1,4 @@
+interface:
+  display_name: "标准投资价值分析"
+  short_description: "按 QuantPyLab 投研框架完成公司投资价值分析"
+  default_prompt: "使用 $investment-analysis-standard 分析指定公司。"
