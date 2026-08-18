@@ -1,7 +1,7 @@
 {
   "version": 1,
   "built_at": "2026-08-07T21:48:44",
-  "column_count": 217,
+  "column_count": 218,
   "columns": {
     "购买子公司、联营企业及合营企业投资所支付的现金净额": "DOUBLE",
     "收到再保险业务现金净额": "DOUBLE",
@@ -202,6 +202,7 @@
     "偿还拆入资金支付的现金": "DOUBLE",
     "收到的其他与筹资活动有关的现金": "DOUBLE",
     "公告日期": "VARCHAR",
+    "数据可用日期": "VARCHAR",
     "处置可供出售金融资产净增加额": "DOUBLE",
     "偿还债务支付的现金": "DOUBLE",
     "币种": "VARCHAR",

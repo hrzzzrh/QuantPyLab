@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 from config.settings import WAREHOUSE_DIR
+from storage.database.financial_publish_date_reconciler import (
+    reconcile_financial_publish_dates_for_symbol,
+)
 from storage.database.manager import db_manager
 from storage.file_store.parquet_store import ParquetStore
 from utils.logger import logger
@@ -39,6 +42,7 @@ class IndicatorStore:
             "报告期名称",
             "证券类型代码",
             "公告日期",
+            "数据可用日期",
             "更新日期",
             "币种",
             "其他_REPORT_YEAR",
@@ -64,7 +68,7 @@ class IndicatorStore:
         保存指标数据到 Parquet。
         """
         if df.empty:
-            return
+            return {}
 
         try:
             symbol = df["symbol"].iloc[0]
@@ -93,7 +97,11 @@ class IndicatorStore:
             df = self._enforce_schema(df)
 
             self.parquet_store.save_partition(df, self.category, symbol)
+            reconciliation_changes = reconcile_financial_publish_dates_for_symbol(
+                symbol
+            )
             logger.info(f"成功入库 {symbol}: {len(df)} 条指标记录 (Parquet)")
+            return reconciliation_changes
 
         except Exception:
             logger.exception("存储财务指标失败")

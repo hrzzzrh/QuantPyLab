@@ -14,9 +14,15 @@ from data_ingestion.collectors.stock_list import (
     StockDetailCollector,
     StockListCollector,
 )
+from storage.database.financial_publish_date_verifier import (
+    verify_overdue_financial_publish_dates_for_symbol,
+)
 from storage.database.financial_store import FinancialStore
 from storage.database.indicator_store import IndicatorStore
 from storage.database.manager import db_manager
+from storage.database.official_disclosure_date_resolver import (
+    OfficialDisclosureDateResolver,
+)
 from utils.financial import get_consecutive_reports
 from utils.logger import logger
 from utils.requests_protection import SinaBlockedError
@@ -411,6 +417,36 @@ def get_target_report_dates():
     return dates
 
 
+def _record_ttm_pending(symbol: str) -> None:
+    """记录待重算 TTM 状态，供所有 TTM 调用路径复用。"""
+    from storage.database.sync_status import (
+        DATASET_FINANCIAL_TTM_PENDING,
+        record_sync_success,
+    )
+
+    record_sync_success(DATASET_FINANCIAL_TTM_PENDING, symbol, datetime.now().date())
+
+
+def _clear_ttm_pending(symbol: str) -> None:
+    """清除已成功重算的 TTM 待处理状态。"""
+    from storage.database.sync_status import (
+        DATASET_FINANCIAL_TTM_PENDING,
+        clear_sync_status,
+    )
+
+    clear_sync_status(DATASET_FINANCIAL_TTM_PENDING, symbol)
+
+
+def _calculate_ttm_and_update_status(calculator, symbol: str) -> None:
+    """计算单股 TTM，失败留痕，成功清除待重算状态。"""
+    try:
+        calculator.calculate_for_symbol(symbol)
+        _clear_ttm_pending(symbol)
+    except Exception:
+        _record_ttm_pending(symbol)
+        raise
+
+
 def sync_financial_statements(symbol=None, force_all=False):
     """同步财务三大报表
 
@@ -420,6 +456,9 @@ def sync_financial_statements(symbol=None, force_all=False):
     from data_ingestion.collectors.financial_collector import _SINA_NO_DATA_OVERRIDES
     from storage.database.sync_status import (
         DATASET_FINANCIAL_INCOMPLETE,
+        DATASET_FINANCIAL_OFFICIAL_PENDING,
+        DATASET_FINANCIAL_TTM_PENDING,
+        clear_sync_status,
         get_last_sync_date,
         record_sync_success,
     )
@@ -451,6 +490,16 @@ def sync_financial_statements(symbol=None, force_all=False):
             for c in get_orphan_codes("financial", all_codes)
             if get_last_sync_date(DATASET_FINANCIAL_INCOMPLETE, c) is None
         )
+        target_codes.update(
+            c
+            for c in all_codes
+            if get_last_sync_date(DATASET_FINANCIAL_OFFICIAL_PENDING, c) is not None
+        )
+        target_codes.update(
+            c
+            for c in all_codes
+            if get_last_sync_date(DATASET_FINANCIAL_TTM_PENDING, c) is not None
+        )
 
     if not target_codes:
         logger.info("财务报表数据已是最新。")
@@ -459,9 +508,15 @@ def sync_financial_statements(symbol=None, force_all=False):
     symbol_name_map = {s[0]: s[1] for s in all_stocks}
     pbar = tqdm(list(target_codes), desc="报表同步")
     failed = 0
+    official_date_resolver = OfficialDisclosureDateResolver()
+    ttm_recalculator = None
     for code in pbar:
         name = symbol_name_map.get(code, "")
         pbar.set_description(f"报表同步: {code} {name}")
+        ttm_recalculation_required = (
+            get_last_sync_date(DATASET_FINANCIAL_TTM_PENDING, code) is not None
+        )
+        source_date_changes: dict[str, int] = {}
         try:
             stat_map = {
                 "balance": "fin_balance_sheet",
@@ -471,13 +526,48 @@ def sync_financial_statements(symbol=None, force_all=False):
             for st, table_name in stat_map.items():
                 df = collector.fetch_statement(code, st)
                 if not df.empty:
-                    store.save_statement(df, table_name)
+                    reconciliation_changes = store.save_statement(df, table_name) or {}
+                    for source_name, changed_count in reconciliation_changes.items():
+                        source_date_changes[source_name] = (
+                            source_date_changes.get(source_name, 0) + changed_count
+                        )
                 time.sleep(random.uniform(3.0, 6.0))
+
+            verification = verify_overdue_financial_publish_dates_for_symbol(
+                code,
+                resolver=official_date_resolver,
+            )
+            ttm_recalculation_required = ttm_recalculation_required or bool(
+                source_date_changes or verification.changed_rows
+            )
+            if ttm_recalculation_required:
+                if ttm_recalculator is None:
+                    from analysis.processors.ttm_calculator import TTMCalculator
+
+                    ttm_recalculator = TTMCalculator()
+                _calculate_ttm_and_update_status(ttm_recalculator, code)
+                logger.info("%s 公告日期修正后已重算 TTM", code)
+            if verification.unresolved_report_dates:
+                record_sync_success(
+                    DATASET_FINANCIAL_OFFICIAL_PENDING,
+                    code,
+                    datetime.now().date(),
+                )
+                failed += 1
+            else:
+                clear_sync_status(DATASET_FINANCIAL_OFFICIAL_PENDING, code)
         except SinaBlockedError as e:
             logger.error(f"新浪接口 IP 风控，中止报表同步: {e}")
             raise
         except Exception:
             failed += 1
+            if ttm_recalculation_required:
+                _record_ttm_pending(code)
+            record_sync_success(
+                DATASET_FINANCIAL_OFFICIAL_PENDING,
+                code,
+                datetime.now().date(),
+            )
             logger.exception(f"{code} 报表同步失败")
         # 该股存在确证缺表的报表类型 → 记录标记, 孤儿补全不再选中
         if any((code, st) in _SINA_NO_DATA_OVERRIDES for st in stat_map):
@@ -494,6 +584,14 @@ def sync_financial_indicators(symbol=None, force_all=False):
 
     返回 (processed, failed): failed 为单股同步异常数 (网络/解析/存储错误)。
     """
+    from storage.database.sync_status import (
+        DATASET_FINANCIAL_DATE_RECONCILIATION_PENDING,
+        DATASET_FINANCIAL_TTM_PENDING,
+        clear_sync_status,
+        get_last_sync_date,
+        record_sync_success,
+    )
+
     store = IndicatorStore()
     collector = FinancialCollector()
     all_stocks = get_all_stocks()
@@ -516,6 +614,17 @@ def sync_financial_indicators(symbol=None, force_all=False):
                     if f"{code}_{r_date}" not in existing:
                         target_codes.add(code)
         target_codes.update(get_orphan_codes("indicators", [s[0] for s in all_stocks]))
+        target_codes.update(
+            s[0]
+            for s in all_stocks
+            if get_last_sync_date(DATASET_FINANCIAL_TTM_PENDING, s[0]) is not None
+        )
+        target_codes.update(
+            s[0]
+            for s in all_stocks
+            if get_last_sync_date(DATASET_FINANCIAL_DATE_RECONCILIATION_PENDING, s[0])
+            is not None
+        )
         target_tasks = [s for s in all_stocks if s[0] in target_codes]
 
     if not target_tasks:
@@ -526,16 +635,34 @@ def sync_financial_indicators(symbol=None, force_all=False):
     from utils.financial import get_market_label
 
     failed = 0
+    ttm_recalculator = None
     for code, name in pbar:
         pbar.set_description(f"指标同步: {code} {name}")
+        ttm_recalculation_required = (
+            get_last_sync_date(DATASET_FINANCIAL_TTM_PENDING, code) is not None
+        )
         try:
             # 东财接口需要带后缀的代码 (如 600519.SH)
             label = get_market_label(code).value
             fmt_symbol = f"{code}.{label}"
-            collector.collect_indicators(code, fmt_symbol)
+            reconciliation_result = collector.collect_indicators(code, fmt_symbol)
+            if reconciliation_result is not None:
+                clear_sync_status(DATASET_FINANCIAL_DATE_RECONCILIATION_PENDING, code)
+            reconciliation_changes = reconciliation_result or {}
+            if reconciliation_changes or ttm_recalculation_required:
+                if ttm_recalculator is None:
+                    from analysis.processors.ttm_calculator import TTMCalculator
+
+                    ttm_recalculator = TTMCalculator()
+                _calculate_ttm_and_update_status(ttm_recalculator, code)
             time.sleep(random.uniform(0.5, 1.0))
         except Exception:
             failed += 1
+            record_sync_success(
+                DATASET_FINANCIAL_DATE_RECONCILIATION_PENDING,
+                code,
+                datetime.now().date(),
+            )
             logger.exception(f"{code} 指标同步失败")
 
     return len(target_tasks), failed
@@ -554,6 +681,10 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
     返回 (processed, failed): failed 为单股计算异常数。
     """
     from analysis.processors.ttm_calculator import TTMCalculator
+    from storage.database.sync_status import (
+        DATASET_FINANCIAL_TTM_PENDING,
+        get_last_sync_date,
+    )
 
     calculator = TTMCalculator()
     all_stocks = get_all_stocks()
@@ -567,7 +698,7 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
             return 0, 0
         logger.info(f"单只同步模式: {symbol}")
         try:
-            calculator.calculate_for_symbol(symbol)
+            _calculate_ttm_and_update_status(calculator, symbol)
         except Exception:
             logger.exception(f"{symbol} TTM 计算失败")
             return 1, 1
@@ -576,12 +707,18 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
     duckdb_conn = db_manager.get_duckdb_conn()
     db_manager.ensure_views("fin_income_statement", "fin_ttm")
     available_views = db_manager.list_available_views()
+    financial_symbols = get_financial_symbols()
+    pending_symbols = {
+        code
+        for code in financial_symbols
+        if get_last_sync_date(DATASET_FINANCIAL_TTM_PENDING, code) is not None
+    }
 
     if force_all:
         logger.info("强制全量模式...")
         # 候选集 = 数据湖中实际有报表的全部股票 (含孤儿股, 覆盖退市股),
         # 而非仅 stocks 活跃列表, 避免孤儿股 TTM 永不被重算
-        candidates = [(s, "20991231") for s in get_financial_symbols()]
+        candidates = [(s, "20991231") for s in financial_symbols]
     else:
         logger.info("智能增量模式：正在进行数据完整性自检...")
         if "fin_ttm" not in available_views:
@@ -597,24 +734,33 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
             """
             candidates = duckdb_conn.execute(sql).fetchall()
 
-    if not candidates:
+    if not candidates and not pending_symbols:
         logger.info("所有 TTM 数据已是最新。")
         return 0, 0
 
     target_symbols = []
+    selected_symbols = set()
     for code, max_date in candidates:
         if force_all:
             target_symbols.append(code)
+            selected_symbols.add(code)
+            continue
+        if code in pending_symbols:
+            target_symbols.append(code)
+            selected_symbols.add(code)
             continue
         required_reports = get_consecutive_reports(max_date, 5)
         check_sql = f"SELECT COUNT(DISTINCT report_date) FROM fin_income_statement WHERE symbol = '{code}' AND report_date IN {tuple(required_reports)}"
         count = duckdb_conn.execute(check_sql).fetchone()[0]
         if count == 5:
             target_symbols.append(code)
+            selected_symbols.add(code)
         else:
             logger.debug(
                 f"跳过数据不全股票 {code}: 最新 {max_date} 往前 5 季仅有 {count} 季数据"
             )
+
+    target_symbols.extend(sorted(pending_symbols - selected_symbols))
 
     if not target_symbols:
         logger.info("数据完整性未达标，无需计算。")
@@ -628,7 +774,7 @@ def calculate_ttm_metrics(symbol=None, force_all=False):
         name = symbol_name_map.get(code, "")
         pbar.set_description(f"TTM 计算: {code} {name}")
         try:
-            calculator.calculate_for_symbol(code)
+            _calculate_ttm_and_update_status(calculator, code)
         except Exception:
             failed += 1
             logger.exception(f"{code} TTM 计算失败")

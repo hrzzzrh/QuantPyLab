@@ -1,7 +1,7 @@
 {
   "version": 1,
   "built_at": "2026-08-07T21:48:47",
-  "column_count": 141,
+  "column_count": 142,
   "columns": {
     "其他_NZBJE": "DOUBLE",
     "营业总收入滚动环比": "DOUBLE",
@@ -90,6 +90,7 @@
     "贷款和垫款": "DOUBLE",
     "员工人数": "DOUBLE",
     "公告日期": "VARCHAR",
+    "数据可用日期": "VARCHAR",
     "扣非净利润同比增长": "DOUBLE",
     "每股净资产": "DOUBLE",
     "净资本/净资产": "DOUBLE",

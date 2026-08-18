@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 from config.settings import WAREHOUSE_DIR
+from storage.database.financial_publish_date_reconciler import (
+    reconcile_financial_publish_dates_for_symbol,
+)
 from storage.database.manager import db_manager
 from storage.file_store.parquet_store import ParquetStore
 from utils.logger import logger
@@ -29,7 +32,7 @@ class FinancialStore:
         保存报表数据到 Parquet。
         """
         if df.empty:
-            return
+            return {}
 
         try:
             category = self.table_map.get(table_name)
@@ -37,47 +40,6 @@ class FinancialStore:
                 raise ValueError(f"未知表名: {table_name}")
 
             symbol = df["symbol"].iloc[0]
-
-            # --- 日期对齐修复逻辑开始 ---
-            # 从 fin_indicator (东财源) 获取更准确的公告日期和更新日期
-            try:
-                # 确保 fin_indicator 视图可用（按需注册）
-                db_manager.ensure_views("fin_indicator")
-                available_views = db_manager.list_available_views()
-                if "fin_indicator" in available_views:
-                    sql = f'SELECT report_date, "公告日期" as em_ann_date, "更新日期" as em_up_date FROM fin_indicator WHERE symbol = \'{symbol}\''
-                    df_dates = self.conn.execute(sql).df()
-
-                    if not df_dates.empty:
-                        # 标准化东财日期格式
-                        df_dates["em_ann_date"] = pd.to_datetime(
-                            df_dates["em_ann_date"]
-                        ).dt.strftime("%Y%m%d")
-                        df_dates["em_up_date"] = pd.to_datetime(
-                            df_dates["em_up_date"]
-                        ).dt.strftime("%Y-%m-%d %H:%M:%S")
-
-                        # 合并到当前报表 df
-                        # 注意：优先信任指标表的日期，强制覆盖
-                        df = pd.merge(df, df_dates, on="report_date", how="left")
-
-                        # 执行覆盖
-                        if "em_ann_date" in df.columns:
-                            mask = df["em_ann_date"].notna()
-                            df.loc[mask, "公告日期"] = df.loc[mask, "em_ann_date"]
-                            df.drop(columns=["em_ann_date"], inplace=True)
-
-                        if "em_up_date" in df.columns:
-                            mask = df["em_up_date"].notna()
-                            df.loc[mask, "更新日期"] = df.loc[mask, "em_up_date"]
-                            df.drop(columns=["em_up_date"], inplace=True)
-
-                        logger.debug(
-                            f"已根据 fin_indicator 为 {symbol} 修复了公告/更新日期"
-                        )
-            except Exception as date_err:
-                logger.warning(f"尝试修复 {symbol} 报表日期失败 (跳过): {date_err}")
-            # --- 日期对齐修复逻辑结束 ---
 
             # 读取该股票已有的数据（如果存在），进行合并去重
             # 这样可以处理增量更新/覆盖逻辑
@@ -105,6 +67,7 @@ class FinancialStore:
             df = self._coerce_numeric(df)
 
             self.parquet_store.save_partition(df, category, symbol)
+            return reconcile_financial_publish_dates_for_symbol(symbol)
 
         except Exception:
             logger.exception(f"存储 {table_name} 失败")
@@ -117,6 +80,7 @@ class FinancialStore:
             "symbol",
             "report_date",
             "公告日期",
+            "数据可用日期",
             "更新日期",
             "数据源",
             "是否审计",

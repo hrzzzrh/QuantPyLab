@@ -1,7 +1,7 @@
 {
   "version": 1,
   "built_at": "2026-08-07T21:48:38",
-  "column_count": 279,
+  "column_count": 280,
   "columns": {
     "应付债券：永续债": "DOUBLE",
     "负债和所有者权益(或股东权益)总计": "DOUBLE",
@@ -270,6 +270,7 @@
     "农险保费准备金": "DOUBLE",
     "库存股": "DOUBLE",
     "公告日期": "VARCHAR",
+    "数据可用日期": "VARCHAR",
     "保险合同准备金": "DOUBLE",
     "长期负债合计": "DOUBLE",
     "存出保证金": "DOUBLE",

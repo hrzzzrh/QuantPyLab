@@ -20,20 +20,67 @@ class DailyValuationView(DuckDBView):
                 FROM share_capital
             ),
             -- 3. 准备财务 TTM 历史
-            ttm_hist AS (
-                SELECT symbol, strptime(pub_date, '%Y%m%d')::DATE as pub_date, net_profit_ttm, deduct_net_profit_ttm, revenue_ttm, ocf_ttm
+            ttm_source AS (
+                SELECT
+                    symbol,
+                    pub_date,
+                    report_date,
+                    net_profit_ttm,
+                    deduct_net_profit_ttm,
+                    revenue_ttm,
+                    ocf_ttm,
+                    md5(concat_ws(
+                        '|',
+                        COALESCE(CAST(report_date AS VARCHAR), '<NULL>'),
+                        COALESCE(CAST(net_profit_ttm AS VARCHAR), '<NULL>'),
+                        COALESCE(CAST(deduct_net_profit_ttm AS VARCHAR), '<NULL>'),
+                        COALESCE(CAST(revenue_ttm AS VARCHAR), '<NULL>'),
+                        COALESCE(CAST(ocf_ttm AS VARCHAR), '<NULL>')
+                    )) AS record_tie_breaker
                 FROM fin_ttm
             ),
+            ttm_hist AS (
+                SELECT symbol, strptime(pub_date, '%Y%m%d')::DATE as pub_date, net_profit_ttm, deduct_net_profit_ttm, revenue_ttm, ocf_ttm
+                FROM ttm_source
+                QUALIFY ROW_NUMBER() OVER (
+                    PARTITION BY symbol, pub_date
+                    ORDER BY report_date DESC, record_tie_breaker DESC
+                ) = 1
+            ),
             -- 4. 准备净资产历史
+            assets_source AS (
+                SELECT
+                    symbol,
+                    COALESCE(
+                        CASE
+                            WHEN length(数据可用日期) = 8 THEN strptime(数据可用日期, '%Y%m%d')::DATE
+                            ELSE try_strptime(LEFT(数据可用日期, 10), '%Y-%m-%d')::DATE
+                        END,
+                        CASE
+                            WHEN length(公告日期) = 8 THEN try_strptime(公告日期, '%Y%m%d')::DATE
+                            ELSE try_strptime(LEFT(公告日期, 10), '%Y-%m-%d')::DATE
+                        END
+                    ) as pub_date,
+                    report_date,
+                    "归属于母公司股东权益合计" as net_assets,
+                    md5(concat_ws(
+                        '|',
+                        COALESCE(CAST(report_date AS VARCHAR), '<NULL>'),
+                        COALESCE(CAST("归属于母公司股东权益合计" AS VARCHAR), '<NULL>')
+                    )) AS record_tie_breaker
+                FROM fin_balance_sheet
+            ),
             assets_hist AS (
                 SELECT 
                     symbol, 
-                    CASE 
-                        WHEN length(公告日期) = 8 THEN strptime(公告日期, '%Y%m%d')::DATE
-                        ELSE CAST(LEFT(公告日期, 10) AS DATE)
-                    END as pub_date,
-                    "归属于母公司股东权益合计" as net_assets
-                FROM fin_balance_sheet
+                    pub_date,
+                    report_date,
+                    net_assets
+                FROM assets_source
+                QUALIFY ROW_NUMBER() OVER (
+                    PARTITION BY symbol, pub_date
+                    ORDER BY report_date DESC, record_tie_breaker DESC
+                ) = 1
             )
 
             SELECT 

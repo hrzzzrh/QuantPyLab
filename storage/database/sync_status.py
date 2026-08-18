@@ -8,6 +8,9 @@ DATASET_KLINE = "kline"
 DATASET_KLINE_DAILY = "kline_daily"
 DATASET_STOCK_METADATA = "stock_metadata"
 DATASET_FINANCIAL_INCOMPLETE = "financial_incomplete"
+DATASET_FINANCIAL_OFFICIAL_PENDING = "financial_official_pending"
+DATASET_FINANCIAL_TTM_PENDING = "financial_ttm_pending"
+DATASET_FINANCIAL_DATE_RECONCILIATION_PENDING = "financial_date_reconciliation_pending"
 DATASET_SYNC_ALL = "sync_all"
 # sync-all 全流程记录为单条记录, symbol 固定占位符
 SYMBOL_SYNC_ALL = "ALL"
@@ -28,6 +31,16 @@ def record_sync_success(dataset: str, symbol: str, sync_date: date) -> None:
     )
     conn.commit()
     logger.debug(f"记录同步成功: {dataset}/{symbol} @ {sync_date}")
+
+
+def clear_sync_status(dataset: str, symbol: str) -> None:
+    """删除指定数据集和股票的同步状态记录。"""
+    conn = db_manager.get_sqlite_conn()
+    conn.execute(
+        "DELETE FROM sync_status WHERE dataset = ? AND symbol = ?",
+        (dataset, symbol),
+    )
+    conn.commit()
 
 
 def get_last_sync_date(dataset: str, symbol: str) -> date | None:

@@ -108,16 +108,27 @@ class BacktestDataAccess:
         columns = ",\n                ".join(
             f'"{field.source_name}" AS {field.alias}' for field in indicator_fields
         )
+        tie_breaker_parts = [
+            "COALESCE(CAST(report_date AS VARCHAR), '<NULL>')",
+            *[
+                f"COALESCE(CAST(\"{field.source_name}\" AS VARCHAR), '<NULL>')"
+                for field in indicator_fields
+            ],
+        ]
+        tie_breaker = "md5(concat_ws('|', " + ", ".join(tie_breaker_parts) + "))"
         return f"""
             WITH indicator_history AS (
                 SELECT
                     symbol,
                     COALESCE(
+                        try_strptime(LEFT(CAST("数据可用日期" AS VARCHAR), 10), '%Y-%m-%d')::DATE,
+                        try_strptime(LEFT(CAST("数据可用日期" AS VARCHAR), 8), '%Y%m%d')::DATE,
                         try_strptime(LEFT(CAST("公告日期" AS VARCHAR), 10), '%Y-%m-%d')::DATE,
                         try_strptime(LEFT(CAST("公告日期" AS VARCHAR), 8), '%Y%m%d')::DATE
                     ) AS pub_date,
                     {columns},
-                    report_date
+                    report_date,
+                    {tie_breaker} AS record_tie_breaker
                 FROM fin_indicator
             ),
             deduplicated_indicators AS (
@@ -125,7 +136,8 @@ class BacktestDataAccess:
                 FROM indicator_history
                 WHERE pub_date IS NOT NULL
                 QUALIFY ROW_NUMBER() OVER (
-                    PARTITION BY symbol, pub_date ORDER BY report_date DESC
+                    PARTITION BY symbol, pub_date
+                    ORDER BY report_date DESC, record_tie_breaker DESC
                 ) = 1
             )
         """

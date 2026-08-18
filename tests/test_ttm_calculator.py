@@ -203,6 +203,110 @@ class TestCalculateForSymbol:
         # 20240930 应使用修订值 999: TTM = 999 + (400 - 300)
         assert result.loc["20240930", "net_profit_ttm"] == pytest.approx(1099)
 
+    def test_duplicate_report_date_with_same_safe_date_is_deterministic(
+        self, isolated_warehouse
+    ):
+        """统一安全日期后，重复报告期的选择不依赖 Parquet 行顺序。"""
+        base_rows = [
+            {
+                "report_date": rd,
+                "公告日期": pub,
+                "归属于母公司所有者的净利润": np_,
+                "营业总收入": rev,
+            }
+            for rd, pub, np_, rev in FULL_REPORTS
+            if rd != "20240930"
+        ]
+        duplicate_rows = [
+            {
+                "report_date": "20240930",
+                "公告日期": "20241030",
+                "数据可用日期": "20241115",
+                "归属于母公司所有者的净利润": 300,
+                "营业总收入": 4700,
+            },
+            {
+                "report_date": "20240930",
+                "公告日期": "20241030",
+                "数据可用日期": "20241115",
+                "归属于母公司所有者的净利润": 999,
+                "营业总收入": 9999,
+            },
+        ]
+        path = isolated_warehouse / INCOME_CATEGORY / "symbol=000001" / "data.parquet"
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        def calculate_with_rows(rows):
+            pd.DataFrame(base_rows + rows).to_parquet(path, index=False)
+            calc = TTMCalculator()
+            calc.calculate_for_symbol("000001")
+            result = _read_result(isolated_warehouse, "000001")
+            return tuple(
+                result.loc[
+                    result["report_date"] == "20240930",
+                    ["net_profit_ttm", "revenue_ttm"],
+                ].iloc[0]
+            )
+
+        first = calculate_with_rows(duplicate_rows)
+        second = calculate_with_rows(list(reversed(duplicate_rows)))
+
+        assert second == first
+        assert first in {(400, 6200), (1099, 11499)}
+
+    def test_uses_data_available_date_for_asof_publish_date(self, isolated_warehouse):
+        """四源最小公告日期不能早于全部组件可用日。"""
+        rows = [
+            {
+                "report_date": rd,
+                "公告日期": pub,
+                "数据可用日期": available,
+                "归属于母公司所有者的净利润": np_,
+                "营业总收入": rev,
+            }
+            for (rd, pub, np_, rev), available in zip(
+                FULL_REPORTS,
+                [
+                    "2022-05-02",
+                    "2022-09-02",
+                    "2022-11-01",
+                    "2023-05-02",
+                    "2023-05-02",
+                    "2023-09-02",
+                    "2023-11-01",
+                    "2024-05-02",
+                    "2024-05-02",
+                    "2024-09-02",
+                    "2024-11-01",
+                ],
+            )
+        ]
+        path = isolated_warehouse / INCOME_CATEGORY / "symbol=000001" / "data.parquet"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(rows).to_parquet(path, index=False)
+
+        calc = TTMCalculator()
+        calc.calculate_for_symbol("000001")
+
+        result = _read_result(isolated_warehouse, "000001").set_index("report_date")
+        assert result.loc["20240930", "pub_date"] == "20241101"
+
+    def test_historical_input_date_is_included_in_asof_publish_date(
+        self, isolated_warehouse
+    ):
+        """历史年末修订晚于当前期时，TTM 生效日必须覆盖该修订日期。"""
+        rows = [
+            (rd, "2025-01-01" if rd == "20231231" else pub, np_, rev)
+            for rd, pub, np_, rev in FULL_REPORTS
+        ]
+        _write_income(isolated_warehouse, "000001", rows)
+
+        calc = TTMCalculator()
+        calc.calculate_for_symbol("000001")
+
+        result = _read_result(isolated_warehouse, "000001").set_index("report_date")
+        assert result.loc["20240331", "pub_date"] == "20250101"
+
     def test_insufficient_data_no_crash(self, isolated_warehouse):
         """无任何财务数据时静默跳过, 不报错"""
         calc = TTMCalculator()

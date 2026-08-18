@@ -1239,6 +1239,7 @@ dependencies = [
     { name = "playwright" },
     { name = "pyarrow" },
     { name = "pypdf" },
+    { name = "requests" },
     { name = "tqdm" },
 ]
 
@@ -1260,6 +1261,7 @@ requires-dist = [
     { name = "playwright", specifier = ">=1.58.0" },
     { name = "pyarrow", specifier = ">=23.0.0" },
     { name = "pypdf", specifier = ">=6.14.2" },
+    { name = "requests", specifier = ">=2.32.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
 

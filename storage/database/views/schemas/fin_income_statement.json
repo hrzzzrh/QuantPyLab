@@ -1,7 +1,7 @@
 {
   "version": 1,
   "built_at": "2026-08-07T21:48:41",
-  "column_count": 158,
+  "column_count": 159,
   "columns": {
     "赔付支出": "DOUBLE",
     "中间业务净收入": "DOUBLE",
@@ -135,6 +135,7 @@
     "其他业务利润": "DOUBLE",
     "含少数股东损益的净利润": "DOUBLE",
     "公告日期": "VARCHAR",
+    "数据可用日期": "VARCHAR",
     "摊回保险责任准备金": "DOUBLE",
     "企业自身信用风险公允价值变动": "DOUBLE",
     "金融资产重分类计入其他综合收益的金额": "DOUBLE",

@@ -133,7 +133,7 @@ class FinancialCollector:
 
             if df is None or df.empty:
                 logger.warning(f"{market_symbol} 接口返回为空，跳过")
-                return
+                return None
 
             # 2. 列名处理与翻译
             # 我们只保留在字典中定义了映射的列，以及必要的 symbol/report_date
@@ -149,7 +149,7 @@ class FinancialCollector:
                 keep_raw_cols.append("report_date")
             else:
                 logger.warning(f"{market_symbol} 数据格式异常，缺少报告期列")
-                return
+                return None
 
             # 映射中文列名
             for col in df.columns:
@@ -181,7 +181,7 @@ class FinancialCollector:
             df["symbol"] = symbol
 
             # 5. 入库
-            self.indicator_store.save_indicators(df)
+            return self.indicator_store.save_indicators(df)
 
         except Exception as e:
             # Re-raise 让 @retry 装饰器捕捉并重试
