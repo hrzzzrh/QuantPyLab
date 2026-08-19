@@ -254,8 +254,8 @@ class TestCalculateForSymbol:
         assert second == first
         assert first in {(400, 6200), (1099, 11499)}
 
-    def test_uses_data_available_date_for_asof_publish_date(self, isolated_warehouse):
-        """四源最小公告日期不能早于全部组件可用日。"""
+    def test_uses_current_publish_date_for_ttm_publish_date(self, isolated_warehouse):
+        """TTM 取当前报告期公告日期，不传播数据可用日期或历史输入日期。"""
         rows = [
             {
                 "report_date": rd,
@@ -289,12 +289,48 @@ class TestCalculateForSymbol:
         calc.calculate_for_symbol("000001")
 
         result = _read_result(isolated_warehouse, "000001").set_index("report_date")
-        assert result.loc["20240930", "pub_date"] == "20241101"
+        # 当前报告期公告日期 20241030 应作为 TTM 生效日期
+        assert result.loc["20240930", "pub_date"] == "20241030"
 
-    def test_historical_input_date_is_included_in_asof_publish_date(
+    def test_skips_source_when_publish_date_column_is_missing(self, isolated_warehouse):
+        """不再使用数据可用日期补充缺少公告日期的数据源。"""
+        rows = [
+            {
+                "report_date": rd,
+                "数据可用日期": available,
+                "归属于母公司所有者的净利润": np_,
+                "营业总收入": rev,
+            }
+            for (rd, pub, np_, rev), available in zip(
+                FULL_REPORTS,
+                [
+                    "2022-05-02",
+                    "2022-09-02",
+                    "2022-11-01",
+                    "2023-05-02",
+                    "2023-05-02",
+                    "2023-09-02",
+                    "2023-11-01",
+                    "2024-05-02",
+                    "2024-05-02",
+                    "2024-09-02",
+                    "2024-11-01",
+                ],
+            )
+        ]
+        path = isolated_warehouse / INCOME_CATEGORY / "symbol=000001" / "data.parquet"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(rows).to_parquet(path, index=False)
+
+        calc = TTMCalculator()
+        calc.calculate_for_symbol("000001")
+
+        assert not (isolated_warehouse / "financial/ttm").exists()
+
+    def test_uses_current_report_date_when_historical_input_date_is_later(
         self, isolated_warehouse
     ):
-        """历史年末修订晚于当前期时，TTM 生效日必须覆盖该修订日期。"""
+        """历史输入日期较晚时，TTM 仍使用当前报告期公告日期。"""
         rows = [
             (rd, "2025-01-01" if rd == "20231231" else pub, np_, rev)
             for rd, pub, np_, rev in FULL_REPORTS
@@ -305,7 +341,7 @@ class TestCalculateForSymbol:
         calc.calculate_for_symbol("000001")
 
         result = _read_result(isolated_warehouse, "000001").set_index("report_date")
-        assert result.loc["20240331", "pub_date"] == "20250101"
+        assert result.loc["20240331", "pub_date"] == "20240430"
 
     def test_insufficient_data_no_crash(self, isolated_warehouse):
         """无任何财务数据时静默跳过, 不报错"""

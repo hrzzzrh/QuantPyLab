@@ -4,7 +4,6 @@ import pandas as pd
 
 from config.settings import WAREHOUSE_DIR
 from storage.database.financial_publish_date_reconciler import (
-    DATA_AVAILABLE_DATE_COLUMN,
     PUBLISH_DATE_COLUMN,
     normalize_financial_dates,
 )
@@ -77,11 +76,10 @@ class TTMCalculator:
                     logger.debug(f"跳过缺失数据源: {category}")
                     continue
 
-                date_column = (
-                    DATA_AVAILABLE_DATE_COLUMN
-                    if DATA_AVAILABLE_DATE_COLUMN in df_raw.columns
-                    else PUBLISH_DATE_COLUMN
-                )
+                if PUBLISH_DATE_COLUMN not in df_raw.columns:
+                    logger.debug(f"跳过缺少公告日期列的数据源: {category}")
+                    continue
+                date_column = PUBLISH_DATE_COLUMN
                 available_columns = [
                     column
                     for column in sorted(required_columns)
@@ -118,7 +116,6 @@ class TTMCalculator:
                 )
                 source_frames[category] = (source_frame, date_column)
 
-            value_date_columns: dict[str, str] = {}
             for key, (category, col_name) in self.INDICATORS.items():
                 source_info = source_frames.get(category)
                 if source_info is None or col_name not in source_info[0].columns:
@@ -137,7 +134,6 @@ class TTMCalculator:
                     inplace=True,
                 )
                 dfs.append(df_subset)
-                value_date_columns[value_column] = date_output_column
 
             if not dfs:
                 logger.warning(f"无足够财务数据，跳过 TTM 计算: {symbol}")
@@ -172,23 +168,17 @@ class TTMCalculator:
                 for k in self.INDICATORS.keys()
                 if k.replace("_ttm", "") in df_base.columns
             ]
-            date_cols = [
-                value_date_columns[col]
-                for col in target_cols
-                if col in value_date_columns
-            ]
-
             # 准备“上年终值”查找表
             df_year_end = df_base[df_base["period"] == "1231"][
-                ["report_date"] + target_cols + date_cols
+                ["report_date"] + target_cols
             ].copy()
-            year_end_columns = target_cols + date_cols
+            year_end_columns = target_cols
             df_year_end.columns = ["last_year_end"] + [
                 f"{c}_lye" for c in year_end_columns
             ]
 
             # 准备“上年同期”查找表
-            df_year_same = df_base[["report_date"] + target_cols + date_cols].copy()
+            df_year_same = df_base[["report_date"] + target_cols].copy()
             df_year_same.columns = ["last_year_same"] + [
                 f"{c}_lys" for c in year_end_columns
             ]
@@ -200,7 +190,6 @@ class TTMCalculator:
             # 4. 计算 TTM
             # 公式: TTM = Current + (LYE - LYS)
             calculated_ttm_cols = []
-            date_candidates = []
             for col in target_cols:
                 ttm_col = f"{col}_ttm"
                 # 只有当 LYE 和 LYS 都不为空时才能计算
@@ -208,31 +197,11 @@ class TTMCalculator:
                     df_ttm[f"{col}_lye"] - df_ttm[f"{col}_lys"]
                 )
                 calculated_ttm_cols.append(ttm_col)
-                date_column = value_date_columns.get(col)
-                if date_column is None:
-                    continue
-                valid_result = df_ttm[ttm_col].notna()
-                for value_column, input_date_column in (
-                    (col, date_column),
-                    (f"{col}_lye", f"{date_column}_lye"),
-                    (f"{col}_lys", f"{date_column}_lys"),
-                ):
-                    if input_date_column in df_ttm.columns:
-                        date_candidates.append(
-                            df_ttm[input_date_column].where(
-                                valid_result & df_ttm[value_column].notna()
-                            )
-                        )
 
             # 5. 清洗结果并保存
-            if date_candidates:
-                df_ttm["pub_date"] = normalize_financial_dates(
-                    pd.concat(date_candidates, axis=1).max(axis=1)
-                )
-            else:
-                df_ttm["pub_date"] = pd.Series(
-                    pd.NA, index=df_ttm.index, dtype="string"
-                )
+            # TTM 的生效日取当前报告期的统一公告日期。
+            # 上年年末和上年同期仅参与数值计算，不再把其日期传播到当前 TTM。
+            df_ttm["pub_date"] = self._normalize_pub_date(df_ttm["pub_date"])
             final_cols = ["report_date", "pub_date"] + calculated_ttm_cols
             df_result = df_ttm[final_cols].copy()
             df_result.dropna(subset=calculated_ttm_cols, how="all", inplace=True)
