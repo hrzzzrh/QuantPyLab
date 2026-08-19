@@ -1,5 +1,6 @@
 import pandas as pd
 
+from analysis.factors import FactorEngine
 from backtest.config import BacktestConfig
 from backtest.data_access import BacktestDataAccess
 from backtest.strategy_base import (
@@ -11,6 +12,8 @@ from backtest.strategy_base import (
 
 
 class PriceMomentumStrategy(BacktestStrategy):
+    factor_names = ("price_momentum_120d", "price_trend_above_ma_120d")
+
     metadata = StrategyMetadata(
         name="price-momentum",
         version="1",
@@ -44,9 +47,11 @@ class PriceMomentumStrategy(BacktestStrategy):
     def load_signal_data(
         self, data_access: BacktestDataAccess, config: BacktestConfig, parameters: dict
     ) -> pd.DataFrame:
-        return data_access.load_market_data(
+        return data_access.load_factor_data(
             config,
-            max(
+            self.factor_names,
+            factor_parameters=self._factor_parameters(parameters),
+            minimum_history_days=max(
                 parameters["lookback_days"],
                 parameters["trend_window"],
                 parameters["min_listing_days"],
@@ -54,25 +59,40 @@ class PriceMomentumStrategy(BacktestStrategy):
         )
 
     def build_targets(self, signal_data, config, parameters) -> pd.DataFrame:
-        data = signal_data.copy().sort_values(["symbol", "date"])
-        data["listing_days"] = data.groupby("symbol").cumcount() + 1
-        data["momentum"] = data.groupby("symbol")["close_hfq"].transform(
-            lambda values: values / values.shift(parameters["lookback_days"]) - 1
+        factor_data = FactorEngine().calculate(
+            signal_data,
+            self.factor_names,
+            self._factor_parameters(parameters),
         )
-        data["trend_average"] = data.groupby("symbol")["close_hfq"].transform(
-            lambda values: values.rolling(
-                parameters["trend_window"], min_periods=parameters["trend_window"]
-            ).mean()
+        ordered_input = signal_data.copy()
+        ordered_input["date"] = pd.to_datetime(ordered_input["date"])
+        ordered_input = ordered_input.sort_values(["symbol", "date"])
+        listing_days = ordered_input[["date", "symbol"]].copy()
+        listing_days["listing_days"] = (
+            ordered_input.groupby("symbol", sort=False).cumcount() + 1
+        ).to_numpy()
+        data = factor_data.merge(
+            listing_days,
+            on=["date", "symbol"],
+            how="left",
+            validate="one_to_one",
         )
         candidates = data[data["date"].isin(get_month_end_dates(data["date"]))].copy()
         candidates = candidates[candidates["date"].dt.date >= config.start_date]
         candidates = candidates[
             (candidates["listing_days"] >= parameters["min_listing_days"])
-            & candidates["momentum"].notna()
-            & (candidates["close_hfq"] > candidates["trend_average"])
+            & candidates["price_momentum_120d"].notna()
+            & candidates["price_trend_above_ma_120d"].gt(0)
         ].copy()
-        candidates["score"] = candidates["momentum"]
+        candidates["score"] = candidates["price_momentum_120d"]
         candidates["rank"] = candidates.groupby("date")["score"].rank(
             method="first", ascending=False
         )
         return select_equal_weight_targets(candidates, parameters["holding_count"])
+
+    @staticmethod
+    def _factor_parameters(parameters: dict) -> dict:
+        return {
+            "price_momentum_120d": {"lookback_days": parameters["lookback_days"]},
+            "price_trend_above_ma_120d": {"trend_window": parameters["trend_window"]},
+        }

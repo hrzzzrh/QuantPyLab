@@ -1,7 +1,9 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pandas as pd
 
+from analysis.factors.registry import get_factor_definition
 from backtest.config import BacktestConfig
 from storage.database.manager import DBManager
 
@@ -15,6 +17,8 @@ class IndicatorField:
 class BacktestDataAccess:
     """通过统一视图加载回测数据，并统一处理点时财务指标。"""
 
+    _KLINE_SIGNAL_COLUMNS = frozenset({"high", "low", "volume", "amount"})
+
     def __init__(self, db_manager: DBManager):
         self.db_manager = db_manager
 
@@ -23,7 +27,13 @@ class BacktestDataAccess:
         config: BacktestConfig,
         lookback_days: int,
         indicator_fields: tuple[IndicatorField, ...] = (),
+        kline_fields: tuple[str, ...] = (),
     ) -> pd.DataFrame:
+        unknown_kline_fields = set(kline_fields) - self._KLINE_SIGNAL_COLUMNS
+        if unknown_kline_fields:
+            raise ValueError(
+                "不支持的行情信号字段: " + ", ".join(sorted(unknown_kline_fields))
+            )
         view_names = ["v_daily_valuation", "daily_kline"]
         if indicator_fields:
             view_names.append("fin_indicator")
@@ -33,6 +43,7 @@ class BacktestDataAccess:
             conn, config.start_date, lookback_days
         )
         indicator_sql = self._build_indicator_join(indicator_fields)
+        kline_projection = self._build_kline_projection(kline_fields)
         frame = conn.execute(
             f"""
             {indicator_sql}
@@ -46,6 +57,7 @@ class BacktestDataAccess:
                     valuation.pe_ttm,
                     valuation.pb,
                     kline.open
+                    {kline_projection}
                 FROM v_daily_valuation AS valuation
                 INNER JOIN daily_kline AS kline
                     ON valuation.symbol = kline.symbol AND valuation.date = CAST(kline.date AS DATE)
@@ -60,6 +72,55 @@ class BacktestDataAccess:
         # 后复权开盘价让开盘成交与收盘收益使用同一经济口径。
         frame["open_hfq"] = frame["open"] * frame["close_hfq"] / frame["raw_close"]
         return frame
+
+    def load_factor_data(
+        self,
+        config: BacktestConfig,
+        factor_names: tuple[str, ...],
+        factor_parameters: Mapping[str, Mapping[str, object]] | None = None,
+        minimum_history_days: int = 0,
+    ) -> pd.DataFrame:
+        """按注册因子需求加载点时行情和财务输入，不计算因子值。"""
+        names = tuple(dict.fromkeys(factor_names))
+        if not names:
+            raise ValueError("至少需要指定一个因子")
+        if (
+            isinstance(minimum_history_days, bool)
+            or not isinstance(minimum_history_days, int)
+            or minimum_history_days < 0
+        ):
+            raise ValueError("minimum_history_days 必须是非负整数")
+
+        indicator_fields: dict[str, IndicatorField] = {}
+        kline_fields: set[str] = set()
+        lookback_days = minimum_history_days
+        parameter_map = factor_parameters or {}
+        if not isinstance(parameter_map, Mapping):
+            raise ValueError("factor_parameters 必须是映射")
+        for factor_name in names:
+            definition = get_factor_definition(factor_name)
+            factor_parameters_for_name = parameter_map.get(factor_name, {})
+            if not isinstance(factor_parameters_for_name, Mapping):
+                raise ValueError(f"因子 {factor_name} 的参数必须是映射")
+            lookback_days = max(
+                lookback_days,
+                definition.get_lookback_days(factor_parameters_for_name),
+            )
+            metadata = definition.metadata
+            for field in metadata.inputs:
+                if field.source == "indicator":
+                    indicator_fields[field.alias] = IndicatorField(
+                        field.source_name, field.alias
+                    )
+                elif field.source == "kline":
+                    kline_fields.add(field.alias)
+
+        return self.load_market_data(
+            config,
+            lookback_days,
+            tuple(indicator_fields.values()),
+            tuple(sorted(kline_fields)),
+        )
 
     def load_benchmark_prices(self, config: BacktestConfig) -> pd.DataFrame:
         if not config.benchmark_symbol:
@@ -83,6 +144,8 @@ class BacktestDataAccess:
 
     @staticmethod
     def _get_lookback_start(conn, start_date, lookback_days: int):
+        if lookback_days <= 0:
+            return start_date
         row = conn.execute(
             """
             SELECT MIN(date)
@@ -151,6 +214,14 @@ class BacktestDataAccess:
             if not indicator_fields
             else ", "
             + ", ".join(f"indicators.{field.alias}" for field in indicator_fields)
+        )
+
+    @staticmethod
+    def _build_kline_projection(kline_fields: tuple[str, ...]) -> str:
+        if not kline_fields:
+            return ""
+        return ", " + ", ".join(
+            f'kline."{field}" AS "{field}"' for field in kline_fields
         )
 
     @staticmethod
