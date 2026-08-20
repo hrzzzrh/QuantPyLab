@@ -104,6 +104,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `list-backtest-strategies` | 列出已注册的日频回测策略 | 无 |
 | `diagnose-factors` | 运行点时因子覆盖率、IC、分位收益和稳定性诊断 | `--factor-names`、`--start-date`、`--end-date`、`[--horizons]`、`[--quantile-count]`、`[--output]` |
 | `evaluate-factor-experiments` | 按训练/验证/测试和 Walk-forward 评估候选因子实验 | `--research-config PATH`、`[--output]` |
+| `diagnose-factor-exposures` | 诊断因子实验的点时规模暴露 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]` |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -168,6 +169,18 @@ uv run main.py evaluate-factor-experiments \
 结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`research_validity.csv`、`selection_diagnostics.csv`、`factor_weight_diagnostics.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 文件提供完整审计明细。`selection_diagnostics.csv` 记录每个窗口比较的组合数、验证信号日、第一/二名差距、并列数量和选择负担风险；`factor_weight_diagnostics.csv` 记录每个训练组合的最大权重、有效因子数、权重熵、塌缩级别和入选标记；验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变测试集隔离。默认研究门槛是训练至少 24 个信号日，验证和测试各至少 11 个实际可执行信号及 100 个目标观测，实际门槛可在 `[validity]` 中显式调整。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
 
 完整参数搜索会在每个 split 内以最多 4 组因子输入和 2 个市场区间的有界 LRU 缓存，复用因子实验的原始点时输入、基础候选表以及行情索引结构，减少重复查询、因子计算和行情准备；缓存不跨 split，且每组参数仍重新计算缩尾、排名、组合权重和持仓状态。
+
+### 3.3.3 因子实验暴露诊断 (`diagnose-factor-exposures`)
+
+该命令对 `factor-composite-experiment` 的每个信号日可选股票池和最终入选持仓做点时规模分组比较。市值来自 `v_daily_valuation.market_cap`，规模分组在每个信号日独立计算，规模组 1 为较小市值组，最后一组为较大市值组。
+
+```bash
+uv run main.py diagnose-factor-exposures \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --quantile-count 5
+```
+
+结果写入 `workspace/factor_exposure_diagnostics/`，包含 `summary.md`、`size_exposure.csv`、`size_exposure_summary.csv`、`size_exposure_coverage.csv` 和 `parameters.json`。每个信号日必须至少有 `quantile_count` 个有效市值候选，否则命令会拒绝生成不完整报告。报告给出可选池与入选持仓的规模占比、选择提升和市值覆盖率；它不改变回测行为，也不构成收益因果归因。当前 `stocks.industry` 没有历史生效日期和版本，不能用于历史行业暴露或行业中性结论，报告会明确记录这一限制。
 
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 

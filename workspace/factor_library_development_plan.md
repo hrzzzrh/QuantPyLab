@@ -58,6 +58,7 @@
 | 验证集选择稳健性审计 | 已完成 | 2026-08-20 | 新增 `selection_diagnostics.csv` 和标准报告选择负担章节；完整评估量化 11～23 个验证信号日比较 36 组组合、并列第一和分数差距；Ruff、全量 528 项测试、真实烟测和完整评估通过 | 使用更长验证区间或嵌套 Walk-forward 修复当前选择样本不足与多重比较风险 |
 | 长验证/长测试稳健研究协议 | 已完成 | 2026-08-20 | 新增 `factor_experiment_evaluation_robust.toml`；3 年训练 + 2 年验证 + 2 年测试、2011—2025 完整自然年、18 组去重复参数；180 组组合全部成功，所有有效性门禁通过 | 处理单因子权重塌缩、候选切换和大回撤风险 |
 | 因子权重稳定性诊断 | 已完成 | 2026-08-20 | 新增 `factor_weight_diagnostics.csv`、标准报告按窗口集中度汇总和普遍塌缩/选择放大风险提示；真实稳健评估输出 180 行，156 组单因子、24 组集中权重 | 进入权重约束、行业/规模暴露和可复现性复核 |
+| 点时规模暴露诊断 | 进行中 | 2026-08-21 | 已完成设计和实现；使用 `v_daily_valuation.market_cap` 按信号日分组，行业快照暂不用于历史结论 | 完成真实点时诊断并决定是否引入规模约束 |
 | 风险因子与行业/规模中性化 | 待开始 | — | 计划阶段二 | 依赖第一批因子诊断结果 |
 | 多因子组合边际贡献验证 | 待开始 | — | 计划阶段三 | 依赖诊断报告和中性化能力 |
 | 高级事件类与预期类因子 | 待开始 | — | 计划阶段四 | 依赖版本化历史数据源 |
@@ -73,6 +74,7 @@
 | 2026-08-19 | 完成阶段零因子诊断基础设施 | 支持覆盖率、Rank IC、分位收益、换手、自相关和因子相关性 | `diagnose-factors`、`analysis/factors/diagnostics.py` |
 | 2026-08-19 | 完成阶段一第一批六个因子 | 覆盖率、ASOF 查询和真实点时诊断通过 | `analysis/factors/fundamental.py`、`analysis/factors/market.py` |
 | 2026-08-20 | 完成阶段一实验回测配置 | 新增单因子/小组合实验策略和反转、价值成长示例配置；全量测试 492 项通过，两套真实回测烟测成功 | `factor-composite-experiment`、`config/backtest/factor_experiment_*.toml` |
+| 2026-08-21 | 开始点时规模暴露诊断 | 新增 `market_cap` 点时输入扩展、规模分组/选择提升/覆盖率审计和 CLI；行业快照明确标记为不可用于历史结论 | `workspace/design_factor_exposure_diagnostics.md` |
 | 2026-08-20 | 完成训练/验证/测试与 Walk-forward 评估 | 完成设计、候选选择、测试集锁定、滚动窗口和短窗口真实烟测；全量测试 498 项通过 | `backtest/research_evaluator.py`、`evaluate-factor-experiments` |
 | 2026-08-20 | 开发真实因子权重训练 | 已接入训练样本构造、未来收益标签、非负 Ridge 拟合和冻结权重传递；正在补充真实数据烟测与门禁验证 | `backtest/factor_trainer.py`、`workspace/design_factor_experiment_evaluation.md` |
 | 2026-08-20 | 完成真实因子权重训练 | 三因子真实点时烟测拟合出非默认权重；默认候选固定切分中记录并排除无正向权重的反转候选，价值成长候选完成验证/测试；Ruff 和全量 503 项测试通过 | `backtest/factor_trainer.py`、`training_models.csv`、`tests/test_factor_trainer.py` |

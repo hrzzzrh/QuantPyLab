@@ -137,6 +137,18 @@ uv run main.py evaluate-factor-experiments \
 
 示例配置见 `config/backtest/factor_experiment_evaluation.toml`，设计与边界见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md) 和 [`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md)。结果写入 `workspace/backtest/evaluations/<name>_<timestamp>/`，包括标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`（每组参数的训练状态、训练/验证指标、拟合权重和失败原因）、`evaluation_failures.csv`、`research_validity.csv`（训练 / 验证 / 测试的实际覆盖、阈值和门禁结果）、`selection_diagnostics.csv`（每个窗口的比较组合数、验证信号日、第一/二名分数差距、并列数量和选择负担风险）、`factor_weight_diagnostics.csv`（全部训练组合的权重集中度、有效因子数和入选标记）、候选指标、入选记录和参数快照。`summary.md` 固定报告执行状态、点时样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、失败组合、入选权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 是完整审计明细。验证信号日偏少或比较组合数多于验证信号日时只产生研究风险提示，不改变测试集隔离和入选规则。评估器不把测试结果反写到候选配置，也不跨窗口传递持仓或净值。
 
+### 4.6 因子实验点时规模暴露诊断
+
+`diagnose-factor-exposures` 是独立于训练和回测结果的暴露审计命令，仅支持 `factor-composite-experiment`。它按每个信号日的可选股票池计算 `v_daily_valuation.market_cap` 的截面规模分组，再比较最终入选持仓在各组的占比和选择提升；缺失或非正市值会从分组中排除，并单独记录覆盖率。为保证规模组编号有效，每个信号日必须至少有 `quantile_count` 个有效市值候选；不满足时命令会拒绝生成报告。该命令不改变策略目标、因子权重、成交或净值。
+
+```bash
+uv run main.py diagnose-factor-exposures \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --quantile-count 5
+```
+
+结果默认写入 `workspace/factor_exposure_diagnostics/<name>_<timestamp>/`，包含 `summary.md`、`size_exposure.csv`、`size_exposure_summary.csv`、`size_exposure_coverage.csv` 和 `parameters.json`。报告用于识别规模选择偏向，不构成收益因果归因。当前 `stocks.industry` 只有未版本化的元数据快照，缺少历史生效日期，因此本命令不输出历史行业暴露，也不能据此实施行业中性化；需要先补齐历史行业数据。
+
 ## 5. 成交、成本和净值
 
 单边交易成本为 `commission_bps + slippage_bps`。每次调仓先按开盘时持仓与目标持仓的绝对差额计算名义换手，再从组合净值中扣除成本，最后按扣成本后的净值配置目标权重。因此现金不会因成本而变为负数。

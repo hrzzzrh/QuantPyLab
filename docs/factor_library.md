@@ -86,6 +86,8 @@ uv run main.py diagnose-factors \
 
 诊断中的“方向调整”使用因子元数据的 `higher_is_better`：低估值因子会将原始负相关转换为正向可比较指标。因子诊断只用于评估信号，不改变策略的筛选、权重和成交逻辑。
 
+因子实验还可以使用 `diagnose-factor-exposures` 审计点时规模暴露。命令从 `v_daily_valuation.market_cap` 读取信号日市值，在每个信号日的可选股票池内重新分组，比较可选池与入选持仓的规模占比、选择提升和覆盖率。该审计不参与训练或回测，也不改变策略行为。当前 `stocks.industry` 是没有历史生效日期的元数据快照，不能用于历史行业暴露或行业中性结论；行业诊断必须等历史行业数据版本化后再实现。
+
 ## 6. 回测使用方式
 
 多因子策略 `multi-factor-quality-value-momentum` 使用全部七个内置因子：

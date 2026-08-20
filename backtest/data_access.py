@@ -19,7 +19,7 @@ class BacktestDataAccess:
     """通过统一视图加载回测数据，并统一处理点时财务指标。"""
 
     _KLINE_SIGNAL_COLUMNS = frozenset({"high", "low", "volume", "amount"})
-    _VALUATION_SIGNAL_COLUMNS = frozenset({"ps_ttm", "pcf_ttm"})
+    _VALUATION_SIGNAL_COLUMNS = frozenset({"ps_ttm", "pcf_ttm", "market_cap"})
 
     def __init__(self, db_manager: DBManager):
         self.db_manager = db_manager
@@ -87,6 +87,7 @@ class BacktestDataAccess:
         factor_parameters: Mapping[str, Mapping[str, object]] | None = None,
         minimum_history_days: int = 0,
         data_end_date: date | None = None,
+        include_market_cap: bool = False,
     ) -> pd.DataFrame:
         """按注册因子需求加载点时行情和财务输入，不计算因子值。"""
         names = tuple(dict.fromkeys(factor_names))
@@ -102,6 +103,8 @@ class BacktestDataAccess:
         indicator_fields: dict[str, IndicatorField] = {}
         kline_fields: set[str] = set()
         valuation_fields: set[str] = set()
+        if include_market_cap:
+            valuation_fields.add("market_cap")
         lookback_days = minimum_history_days
         parameter_map = factor_parameters or {}
         if not isinstance(parameter_map, Mapping):
