@@ -173,7 +173,7 @@ class DailyBacktestEngine:
                 signal_date,
                 {
                     row.symbol: float(row.target_weight)
-                    for row in group.itertuples(index=False)
+                    for row in group.sort_values("symbol").itertuples(index=False)
                 },
             )
         return plans
@@ -208,7 +208,7 @@ class DailyBacktestEngine:
             if symbol in today_prices and pd.notna(today_prices[symbol].get("open_hfq"))
         }
         before_nav = cash + sum(open_values.values())
-        symbols = set(open_values) | set(available_weights)
+        symbols = sorted(set(open_values) | set(available_weights))
         notional_by_symbol = {
             symbol: abs(
                 available_weights.get(symbol, 0.0) * before_nav

@@ -111,6 +111,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `diagnose-factor-neutralization` | 对照因子实验的行业/规模残差化选股与暴露变化 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；仅研究，不改变正式策略 |
 | `diagnose-factor-constrained-selection` | 对照因子实验的行业/规模比例配额选股 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；使用 Hamilton 最大余数法，仅研究 |
 | `evaluate-factor-selection-variants` | 在同一成交与成本口径下比较基准、残差化和配额选股 | `--backtest-config PATH`、`[--evaluation-start-date]`、`[--evaluation-end-date]`、`[--quantile-count]`、`[--output]`；日期参数成对出现，显式区间才标记为锁定评估 |
+| `evaluate-factor-marginal-contributions` | 在同一公共候选池和成交口径下比较完整组合、单因子与 leave-one-out 组合 | `--backtest-config PATH`、`--evaluation-start-date DATE`、`--evaluation-end-date DATE`、`[--output]`；仅支持正式多因子策略，日期参数成对出现 |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -225,6 +226,19 @@ uv run main.py evaluate-factor-selection-variants \
 ```
 
 评估日期必须成对指定。显式日期用于锁定测试区间时，报告才标记为锁定评估；不指定则使用 TOML 原始区间并明确写为非样本外比较。结果写入 `workspace/factor_selection_comparison/`，包括标准摘要、解析参数、各变体收益/风险/换手/成本、逐日净值、逐笔成交、目标、覆盖失败和与 baseline 的目标重合。控制变量不完整或有效目标不足时不回退到基准，报告必须结合覆盖率和失败原因解释。
+
+### 3.3.7 多因子组合边际贡献验证 (`evaluate-factor-marginal-contributions`)
+
+该命令只接受正式 `multi-factor-quality-value-momentum` 策略，在所有七个因子同时有效的公共候选池上构造 15 个变体：完整组合、七个单因子和七个 leave-one-out 组合。完整组合沿用配置权重，单因子权重为 1，leave-one-out 按剩余配置权重归一化。所有变体共享同一行情准备对象和日频回测引擎，报告同时记录覆盖、目标重合、收益、风险、换手和交易成本。
+
+```bash
+uv run main.py evaluate-factor-marginal-contributions \
+  --backtest-config config/backtest/multi_factor_quality_value_momentum.toml \
+  --evaluation-start-date 2022-07-01 \
+  --evaluation-end-date 2024-06-30
+```
+
+结果写入 `workspace/factor_marginal_contribution/`。该验证用于判断因子是否提供独立信息或与其他因子形成互补，不会自动修改正式策略；若基准行情不可用，报告会保留缺失状态并告警。
 
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 

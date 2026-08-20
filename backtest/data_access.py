@@ -354,6 +354,10 @@ class BacktestDataAccess:
             return ""
         # 指标只有在公告日当天及之后可见，不能按报告期直接连接。
         return """
-            ASOF LEFT JOIN deduplicated_indicators AS indicators
+            ASOF LEFT JOIN (
+                SELECT *
+                FROM deduplicated_indicators
+                ORDER BY symbol, pub_date
+            ) AS indicators
                 ON daily_data.symbol = indicators.symbol AND daily_data.date >= indicators.pub_date
         """

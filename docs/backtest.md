@@ -43,10 +43,11 @@
 
 1. 信号在调仓日 T 收盘后生成。
 2. T 日估值来自 `v_daily_valuation`：TTM 估值分母按 `fin_ttm.pub_date` ASOF 对齐，净资产按资产负债表的 `数据可用日期` ASOF 对齐，均不能使用各自生效日之前的数据。TTM 的 `pub_date` 是当前报告期四源统一后的公告日期；四源最大日期仍作为财务源全部可用性的派生边界。同步时若公告日期超过法定期限，还会通过对应交易所官方公告二次核验并覆盖该字段。
-3. `fin_indicator` 的质量因子在回测查询中以 `数据可用日期` ASOF 对齐，不能以 `report_date` 直接对齐；同一股票同一生效日的多条记录按 `report_date` 降序确定性去重。
-4. 调仓最早在下一个实际有行情的交易日 T+1 开盘执行，禁止 T 日收盘信号以 T 日价格成交。
-5. 不复权价用于估值与原始成交价记录；后复权价用于持仓收益、净值和基准收益。
-6. 持仓证券的行情在其最后交易日收盘后终结（退市/摘牌），当日收盘后按收盘价强制清算为现金并记录 `DELIST` 交易；清算后不再产生交易与定价，亦不再阻塞后续调仓。行情终结判定基于数据湖实际行情（该股最后一条日线），不依赖 `stocks` 快照的 `is_active` 状态。
+3. `daily_kline` 视图按 `(symbol, date)` 做确定性去重，避免存量 Parquet 中的重复行污染滚动窗口；`v_daily_valuation` 和 `fin_indicator` 的 ASOF 右表均按股票及生效日期排序，保证不同 DuckDB 连接得到同一条历史记录。
+4. `fin_indicator` 的质量因子在回测查询中以 `数据可用日期` ASOF 对齐，不能以 `report_date` 直接对齐；同一股票同一生效日的多条记录按 `report_date` 降序确定性去重。
+5. 调仓最早在下一个实际有行情的交易日 T+1 开盘执行，禁止 T 日收盘信号以 T 日价格成交。
+6. 不复权价用于估值与原始成交价记录；后复权价用于持仓收益、净值和基准收益。
+7. 持仓证券的行情在其最后交易日收盘后终结（退市/摘牌），当日收盘后按收盘价强制清算为现金并记录 `DELIST` 交易；清算后不再产生交易与定价，亦不再阻塞后续调仓。行情终结判定基于数据湖实际行情（该股最后一条日线），不依赖 `stocks` 快照的 `is_active` 状态。
 
 持仓以连续价值而非整手股数表示。这样可以隔离策略本身与不同证券价格、最小交易单位导致的资金闲置；整手及涨跌停等实盘撮合约束留待独立模块实现。
 
@@ -199,6 +200,19 @@ uv run main.py evaluate-factor-selection-variants \
 ```
 
 `--evaluation-start-date` 和 `--evaluation-end-date` 必须成对出现；省略时使用配置原始区间，报告会明确标记为未锁定样本外区间。结果默认写入 `workspace/factor_selection_comparison/<name>_<timestamp>/`，包括 `summary.md`、`parameters.json`、`selection_comparison.csv`、`selection_daily_nav.csv`、`selection_trades.csv`、`selection_targets.csv`、`selection_coverage.csv` 和 `selection_target_overlap.csv`。换手只统计 BUY/SELL 的单边名义金额，DELIST 与 SKIP_REBALANCE 单独计数；控制变量不足的信号日不回退到 baseline，并在覆盖文件记录失败原因。
+
+### 4.10 多因子组合边际贡献验证
+
+`evaluate-factor-marginal-contributions` 固定正式多因子策略的点时公共候选池，比较完整七因子组合、每个单因子和移除一个因子的七个 leave-one-out 组合。完整组合使用正式配置中的归一化权重，单因子使用 100% 权重，leave-one-out 组合按剩余正式权重重新归一化；所有变体共享同一 `PreparedMarketData`、T+1 开盘成交、手续费、滑点和净值计算，避免因行情准备或成交口径不同造成比较偏差。回测引擎对目标和成交股票按代码排序，防止集合遍历顺序改变交易记录或成本汇总的末位结果。
+
+```bash
+uv run main.py evaluate-factor-marginal-contributions \
+  --backtest-config config/backtest/multi_factor_quality_value_momentum.toml \
+  --evaluation-start-date 2022-07-01 \
+  --evaluation-end-date 2024-06-30
+```
+
+评估日期必须成对指定，显式区间才标记为锁定评估。结果默认写入 `workspace/factor_marginal_contribution/<name>_<timestamp>/`，包括标准摘要、解析参数、组合收益/风险/换手/成本、逐日净值、逐笔成交、目标、公共候选覆盖率和相对完整组合的目标重合率。该命令只用于判断因子的边际信息和组合互补性，不自动修改正式因子权重或策略配置；基准没有行情时会明确告警，不会伪造基准收益。
 
 ## 5. 成交、成本和净值
 

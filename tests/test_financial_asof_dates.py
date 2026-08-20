@@ -6,10 +6,14 @@ import pandas as pd
 from analysis.factors.engine import FactorEngine
 from backtest.data_access import BacktestDataAccess, IndicatorField
 from storage.database.views.analysis.v_daily_valuation import DailyValuationView
+from storage.database.views.market.daily_kline import DailyKlineView
 
 
 def test_indicator_asof_join_prefers_data_available_date():
     sql = BacktestDataAccess._build_indicator_join(
+        (IndicatorField("净资产收益率", "roe"),)
+    )
+    asof_sql = BacktestDataAccess._build_indicator_asof_join(
         (IndicatorField("净资产收益率", "roe"),)
     )
 
@@ -17,6 +21,7 @@ def test_indicator_asof_join_prefers_data_available_date():
     assert '"公告日期"' in sql
     assert "deduplicated_indicators" in sql
     assert "record_tie_breaker DESC" in sql
+    assert "ORDER BY symbol, pub_date" in asof_sql
 
 
 def test_daily_valuation_deduplicates_same_effective_date():
@@ -24,6 +29,16 @@ def test_daily_valuation_deduplicates_same_effective_date():
 
     assert "record_tie_breaker DESC" in sql
     assert "数据可用日期" in sql
+    assert "ORDER BY symbol, change_date" in sql
+    assert "ORDER BY symbol, pub_date" in sql
+
+
+def test_daily_kline_deduplicates_same_symbol_date():
+    sql = DailyKlineView().get_sql("/tmp/warehouse")
+
+    assert "deduplicated_kline" in sql
+    assert "PARTITION BY partition_symbol, CAST(date AS DATE)" in sql
+    assert "ROW_NUMBER() OVER" in sql
 
 
 def test_daily_valuation_view_executes_with_net_assets_alias():

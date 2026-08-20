@@ -290,6 +290,37 @@ def build_selection_target_overlap(
     return pd.DataFrame(rows, columns=SELECTION_OVERLAP_COLUMNS)
 
 
+def run_target_backtests(
+    config: BacktestConfig,
+    signal_data: pd.DataFrame,
+    variant_targets: Mapping[str, pd.DataFrame],
+    *,
+    benchmark_prices: pd.DataFrame | None = None,
+    prepared_market_data: PreparedMarketData | None = None,
+) -> dict[str, BacktestResult]:
+    """Run arbitrary labeled target sets through one prepared market engine."""
+
+    if not isinstance(variant_targets, Mapping) or not variant_targets:
+        raise ValueError("统一回测目标必须是非空映射")
+    normalized_targets = {
+        str(variant): validate_target_weights(targets)
+        for variant, targets in variant_targets.items()
+    }
+    if any(not variant for variant in normalized_targets):
+        raise ValueError("统一回测目标标签不能为空")
+    engine = DailyBacktestEngine(config)
+    prepared = prepared_market_data or engine.prepare_market_data(signal_data, config)
+    return {
+        variant: engine.run(
+            signal_data,
+            targets,
+            benchmark_prices,
+            prepared_market_data=prepared,
+        )
+        for variant, targets in normalized_targets.items()
+    }
+
+
 def compare_selection_variants(
     config: BacktestConfig,
     signal_data: pd.DataFrame,
@@ -306,28 +337,26 @@ def compare_selection_variants(
     normalized_targets = _normalize_variant_targets(variant_targets)
     if candidates is None:
         raise ValueError("统一选股比较必须提供候选股票池")
-    engine = DailyBacktestEngine(config)
-    prepared = prepared_market_data or engine.prepare_market_data(signal_data, config)
     coverage = build_selection_coverage(
         candidates,
         normalized_targets,
         holding_count=holding_count,
     )
     overlap = build_selection_target_overlap(normalized_targets)
+    raw_results = run_target_backtests(
+        config,
+        signal_data,
+        normalized_targets,
+        benchmark_prices=benchmark_prices,
+        prepared_market_data=prepared_market_data,
+    )
 
     nav_frames = []
     trade_frames = []
     target_frames = []
     metric_rows = []
-    raw_results: dict[str, BacktestResult] = {}
     for variant in SELECTION_VARIANTS:
-        result = engine.run(
-            signal_data,
-            normalized_targets[variant],
-            benchmark_prices,
-            prepared_market_data=prepared,
-        )
-        raw_results[variant] = result
+        result = raw_results[variant]
         nav_frame = result.daily_nav.loc[:, list(SELECTION_NAV_COLUMNS[1:])].copy()
         nav_frame.insert(0, "variant", variant)
         nav_frames.append(nav_frame)
@@ -653,6 +682,12 @@ def _summarize_trades(trades: pd.DataFrame, initial_capital: float) -> dict:
         "skipped_rebalance_count": int((side == "SKIP_REBALANCE").sum()),
         "delist_count": int((side == "DELIST").sum()),
     }
+
+
+def summarize_trade_statistics(trades: pd.DataFrame, initial_capital: float) -> dict:
+    """Return comparable turnover and execution statistics for a trade table."""
+
+    return _summarize_trades(trades, initial_capital)
 
 
 def _variant_category(variant: str) -> str:

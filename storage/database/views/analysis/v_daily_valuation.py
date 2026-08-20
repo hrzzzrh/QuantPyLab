@@ -97,10 +97,16 @@ class DailyValuationView(DuckDBView):
                 (k.close * s.total_shares) / NULLIF(t.ocf_ttm, 0) AS pcf_ttm
 
             FROM base_kline k
-            ASOF JOIN capital_hist s 
+            ASOF JOIN (
+                SELECT * FROM capital_hist ORDER BY symbol, change_date
+            ) s
                 ON k.symbol = s.symbol AND k.date >= s.change_date
-            ASOF JOIN ttm_hist t 
+            ASOF JOIN (
+                SELECT * FROM ttm_hist ORDER BY symbol, pub_date
+            ) t
                 ON k.symbol = t.symbol AND k.date >= t.pub_date
-            ASOF JOIN assets_hist a
+            ASOF JOIN (
+                SELECT * FROM assets_hist ORDER BY symbol, pub_date
+            ) a
                 ON k.symbol = a.symbol AND k.date >= a.pub_date;
         """

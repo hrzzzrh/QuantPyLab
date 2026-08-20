@@ -125,6 +125,34 @@ def test_rebalance_charges_commission_and_slippage_on_turnover():
     ].iloc[0] == pytest.approx(109_890)
 
 
+def test_rebalance_is_independent_of_target_row_order():
+    targets = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-02"),
+                "symbol": "000002",
+                "target_weight": 0.5,
+            },
+            {
+                "date": pd.Timestamp("2024-01-02"),
+                "symbol": "000001",
+                "target_weight": 0.5,
+            },
+        ]
+    )
+    engine = DailyBacktestEngine(_config())
+
+    first = engine.run(_prices(), targets)
+    second = engine.run(_prices(), targets.iloc[::-1].reset_index(drop=True))
+
+    pd.testing.assert_frame_equal(first.daily_nav, second.daily_nav)
+    pd.testing.assert_frame_equal(first.trades, second.trades)
+    assert first.trades.loc[first.trades["side"] == "BUY", "symbol"].tolist() == [
+        "000001",
+        "000002",
+    ]
+
+
 def test_delisted_position_is_liquidated_at_last_close():
     dates = pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04"])
     rows = []
