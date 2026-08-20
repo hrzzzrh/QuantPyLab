@@ -29,9 +29,9 @@
 8. **代码质量检查 (Lint Gate)**：修改核心代码（`storage/`、`backtest/`、`data_ingestion/`、`utils/`、`config/`、`analysis/`、`tools/`、`main.py`、`tests/`，不含 `workspace/`）后，必须依次运行 `uv run ruff check .` 与 `uv run ruff format --check .`，两项全部通过方可完成任务；如需格式化运行 `uv run ruff format .`。规则与豁免配置见 `pyproject.toml` 的 `[tool.ruff]`。
 9. **测试覆盖要求 (Test Coverage Gate)**：代码变更必须有对应测试用例覆盖。修改核心代码（范围同 Lint Gate）后，须为变更的行为补充/更新单元测试（mock 网络与数据库，不触真实网络），并运行 `uv run pytest tests/` 确认全部通过方可完成任务；新增测试文件必须纳入提交，禁止出现"改代码无测试"的提交。测试规范：真实环境依赖（网络、外部接口、`data/` 数据湖）一律以 `monkeypatch` 或 mock 隔离，仅验证纯逻辑行为。
 10. **禁止全量扫描数据目录 (Data Directory Guard)**：严禁使用 `ls` 或类似命令对 `data/` 目录进行全量或递归扫描（Parquet 分片数量巨大），必须使用精准路径、脚本查询或元数据库（`metadata.db`）定位目标。
-11. **提交审查门禁 (Review Gate)**：提交代码前（功能开发或修复完成后），必须将全部变更交给 `code-reviewer` 子 agent 执行全维度对抗式审查（正确性、数据口径、错误处理、并发、安全、性能、设计抽象、可维护性、测试质量、变更一致性、项目规范），并实测 lint 与测试。审查意见处理规则：
+11. **提交审查门禁 (Review Gate)**：仅在开发和测试全部完成、即将执行 `git commit` 的最后阶段，才允许将当前准备提交的全部变更交给 `code-reviewer` 子 agent 执行全维度对抗式审查（正确性、数据口径、错误处理、并发、安全、性能、设计抽象、可维护性、测试质量、变更一致性、项目规范）。开发、调试、lint、测试过程中禁止提前、分阶段或反复发起 Code Review；lint 与测试必须先完成，再进入临近 `git commit` 的审查阶段。审查意见处理规则：
     - 发现问题 → 执行修复（含补齐对应测试），或明确不采纳（必须附理由）；
-    - **修复的变更与不采纳的项必须再次交给同一 `code-reviewer` 子 agent 审核讨论，直至双方达成意见一致**；
+    - **修复的变更与不采纳的项，须在修复及相关 lint、测试重新完成后，且再次临近执行 `git commit` 时，交给同一 `code-reviewer` 子 agent 审核讨论，直至双方达成意见一致**；该次复核范围严格限定为本次 Review 已覆盖的变更、已提出的审查意见及其直接修复/测试变更，不得扩大到新的文件、模块、功能或未在本次 Review 中提出的问题；范围外问题不得并入本次复核结论，须另行发起独立 Review。
     - 达成一致后，且 Lint Gate / Test Coverage Gate / Review Gate 全部通过，方可提交代码。
     本门禁覆盖所有核心代码变更（范围同 Lint Gate），`workspace/` 除外；研报等 `investigation/` 文档类变更走 `.opencode/commands/investmentAnalysis/reviewAndFix.md` 闭环，不适用本门禁。
 

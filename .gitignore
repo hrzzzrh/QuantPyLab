@@ -30,6 +30,8 @@ htmlcov/
 
 # Generated backtest research outputs
 workspace/backtest/results/
+workspace/backtest/evaluations/
+workspace/factor_diagnostics/
 
 .gemini/*
 !.gemini/GEMINI.md

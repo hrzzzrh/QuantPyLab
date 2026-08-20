@@ -29,7 +29,7 @@
 - `storage/`: 数据存储抽象层。
     - `database/`: DuckDB 与 SQLite 的连接管理及 SQL 脚本。
     - `file_store/`: Parquet 文件读写逻辑封装。
-- `analysis/`: 策略与指标。包含自定义因子和技术指标计算。
+- `analysis/`: 分析、因子与指标。包含独立因子库和技术指标计算。
 - `backtest/`: 日频股票回测引擎。口径、数据流和扩展边界见 [回测文档](backtest.md)。
 - `utils/`: **[工具函数库](utilities.md)**（包含交易日历、日志等通用工具）。
 - `data/`: 本地物理存储目录。
