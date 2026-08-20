@@ -1424,6 +1424,117 @@ def run_factor_constrained_selection_diagnostics(
     return output_dir
 
 
+def evaluate_factor_selection_variants(
+    backtest_config_path: str,
+    quantile_count: int = 5,
+    evaluation_start_date: str | None = None,
+    evaluation_end_date: str | None = None,
+    output_path: str | None = None,
+):
+    """Compare factor selection variants under one cost and execution engine."""
+    from dataclasses import replace
+    from datetime import date
+
+    from backtest.config import load_backtest_config
+    from backtest.data_access import BacktestDataAccess
+    from backtest.selection_comparison import (
+        run_factor_selection_variant_comparison,
+        write_selection_comparison_report,
+    )
+
+    if isinstance(quantile_count, bool) or not isinstance(quantile_count, int):
+        raise ValueError("quantile_count 必须是正整数")
+    if quantile_count <= 0:
+        raise ValueError("quantile_count 必须是正整数")
+    if (evaluation_start_date is None) != (evaluation_end_date is None):
+        raise ValueError("evaluation_start_date 和 evaluation_end_date 必须同时指定")
+
+    source_config = load_backtest_config(backtest_config_path)
+    actual_config = source_config
+    explicit_evaluation_scope = evaluation_start_date is not None
+    if explicit_evaluation_scope:
+        try:
+            start_date = date.fromisoformat(evaluation_start_date)
+            end_date = date.fromisoformat(evaluation_end_date)
+        except (TypeError, ValueError) as error:
+            raise ValueError("评估日期必须使用 YYYY-MM-DD 格式") from error
+        actual_config = replace(
+            source_config,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    report = run_factor_selection_variant_comparison(
+        actual_config,
+        db_manager,
+        quantile_count=quantile_count,
+    )
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/factor_selection_comparison") / (
+            f"{Path(backtest_config_path).stem}_{run_id}"
+        )
+    data_access = BacktestDataAccess(db_manager)
+    benchmark_prices = data_access.load_benchmark_prices(actual_config)
+    benchmark_dates = pd.to_datetime(
+        benchmark_prices.get("date", pd.Series(dtype="datetime64[ns]")),
+        errors="coerce",
+    ).dropna()
+    benchmark_data_status = (
+        f"可用 {len(benchmark_prices)} 行，日期 {benchmark_dates.min().date().isoformat()}..{benchmark_dates.max().date().isoformat()}"
+        if not benchmark_dates.empty
+        else f"不可用：{actual_config.benchmark_symbol or '未配置'} 在评估区间没有行情"
+    )
+    output_dir = write_selection_comparison_report(
+        report,
+        output_dir,
+        parameters={
+            "backtest_config_path": str(Path(backtest_config_path).resolve()),
+            "backtest_config": source_config.to_dict(),
+            "evaluation_config": actual_config.to_dict(),
+            "evaluation_scope": (
+                f"{actual_config.start_date.isoformat()}..{actual_config.end_date.isoformat()}（显式锁定评估区间）"
+                if explicit_evaluation_scope
+                else f"{actual_config.start_date.isoformat()}..{actual_config.end_date.isoformat()}（使用配置原始区间，未标记为样本外）"
+            ),
+            "quantile_count": quantile_count,
+            "selection_variants": [
+                "baseline",
+                "neutralized_industry",
+                "neutralized_size",
+                "neutralized_industry_size",
+                "industry_quota",
+                "size_quota",
+                "industry_size_quota",
+            ],
+            "commission_bps": actual_config.commission_bps,
+            "slippage_bps": actual_config.slippage_bps,
+            "benchmark_symbol": actual_config.benchmark_symbol,
+            "benchmark_price_rows": int(len(benchmark_prices)),
+            "benchmark_price_date_min": (
+                benchmark_dates.min().date().isoformat()
+                if not benchmark_dates.empty
+                else None
+            ),
+            "benchmark_price_date_max": (
+                benchmark_dates.max().date().isoformat()
+                if not benchmark_dates.empty
+                else None
+            ),
+            "benchmark_data_status": benchmark_data_status,
+            "market_data_execution_engine": "DailyBacktestEngine",
+            "market_data_scope": "one PreparedMarketData shared by all variants",
+            "industry_data_source": "industry_classification_sw",
+            "industry_effective_date_field": "effective_date",
+            "market_cap_source": "v_daily_valuation.market_cap",
+            "industry_snapshot": data_access.get_industry_snapshot_metadata(),
+        },
+    )
+    logger.info(f"因子选股变体统一回测完成，结果目录: {output_dir}")
+    return output_dir
+
+
 def run_factor_diagnostics(
     factor_names: list[str],
     start_date: str,
@@ -1741,7 +1852,34 @@ def main():
         help="结果目录，默认写入 workspace/factor_constrained_selection_diagnostics",
     )
 
-    # 19. migrate-kline-source
+    # 23. evaluate-factor-selection-variants
+    selection_comparison_p = subparsers.add_parser(
+        "evaluate-factor-selection-variants",
+        help="在同一成交与成本口径下比较因子选股变体",
+    )
+    selection_comparison_p.add_argument(
+        "--backtest-config", required=True, help="因子实验回测 TOML 配置文件路径"
+    )
+    selection_comparison_p.add_argument(
+        "--evaluation-start-date",
+        help="显式锁定评估起始日期 (YYYY-MM-DD)，必须与结束日期同时指定",
+    )
+    selection_comparison_p.add_argument(
+        "--evaluation-end-date",
+        help="显式锁定评估结束日期 (YYYY-MM-DD)，必须与起始日期同时指定",
+    )
+    selection_comparison_p.add_argument(
+        "--quantile-count",
+        type=int,
+        default=5,
+        help="规模分组数，默认 5",
+    )
+    selection_comparison_p.add_argument(
+        "--output",
+        help="结果目录，默认写入 workspace/factor_selection_comparison",
+    )
+
+    # 24. migrate-kline-source
     migration_p = subparsers.add_parser(
         "migrate-kline-source", help="分阶段重建全部股票日线数据源"
     )
@@ -1940,6 +2078,18 @@ def main():
             )
         except Exception:
             logger.exception("因子配额选股对照诊断异常退出")
+            sys.exit(1)
+    elif args.command == "evaluate-factor-selection-variants":
+        try:
+            evaluate_factor_selection_variants(
+                backtest_config_path=args.backtest_config,
+                quantile_count=args.quantile_count,
+                evaluation_start_date=args.evaluation_start_date,
+                evaluation_end_date=args.evaluation_end_date,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("因子选股变体统一回测异常退出")
             sys.exit(1)
     elif args.command == "migrate-kline-source":
         from tools.kline_source_migration import run_kline_source_migration

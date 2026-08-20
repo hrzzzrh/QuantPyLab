@@ -94,6 +94,8 @@ uv run main.py diagnose-factors \
 
 比例配额对照命令 `diagnose-factor-constrained-selection` 固定原始综合评分，按有效行业、规模或行业×规模候选数量分配 `holding_count`，使用 Hamilton 最大余数法并在组内保留原始评分排序。它用于区分“直接风险配额导致的目标变化”和“残差评分导致的目标变化”；配额误差、控制变量覆盖率和目标重合率均写入报告。该命令仍是研究工具，不改变因子定义、训练、正式策略和回测。
 
+选股约束的收益影响由 `evaluate-factor-selection-variants` 在同一成本与成交口径下统一比较。它同时运行原始 baseline、三种残差化和三种比例配额目标，复用同一 `PreparedMarketData` 和 `DailyBacktestEngine`，输出逐日净值、逐笔成交、换手、成本、覆盖失败和目标重合审计。只有调用方显式传入预先锁定且未参与方案选择的评估区间时，报告才可作为样本外影响对照；该命令不会把任何约束接入正式策略。
+
 ## 6. 回测使用方式
 
 多因子策略 `multi-factor-quality-value-momentum` 使用全部七个内置因子：

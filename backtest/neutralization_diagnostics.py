@@ -73,6 +73,26 @@ class NeutralizationDiagnosticReport:
     size_exposure: pd.DataFrame
 
 
+def build_neutralized_targets(
+    candidates: pd.DataFrame,
+    mode: str,
+    holding_count: int,
+) -> pd.DataFrame:
+    """Build one residualized target set for a downstream research comparison."""
+
+    _validate_positive_integer(holding_count, "holding_count")
+    _validate_mode(mode)
+    normalized_candidates = _normalize_candidates(candidates)
+    if normalized_candidates.empty:
+        raise ValueError("中性化目标生成没有可选股票池")
+    targets, _coverage = _build_neutralized_targets(
+        normalized_candidates,
+        mode,
+        holding_count,
+    )
+    return targets
+
+
 def calculate_neutralization_diagnostics(
     candidates: pd.DataFrame,
     baseline_targets: pd.DataFrame,
@@ -542,6 +562,11 @@ def _validate_mode(mode: str) -> None:
             + "；可选: "
             + ", ".join(NEUTRALIZATION_MODES)
         )
+
+
+def _validate_positive_integer(value: int, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{name} 必须是正整数")
 
 
 def _build_summary(

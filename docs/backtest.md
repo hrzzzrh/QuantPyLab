@@ -184,6 +184,22 @@ uv run main.py diagnose-factor-constrained-selection \
 
 输出包含 `summary.md`、`parameters.json`、`constraint_summary.csv`、`constraint_coverage.csv`、`constraint_target_overlap.csv` 和 `constraint_exposure.csv`。配额误差为实际入选数减目标配额，报告的占比差以各模式有效控制变量候选池为 universe 分母；缺失控制变量的候选只保留在完整候选池覆盖率中。有效候选不足持仓数时不回退。该命令不接入正式策略，不能把配额可行或目标重合较高解释为样本外收益改善。
 
+### 4.9 因子选股变体统一成本与成交回测比较
+
+`evaluate-factor-selection-variants` 将 `baseline`、三种残差化目标和三种比例配额目标送入同一个 `DailyBacktestEngine`。七种目标共享同一份点时因子候选、原始综合评分、行情日历、后复权价格、T+1 开盘成交、手续费、滑点和基准；比较收益、波动、夏普、回撤、换手、交易成本、跳过调仓和退市清算，不改变正式策略默认值。
+
+推荐把已预先锁定、未参与方案选择的测试区间显式传入，才可作为样本外比较：
+
+```bash
+uv run main.py evaluate-factor-selection-variants \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --evaluation-start-date 2022-07-01 \
+  --evaluation-end-date 2024-06-30 \
+  --quantile-count 5
+```
+
+`--evaluation-start-date` 和 `--evaluation-end-date` 必须成对出现；省略时使用配置原始区间，报告会明确标记为未锁定样本外区间。结果默认写入 `workspace/factor_selection_comparison/<name>_<timestamp>/`，包括 `summary.md`、`parameters.json`、`selection_comparison.csv`、`selection_daily_nav.csv`、`selection_trades.csv`、`selection_targets.csv`、`selection_coverage.csv` 和 `selection_target_overlap.csv`。换手只统计 BUY/SELL 的单边名义金额，DELIST 与 SKIP_REBALANCE 单独计数；控制变量不足的信号日不回退到 baseline，并在覆盖文件记录失败原因。
+
 ## 5. 成交、成本和净值
 
 单边交易成本为 `commission_bps + slippage_bps`。每次调仓先按开盘时持仓与目标持仓的绝对差额计算名义换手，再从组合净值中扣除成本，最后按扣成本后的净值配置目标权重。因此现金不会因成本而变为负数。

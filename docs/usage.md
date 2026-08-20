@@ -110,6 +110,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `diagnose-factor-industry-exposures` | 审计因子实验的点时行业覆盖与暴露 | `--backtest-config PATH`、`[--output]`；使用 `industry_classification_sw` 按 `effective_date` ASOF 对齐，不使用 `stocks.industry` 回填 |
 | `diagnose-factor-neutralization` | 对照因子实验的行业/规模残差化选股与暴露变化 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；仅研究，不改变正式策略 |
 | `diagnose-factor-constrained-selection` | 对照因子实验的行业/规模比例配额选股 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；使用 Hamilton 最大余数法，仅研究 |
+| `evaluate-factor-selection-variants` | 在同一成交与成本口径下比较基准、残差化和配额选股 | `--backtest-config PATH`、`[--evaluation-start-date]`、`[--evaluation-end-date]`、`[--quantile-count]`、`[--output]`；日期参数成对出现，显式区间才标记为锁定评估 |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -210,6 +211,20 @@ uv run main.py diagnose-factor-constrained-selection \
 ```
 
 结果默认写入 `workspace/factor_constrained_selection_diagnostics/<name>_<timestamp>/`，包含 `summary.md`、`parameters.json`、`constraint_summary.csv`、`constraint_coverage.csv`、`constraint_target_overlap.csv` 和 `constraint_exposure.csv`。配额误差是实际入选数减目标配额，联合行业×规模配额可能显著改变原始目标；该命令只用于风险暴露和可执行性对照，不改变正式策略、训练权重、交易或净值。
+
+### 3.3.6 因子选股变体统一成本与成交回测 (`evaluate-factor-selection-variants`)
+
+该命令把 `baseline`、`neutralized_industry`、`neutralized_size`、`neutralized_industry_size`、`industry_quota`、`size_quota` 和 `industry_size_quota` 七种目标送入同一个日频回测引擎。所有变体共享候选评分、行情结构、T+1 开盘成交、后复权净值、基准、手续费和滑点；换手只统计 BUY/SELL，DELIST 和 SKIP_REBALANCE 单独统计。
+
+```bash
+uv run main.py evaluate-factor-selection-variants \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --evaluation-start-date 2022-07-01 \
+  --evaluation-end-date 2024-06-30 \
+  --quantile-count 5
+```
+
+评估日期必须成对指定。显式日期用于锁定测试区间时，报告才标记为锁定评估；不指定则使用 TOML 原始区间并明确写为非样本外比较。结果写入 `workspace/factor_selection_comparison/`，包括标准摘要、解析参数、各变体收益/风险/换手/成本、逐日净值、逐笔成交、目标、覆盖失败和与 baseline 的目标重合。控制变量不完整或有效目标不足时不回退到基准，报告必须结合覆盖率和失败原因解释。
 
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 

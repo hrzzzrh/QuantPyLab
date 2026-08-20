@@ -79,6 +79,33 @@ class ConstrainedSelectionDiagnosticReport:
     exposure: pd.DataFrame
 
 
+def build_constrained_targets(
+    candidates: pd.DataFrame,
+    mode: str,
+    holding_count: int,
+    quantile_count: int = 5,
+) -> pd.DataFrame:
+    """Build one proportional quota target set for a downstream research comparison."""
+
+    _validate_positive_integer(holding_count, "holding_count")
+    _validate_positive_integer(quantile_count, "quantile_count")
+    _validate_mode(mode)
+    normalized_candidates = _normalize_candidates(candidates)
+    if normalized_candidates.empty:
+        raise ValueError("配额目标生成没有可选股票池")
+    enriched_candidates = _attach_size_buckets(
+        normalized_candidates,
+        quantile_count,
+    )
+    targets, _coverage, _exposure = _build_constrained_targets(
+        enriched_candidates,
+        mode,
+        holding_count,
+        quantile_count,
+    )
+    return targets
+
+
 def calculate_constrained_selection_diagnostics(
     candidates: pd.DataFrame,
     baseline_targets: pd.DataFrame,
