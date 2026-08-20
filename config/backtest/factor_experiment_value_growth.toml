@@ -1,0 +1,20 @@
+[run]
+start_date = "2018-01-01"
+end_date = "2026-08-07"
+initial_capital = 1000000
+commission_bps = 5
+slippage_bps = 5
+benchmark_symbol = "510300"
+
+[strategy]
+name = "factor-composite-experiment"
+
+[strategy.parameters]
+holding_count = 20
+min_listing_days = 250
+winsorize_lower = 0.05
+winsorize_upper = 0.95
+
+[strategy.parameters.factor_weights]
+valuation_ps_ttm = 0.5
+growth_revenue_yoy = 0.5

@@ -1,6 +1,11 @@
 import pandas as pd
 import pytest
 
+from analysis.factors.diagnostics import (
+    calculate_factor_diagnostics,
+    calculate_forward_returns,
+    write_factor_diagnostic_report,
+)
 from analysis.factors.engine import FactorEngine
 from analysis.factors.registry import list_factor_definitions
 from analysis.factors.transforms import (
@@ -30,18 +35,24 @@ def _factor_data(periods=122):
     return pd.DataFrame(rows)
 
 
-def test_factor_registry_exposes_eight_initial_factors():
+def test_factor_registry_exposes_fourteen_initial_factors():
     names = [metadata.name for metadata in list_factor_definitions()]
 
     assert names == [
+        "growth_deduct_profit_yoy",
+        "growth_revenue_yoy",
         "price_momentum_120d",
+        "price_reversal_20d",
         "price_trend_above_ma_120d",
         "price_trend_gap_120d",
         "price_volatility_60d",
         "quality_operating_cashflow_ratio",
         "quality_roe_weighted",
+        "quality_roic",
         "valuation_pb",
+        "valuation_pcf_ttm",
         "valuation_pe_ttm",
+        "valuation_ps_ttm",
     ]
 
 
@@ -154,6 +165,65 @@ def test_valuation_factors_reject_non_positive_values():
     assert pd.isna(result.loc[result["symbol"] == "000002", "valuation_pb"].iloc[0])
 
 
+def test_growth_quality_and_new_valuation_factors_copy_point_in_time_values():
+    data = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2024-01-02", "2024-01-02"]),
+            "symbol": ["000001", "000002"],
+            "ps_ttm": [2.0, 0.0],
+            "pcf_ttm": [8.0, -1.0],
+            "revenue_yoy": [12.5, -3.0],
+            "deduct_profit_yoy": [18.0, -8.0],
+            "roic": [9.5, -2.0],
+        }
+    )
+
+    result = FactorEngine().calculate(
+        data,
+        (
+            "valuation_ps_ttm",
+            "valuation_pcf_ttm",
+            "growth_revenue_yoy",
+            "growth_deduct_profit_yoy",
+            "quality_roic",
+        ),
+    )
+
+    first = result[result["symbol"] == "000001"].iloc[0]
+    second = result[result["symbol"] == "000002"].iloc[0]
+    assert first["valuation_ps_ttm"] == 2.0
+    assert first["valuation_pcf_ttm"] == 8.0
+    assert first["growth_revenue_yoy"] == 12.5
+    assert first["growth_deduct_profit_yoy"] == 18.0
+    assert first["quality_roic"] == 9.5
+    assert pd.isna(second["valuation_ps_ttm"])
+    assert pd.isna(second["valuation_pcf_ttm"])
+    assert second["growth_revenue_yoy"] == -3.0
+    assert second["growth_deduct_profit_yoy"] == -8.0
+    assert second["quality_roic"] == -2.0
+
+
+def test_price_reversal_uses_inverse_return_and_window_parameter():
+    dates = pd.bdate_range("2024-01-02", periods=4)
+    data = pd.DataFrame(
+        {
+            "date": dates,
+            "symbol": ["000001"] * len(dates),
+            "close_hfq": [10.0, 12.0, 9.0, 8.0],
+        }
+    )
+
+    result = FactorEngine().calculate(
+        data,
+        ("price_reversal_20d",),
+        {"price_reversal_20d": {"lookback_days": 2}},
+    )
+
+    assert result["price_reversal_20d"].iloc[:2].isna().all()
+    assert result["price_reversal_20d"].iloc[2] == pytest.approx(0.1)
+    assert result["price_reversal_20d"].iloc[3] == pytest.approx(1 / 3)
+
+
 def test_cross_sectional_transforms_respect_factor_direction():
     frame = pd.DataFrame(
         {
@@ -182,3 +252,90 @@ def test_factor_input_requires_date_and_symbol():
 
     with pytest.raises(ValueError, match="因子输入缺少字段"):
         FactorEngine().calculate(data, ("price_momentum_120d",))
+
+
+def _diagnostic_data():
+    dates = pd.bdate_range("2024-01-02", periods=4)
+    rows = []
+    for index in range(10):
+        symbol = f"0000{index + 1:02d}"
+        return_value = (10 - index) / 100
+        for date_index, current_date in enumerate(dates):
+            rows.append(
+                {
+                    "date": current_date,
+                    "symbol": symbol,
+                    "open_hfq": 100.0,
+                    "close_hfq": 100.0
+                    if date_index == 0
+                    else 100.0 * (1 + return_value),
+                    "valuation_pb": index + 1.0,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def test_forward_returns_start_at_next_open_and_end_at_later_close():
+    data = pd.DataFrame(
+        {
+            "date": pd.bdate_range("2024-01-02", periods=4),
+            "symbol": ["000001"] * 4,
+            "open_hfq": [10.0, 11.0, 12.0, 13.0],
+            "close_hfq": [10.0, 12.0, 14.0, 16.0],
+        }
+    )
+
+    result = calculate_forward_returns(data, (1, 2))
+
+    assert result.loc[0, "forward_return_1d"] == pytest.approx(12 / 11 - 1)
+    assert result.loc[0, "forward_return_2d"] == pytest.approx(14 / 11 - 1)
+    assert pd.isna(result.loc[3, "forward_return_1d"])
+
+
+def test_factor_diagnostics_orients_lower_is_better_factor():
+    data = _diagnostic_data()
+
+    report = calculate_factor_diagnostics(
+        data,
+        ("valuation_pb",),
+        horizons=(1,),
+        quantile_count=5,
+        signal_start_date="2024-01-02",
+        signal_end_date="2024-01-03",
+    )
+
+    summary = report.summary.iloc[0]
+    assert summary["signal_date_count"] == 2
+    assert summary["factor_coverage_rate"] == pytest.approx(1.0)
+    assert summary["mean_rank_ic"] < 0
+    assert summary["oriented_mean_rank_ic"] > 0
+    assert summary["preferred_quantile_spread"] > 0
+    assert report.coverage["date"].nunique() == 2
+    assert report.daily_rank_ic["date"].max() == pd.Timestamp("2024-01-03")
+    assert report.turnover["turnover"].iloc[1] == pytest.approx(0.0)
+    assert report.signal_autocorrelation["rank_autocorrelation"].iloc[
+        0
+    ] == pytest.approx(1.0)
+
+
+def test_factor_diagnostic_report_writes_all_tables(tmp_path):
+    report = calculate_factor_diagnostics(
+        _diagnostic_data(),
+        ("valuation_pb",),
+        horizons=(1,),
+        quantile_count=5,
+        signal_start_date="2024-01-02",
+        signal_end_date="2024-01-03",
+    )
+
+    output_dir = write_factor_diagnostic_report(
+        report, tmp_path / "diagnostics", {"source": "test"}
+    )
+
+    assert output_dir.joinpath("summary.csv").exists()
+    assert output_dir.joinpath("daily_rank_ic.csv").exists()
+    assert output_dir.joinpath("quantile_returns.csv").exists()
+    assert output_dir.joinpath("turnover.csv").exists()
+    assert output_dir.joinpath("signal_autocorrelation.csv").exists()
+    assert output_dir.joinpath("factor_correlation.csv").exists()
+    assert '"source": "test"' in output_dir.joinpath("parameters.json").read_text()

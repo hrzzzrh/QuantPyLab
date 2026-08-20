@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 
 import pandas as pd
 
@@ -18,6 +19,7 @@ class BacktestDataAccess:
     """通过统一视图加载回测数据，并统一处理点时财务指标。"""
 
     _KLINE_SIGNAL_COLUMNS = frozenset({"high", "low", "volume", "amount"})
+    _VALUATION_SIGNAL_COLUMNS = frozenset({"ps_ttm", "pcf_ttm"})
 
     def __init__(self, db_manager: DBManager):
         self.db_manager = db_manager
@@ -28,12 +30,18 @@ class BacktestDataAccess:
         lookback_days: int,
         indicator_fields: tuple[IndicatorField, ...] = (),
         kline_fields: tuple[str, ...] = (),
+        data_end_date: date | None = None,
+        valuation_fields: tuple[str, ...] = (),
     ) -> pd.DataFrame:
+        effective_end_date = data_end_date or config.end_date
+        if effective_end_date < config.end_date:
+            raise ValueError("data_end_date 不能早于回测结束日期")
         unknown_kline_fields = set(kline_fields) - self._KLINE_SIGNAL_COLUMNS
         if unknown_kline_fields:
             raise ValueError(
                 "不支持的行情信号字段: " + ", ".join(sorted(unknown_kline_fields))
             )
+        valuation_projection = self._build_valuation_projection(valuation_fields)
         view_names = ["v_daily_valuation", "daily_kline"]
         if indicator_fields:
             view_names.append("fin_indicator")
@@ -54,8 +62,7 @@ class BacktestDataAccess:
                     valuation.symbol,
                     valuation.raw_close,
                     valuation.close_hfq,
-                    valuation.pe_ttm,
-                    valuation.pb,
+                    {valuation_projection},
                     kline.open
                     {kline_projection}
                 FROM v_daily_valuation AS valuation
@@ -66,7 +73,7 @@ class BacktestDataAccess:
             {self._build_indicator_asof_join(indicator_fields)}
             ORDER BY daily_data.date, daily_data.symbol
             """,
-            [lookback_start, config.end_date],
+            [lookback_start, effective_end_date],
         ).df()
         frame["date"] = pd.to_datetime(frame["date"])
         # 后复权开盘价让开盘成交与收盘收益使用同一经济口径。
@@ -79,6 +86,7 @@ class BacktestDataAccess:
         factor_names: tuple[str, ...],
         factor_parameters: Mapping[str, Mapping[str, object]] | None = None,
         minimum_history_days: int = 0,
+        data_end_date: date | None = None,
     ) -> pd.DataFrame:
         """按注册因子需求加载点时行情和财务输入，不计算因子值。"""
         names = tuple(dict.fromkeys(factor_names))
@@ -93,6 +101,7 @@ class BacktestDataAccess:
 
         indicator_fields: dict[str, IndicatorField] = {}
         kline_fields: set[str] = set()
+        valuation_fields: set[str] = set()
         lookback_days = minimum_history_days
         parameter_map = factor_parameters or {}
         if not isinstance(parameter_map, Mapping):
@@ -114,12 +123,24 @@ class BacktestDataAccess:
                     )
                 elif field.source == "kline":
                     kline_fields.add(field.alias)
+                elif field.source == "valuation":
+                    if field.alias not in {"close_hfq", "pe_ttm", "pb"}:
+                        valuation_fields.add(field.alias)
 
-        return self.load_market_data(
+        load_arguments = (
             config,
             lookback_days,
             tuple(indicator_fields.values()),
             tuple(sorted(kline_fields)),
+        )
+        if data_end_date is None:
+            return self.load_market_data(
+                *load_arguments, valuation_fields=tuple(sorted(valuation_fields))
+            )
+        return self.load_market_data(
+            *load_arguments,
+            data_end_date=data_end_date,
+            valuation_fields=tuple(sorted(valuation_fields)),
         )
 
     def load_benchmark_prices(self, config: BacktestConfig) -> pd.DataFrame:
@@ -223,6 +244,20 @@ class BacktestDataAccess:
         return ", " + ", ".join(
             f'kline."{field}" AS "{field}"' for field in kline_fields
         )
+
+    @classmethod
+    def _build_valuation_projection(cls, valuation_fields: tuple[str, ...]) -> str:
+        unknown_fields = set(valuation_fields) - cls._VALUATION_SIGNAL_COLUMNS
+        if unknown_fields:
+            raise ValueError(
+                "不支持的估值信号字段: " + ", ".join(sorted(unknown_fields))
+            )
+        columns = [
+            "valuation.pe_ttm",
+            "valuation.pb",
+            *(f"valuation.{field} AS {field}" for field in valuation_fields),
+        ]
+        return ",\n                    ".join(columns)
 
     @staticmethod
     def _build_indicator_asof_join(indicator_fields: tuple[IndicatorField, ...]) -> str:

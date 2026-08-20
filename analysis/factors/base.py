@@ -55,6 +55,11 @@ class FactorDefinition(ABC):
     metadata: FactorMetadata
 
     def get_lookback_days(self, parameters: Mapping[str, object] | None = None) -> int:
+        if parameters:
+            raise ValueError(
+                f"因子 {self.metadata.name} 不支持参数: "
+                + ", ".join(sorted(parameters))
+            )
         return self.metadata.lookback_days
 
     @abstractmethod

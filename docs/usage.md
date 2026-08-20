@@ -52,6 +52,8 @@
 | `rebuild-schemas` | 重建视图 schema 预声明缓存 | `[--dataset]` (默认: 全部) |
 | `run-backtest` | 按 TOML 运行日频股票策略回测 | `--backtest-config PATH` |
 | `list-backtest-strategies` | 列出已注册的日频回测策略 | 无 |
+| `diagnose-factors` | 运行点时因子覆盖率、IC、分位收益和稳定性诊断 | `--factor-names`、`--start-date`、`--end-date`、`[--horizons]`、`[--quantile-count]`、`[--output]` |
+| `evaluate-factor-experiments` | 按训练/验证/测试和 Walk-forward 评估候选因子实验 | `--research-config PATH`、`[--output]` |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -69,16 +71,49 @@ uv run ruff format --check .   # 检查格式是否符合规范（CI 用）
 
 ### 3.3 日频回测 (`run-backtest`)
 
-`run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）和 `price-momentum`（中期动量与趋势）两种策略。所有策略均在每月最后一个交易日收盘后产生信号，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
+`run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）、`price-momentum`（中期动量与趋势）、`multi-factor-quality-value-momentum`（七因子合成）和 `factor-composite-experiment`（单因子/小组合实验）四种策略。所有策略均在每月最后一个交易日收盘后产生信号，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
 
 ```bash
 uv run main.py list-backtest-strategies
 
 uv run main.py run-backtest \
   --backtest-config config/backtest/quality_value_recovery.toml
+
+uv run main.py run-backtest \
+  --backtest-config config/backtest/multi_factor_quality_value_momentum.toml
+
+uv run main.py run-backtest \
+  --backtest-config config/backtest/factor_experiment_reversal.toml
 ```
 
-示例 TOML 位于 `config/backtest/`。将 `[run]` 中的 `benchmark_symbol` 设为空字符串可跳过 ETF 基准。每次运行会在 `workspace/backtest/results/` 创建独立目录，保存解析后的参数 JSON、每日净值、调仓目标、成交记录和摘要；该目录是实验产物，不纳入版本控制。完整的策略参数、数据口径与扩展边界见 [日频股票回测](backtest.md)。
+示例 TOML 位于 `config/backtest/`。将 `[run]` 中的 `benchmark_symbol` 设为空字符串可跳过 ETF 基准。每次运行会在 `workspace/backtest/results/` 创建独立目录，保存解析后的参数 JSON、每日净值、调仓目标、成交记录和摘要；该目录是实验产物，不纳入版本控制。因子接口与计算口径见 [独立因子库](factor_library.md)，完整的策略参数、数据口径与扩展边界见 [日频股票回测](backtest.md)。
+
+### 3.3.1 因子诊断 (`diagnose-factors`)
+
+因子诊断在信号日收盘后生成特征，使用下一交易日开盘作为统一入场点，并计算 1、5、20 个交易日持有期的后续收益。低值更优的因子会依据注册元数据自动调整 Rank IC 和分位数组合方向。
+
+```bash
+uv run main.py diagnose-factors \
+  --factor-names price_momentum_120d valuation_pe_ttm quality_roe_weighted \
+  --start-date 2018-01-01 \
+  --end-date 2025-12-31 \
+  --horizons 1 5 20 \
+  --quantile-count 5 \
+  --output workspace/factor_diagnostics/quality_value_momentum
+```
+
+输出目录包含 `summary.md`、`summary.csv`、`coverage.csv`、`daily_rank_ic.csv`、`quantile_returns.csv`、`turnover.csv`、`signal_autocorrelation.csv`、`factor_correlation.csv` 和 `parameters.json`。因子诊断不会修改数据湖，也不会运行或改变回测策略。
+
+### 3.3.2 因子实验评估 (`evaluate-factor-experiments`)
+
+研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期；`[training]` 默认示例会在训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重；启用 `[hyperparameter_search]` 后，还会在有限网格中搜索因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合重新训练权重。可选的 `[walk_forward]` 区段会按自然年生成固定长度滚动窗口并在每个窗口重新展开和训练。训练权重在验证和测试阶段冻结，训练失败的组合会记录原因并排除，评估器只对验证集入选方案运行测试。
+
+```bash
+uv run main.py evaluate-factor-experiments \
+  --research-config config/backtest/factor_experiment_evaluation.toml
+```
+
+结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 文件提供完整审计明细。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
 
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 

@@ -1,3 +1,6 @@
+from backtest.strategies.factor_composite_experiment import (
+    FactorCompositeExperimentStrategy,
+)
 from backtest.strategies.multi_factor_quality_value_momentum import (
     MultiFactorQualityValueMomentumStrategy,
 )
@@ -5,6 +8,7 @@ from backtest.strategies.price_momentum import PriceMomentumStrategy
 from backtest.strategies.quality_value_recovery import QualityValueRecoveryStrategy
 
 STRATEGY_REGISTRY = {
+    "factor-composite-experiment": FactorCompositeExperimentStrategy(),
     "multi-factor-quality-value-momentum": MultiFactorQualityValueMomentumStrategy(),
     "price-momentum": PriceMomentumStrategy(),
     "quality-value-recovery": QualityValueRecoveryStrategy(),

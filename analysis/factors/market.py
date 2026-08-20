@@ -124,3 +124,30 @@ class PriceVolatility60D(FactorDefinition):
             lambda values: values.rolling(60, min_periods=60).std()
         )
         return ordered.loc[:, ["date", "symbol", "value"]]
+
+
+class PriceReversal20D(FactorDefinition):
+    metadata = FactorMetadata(
+        name="price_reversal_20d",
+        version="1",
+        description="后复权收盘价 20 日收益率的反向信号。",
+        inputs=(FactorInput("close_hfq", "valuation"),),
+        lookback_days=20,
+        higher_is_better=True,
+    )
+
+    def get_lookback_days(self, parameters=None) -> int:
+        return _resolve_window_parameter(
+            parameters, "lookback_days", 20, self.metadata.name
+        )
+
+    def compute(self, data, parameters=None) -> pd.DataFrame:
+        ordered = _ordered_market_data(data)
+        lookback_days = self.get_lookback_days(parameters)
+        previous_close = ordered.groupby("symbol", sort=False)["close_hfq"].shift(
+            lookback_days
+        )
+        ordered["value"] = -(ordered["close_hfq"] / previous_close - 1).where(
+            ordered["close_hfq"].gt(0) & previous_close.gt(0)
+        )
+        return ordered.loc[:, ["date", "symbol", "value"]]

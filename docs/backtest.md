@@ -2,9 +2,9 @@
 
 ## 1. 定位与范围
 
-`backtest/` 是基于统一视图的 A 股日频、长仓、横截面选股回测模块。当前内置 `quality-value-recovery`、`price-momentum` 与 `multi-factor-quality-value-momentum` 三个策略，统一使用月度调仓和 ETF 基准比较；它用于验证研究假设，不能直接替代实盘交易系统。
+`backtest/` 是基于统一视图的 A 股日频、长仓、横截面选股回测模块。当前内置 `quality-value-recovery`、`price-momentum`、`multi-factor-quality-value-momentum` 与 `factor-composite-experiment` 四个策略，统一使用月度调仓和 ETF 基准比较；另提供候选实验的训练/验证/测试与 Walk-forward 评估器。它用于验证研究假设，不能直接替代实盘交易系统。
 
-不支持分钟级交易、融资融券、整手委托、停复牌原因、涨跌停成交限制、税费、行业中性或参数寻优。
+不支持分钟级交易、融资融券、整手委托、停复牌原因、涨跌停成交限制或税费；研究评估器只在配置文件显式列出的候选和有限参数网格内搜索，不进行无上限的自动超参数寻优。启用 `[training]` 时会在训练集内真实拟合候选因子集合的非负 Ridge 权重。
 
 ## 2. 架构与数据流
 
@@ -30,6 +30,10 @@
 | `backtest/strategy_base.py` | 定义策略契约和标准目标权重表校验 |
 | `backtest/strategy_registry.py` | 显式注册可执行策略 |
 | `backtest/strategies/` | 每个策略独立加载信号数据并生成目标权重 |
+| `backtest/runner.py` | 统一执行已解析的内存回测，供正式回测和研究评估复用 |
+| `backtest/factor_trainer.py` | 使用点时月末因子和未来收益拟合非负 Ridge 因子权重 |
+| `backtest/hyperparameter_search.py` | 展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度的有限组合 |
+| `backtest/research_evaluator.py` | 按固定切分和滚动 Walk-forward 训练、选择候选并锁定测试集 |
 | `analysis/factors/` | 定义可复用点时因子、注册表、计算引擎和截面变换 |
 | `backtest/engine.py` | 按 T+1 开盘调仓，逐日计算净值、现金和交易成本 |
 | `backtest/metrics.py` | 计算收益、波动率、夏普和最大回撤 |
@@ -96,6 +100,39 @@ uv run main.py list-backtest-strategies
 
 默认要求上市交易日不少于 250 日，综合分数最高的前 20 只股票等权持有。因子接口、输入字段和未来函数约束见 [独立因子库](factor_library.md)。
 
+### 4.4 factor-composite-experiment
+
+该策略用于单因子和小组合研究，不改变三个正式策略的配置和行为。调用方通过 `factor_weights` 显式选择因子；策略根据因子元数据的 `higher_is_better` 统一方向，先按交易日缩尾并做百分位排名，再按权重合成分数，选择前 `holding_count` 只股票等权持有。
+
+实验策略最多同时使用 6 个因子。`factor_parameters` 用于传递因子自身参数，例如反转因子的窗口；同一信号日只要任一选中因子缺失，该股票就从组合中剔除。权重会在参数解析时归一化，并把因子版本和参数写入 `parameters.json`。
+
+单因子配置示例：
+
+```bash
+uv run main.py run-backtest \
+  --backtest-config config/backtest/factor_experiment_reversal.toml
+```
+
+小组合配置示例：
+
+```bash
+uv run main.py run-backtest \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml
+```
+
+该策略是研究实验入口，不会自动修改 `multi-factor-quality-value-momentum` 的因子权重，也不代表某个因子已经通过投资有效性检验。
+
+### 4.5 训练/验证/测试与 Walk-forward 评估
+
+研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，所有 `factor-composite-experiment` 候选在各自训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重；如果同时启用 `[hyperparameter_search]`，还会在显式有限网格中展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合分别拟合权重。验证集选择完整参数组合，测试集只运行入选组合。训练失败的组合会记录原因并排除，不会退回默认权重；只有全部组合都失败时窗口才终止。开启 Walk-forward 后，每个完整滚动窗口都会重新展开、训练和选择，最终只汇总各窗口测试段。未启用训练时，才是仅比较候选原始配置的兼容模式。
+
+```bash
+uv run main.py evaluate-factor-experiments \
+  --research-config config/backtest/factor_experiment_evaluation.toml
+```
+
+示例配置见 `config/backtest/factor_experiment_evaluation.toml`，设计与边界见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md) 和 [`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md)。结果写入 `workspace/backtest/evaluations/<name>_<timestamp>/`，包括标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`（每组参数的训练状态、训练/验证指标、拟合权重和失败原因）、`evaluation_failures.csv`、候选指标、入选记录和参数快照。`summary.md` 固定报告执行状态、点时样本覆盖、失败组合、入选权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 是完整审计明细。评估器不把测试结果反写到候选配置，也不跨窗口传递持仓或净值。
+
 ## 5. 成交、成本和净值
 
 单边交易成本为 `commission_bps + slippage_bps`。每次调仓先按开盘时持仓与目标持仓的绝对差额计算名义换手，再从组合净值中扣除成本，最后按扣成本后的净值配置目标权重。因此现金不会因成本而变为负数。
@@ -138,7 +175,7 @@ uv run main.py run-backtest \
 | `daily_nav.csv` | 每日策略净值、现金、持仓市值和基准净值 |
 | `rebalance_targets.csv` | 信号日、候选评分、排名和目标权重 |
 | `trades.csv` | T+1 成交记录、原始及后复权开盘价、名义金额与成本 |
-| `summary.md` | 收益、风险、换手和交易记录摘要 |
+| `summary.md` | 普通回测的收益、风险、换手和交易记录摘要；因子实验评估另生成固定章节的训练结果报告 |
 
 结果目录已被 Git 忽略。可复用的研究结论应在复核后写入 `investigation/`，不应把单次运行结果直接提交。
 
@@ -158,4 +195,4 @@ uv run main.py run-backtest \
 
 单元测试覆盖 TOML 配置、策略注册、因子计算与截面变换、质量价值与动量策略排序、多因子策略权重、T+1 成交、交易成本、缺失目标开盘价处理和行情终结（退市）清算。两个旧策略迁移后还通过固定同一份点时输入的前后回测文件比较，验证目标、交易、净值和摘要保持一致。修改时间线、费用、复权口径、目标权重或清算逻辑时，必须先补充对应的可手算测试样例。
 
-后续可独立扩展行业权重约束、卖出印花税、停牌与涨跌停规则、整手仿真、因子 IC、归因和参数敏感性分析；这些功能不得改变本模块现有的点时数据和 T+1 成交约束。
+因子 IC、分位收益、覆盖率、换手、信号自相关和因子相关性诊断已由 `diagnose-factors` 提供；训练/验证/测试与 Walk-forward 评估由 `evaluate-factor-experiments` 提供。后续可独立扩展行业权重约束、卖出印花税、停牌与涨跌停规则、整手仿真、因子归因和参数敏感性分析。这些功能不得改变本模块现有的点时数据和 T+1 成交约束。

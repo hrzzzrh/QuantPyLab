@@ -14,10 +14,11 @@ def test_loads_toml_backtest_config():
     assert config.start_date.isoformat() == "2018-01-01"
 
 
-def test_registry_exposes_three_explicit_strategies():
+def test_registry_exposes_four_explicit_strategies():
     names = [metadata.name for metadata in list_backtest_strategies()]
 
     assert names == [
+        "factor-composite-experiment",
         "multi-factor-quality-value-momentum",
         "price-momentum",
         "quality-value-recovery",
@@ -32,6 +33,18 @@ def test_loads_multi_factor_strategy_parameters():
 
     assert config.strategy_name == "multi-factor-quality-value-momentum"
     assert config.strategy_parameters["factor_weights"]["valuation_pb"] == 0.15
+
+
+def test_loads_factor_experiment_parameters():
+    config = load_backtest_config(
+        Path("config/backtest/factor_experiment_reversal.toml")
+    )
+
+    assert config.strategy_name == "factor-composite-experiment"
+    assert config.strategy_parameters["factor_weights"] == {"price_reversal_20d": 1.0}
+    assert config.strategy_parameters["factor_parameters"] == {
+        "price_reversal_20d": {"lookback_days": 20}
+    }
 
 
 def test_registry_rejects_unknown_strategy():

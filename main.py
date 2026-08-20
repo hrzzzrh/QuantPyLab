@@ -1007,25 +1007,125 @@ def rebuild_view_schemas(dataset: str = None):
 def run_backtest(backtest_config_path: str):
     """按 TOML 配置运行已注册策略并输出可复现的研究产物。"""
     from backtest.config import load_backtest_config
-    from backtest.data_access import BacktestDataAccess
-    from backtest.engine import DailyBacktestEngine
     from backtest.reporter import write_backtest_result
-    from backtest.strategy_base import validate_target_weights
-    from backtest.strategy_registry import get_backtest_strategy
+    from backtest.runner import execute_backtest
 
     config = load_backtest_config(backtest_config_path)
-    strategy = get_backtest_strategy(config.strategy_name)
-    parameters = strategy.validate_parameters(config.strategy_parameters)
-    config = config.with_resolved_strategy(strategy.metadata.version, parameters)
-    data_access = BacktestDataAccess(db_manager)
-    signal_data = strategy.load_signal_data(data_access, config, parameters)
-    targets = validate_target_weights(
-        strategy.build_targets(signal_data, config, parameters)
+    backtest_run = execute_backtest(config, db_manager)
+    output_dir = write_backtest_result(
+        backtest_run.config,
+        backtest_run.result.daily_nav,
+        backtest_run.targets,
+        backtest_run.result.trades,
     )
-    benchmark_prices = data_access.load_benchmark_prices(config)
-    result = DailyBacktestEngine(config).run(signal_data, targets, benchmark_prices)
-    output_dir = write_backtest_result(config, result.daily_nav, targets, result.trades)
     logger.info(f"回测完成，结果目录: {output_dir}")
+
+
+def evaluate_factor_experiments(
+    research_config_path: str,
+    output_path: str | None = None,
+):
+    """按固定切分和 Walk-forward 评估候选因子实验。"""
+    from backtest.research_evaluator import (
+        evaluate_factor_experiments as evaluate_experiments,
+    )
+    from backtest.research_evaluator import (
+        load_factor_experiment_evaluation_config,
+        write_factor_experiment_evaluation_report,
+    )
+
+    config = load_factor_experiment_evaluation_config(research_config_path)
+    result = evaluate_experiments(config, db_manager)
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/backtest/evaluations") / (
+            f"{config.name}_{run_id}"
+        )
+    output_dir = write_factor_experiment_evaluation_report(result, output_dir)
+    logger.info(f"因子实验评估完成，结果目录: {output_dir}")
+    return output_dir
+
+
+def run_factor_diagnostics(
+    factor_names: list[str],
+    start_date: str,
+    end_date: str,
+    horizons: list[int],
+    quantile_count: int,
+    output_path: str | None = None,
+):
+    """Run point-in-time diagnostics for registered factors."""
+    from datetime import date, timedelta
+
+    from analysis.factors.diagnostics import (
+        calculate_factor_diagnostics,
+        write_factor_diagnostic_report,
+    )
+    from analysis.factors.engine import FactorEngine
+    from backtest.config import BacktestConfig
+    from backtest.data_access import BacktestDataAccess
+
+    try:
+        signal_start_date = date.fromisoformat(start_date)
+        signal_end_date = date.fromisoformat(end_date)
+    except ValueError as error:
+        raise ValueError("因子诊断日期必须使用 YYYY-MM-DD 格式") from error
+    if signal_start_date >= signal_end_date:
+        raise ValueError("因子诊断开始日期必须早于结束日期")
+    if not horizons or any(horizon <= 0 for horizon in horizons):
+        raise ValueError("因子诊断持有期必须是正整数")
+
+    # 预留足够的自然日，覆盖节假日后仍能取得最长持有期的收盘价。
+    data_end_date = signal_end_date + timedelta(days=max(horizons) * 3 + 30)
+    config = BacktestConfig(
+        start_date=signal_start_date,
+        end_date=signal_end_date,
+        strategy_name="factor-diagnostics",
+        benchmark_symbol=None,
+    )
+    data_access = BacktestDataAccess(db_manager)
+    input_data = data_access.load_factor_data(
+        config,
+        tuple(factor_names),
+        data_end_date=data_end_date,
+    )
+    factor_frame = FactorEngine().calculate(input_data, tuple(factor_names))
+    price_frame = input_data.loc[:, ["date", "symbol", "open_hfq", "close_hfq"]]
+    diagnostic_input = price_frame.merge(
+        factor_frame,
+        on=["date", "symbol"],
+        how="inner",
+        validate="one_to_one",
+    )
+    report = calculate_factor_diagnostics(
+        diagnostic_input,
+        tuple(factor_names),
+        horizons=tuple(horizons),
+        quantile_count=quantile_count,
+        signal_start_date=signal_start_date,
+        signal_end_date=signal_end_date,
+    )
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/factor_diagnostics") / f"run_{run_id}"
+    output_dir = write_factor_diagnostic_report(
+        report,
+        output_dir,
+        parameters={
+            "factor_names": factor_names,
+            "signal_start_date": signal_start_date.isoformat(),
+            "signal_end_date": signal_end_date.isoformat(),
+            "data_end_date": data_end_date.isoformat(),
+            "horizons": sorted(set(horizons)),
+            "quantile_count": quantile_count,
+        },
+    )
+    logger.info(f"因子诊断完成，结果目录: {output_dir}")
+    return output_dir
 
 
 def list_registered_backtest_strategies():
@@ -1143,6 +1243,51 @@ def main():
     # 16. list-backtest-strategies
     subparsers.add_parser("list-backtest-strategies", help="列出已注册的日频回测策略")
 
+    # 17. diagnose-factors
+    diagnostic_p = subparsers.add_parser(
+        "diagnose-factors", help="运行点时因子覆盖率、IC 与稳定性诊断"
+    )
+    diagnostic_p.add_argument(
+        "--factor-names",
+        nargs="+",
+        required=True,
+        help="一个或多个已注册因子名称",
+    )
+    diagnostic_p.add_argument(
+        "--start-date", required=True, help="信号起始日期 (YYYY-MM-DD)"
+    )
+    diagnostic_p.add_argument(
+        "--end-date", required=True, help="信号结束日期 (YYYY-MM-DD)"
+    )
+    diagnostic_p.add_argument(
+        "--horizons",
+        nargs="+",
+        type=int,
+        default=[1, 5, 20],
+        help="持有期交易日数量，默认 1 5 20",
+    )
+    diagnostic_p.add_argument(
+        "--quantile-count",
+        type=int,
+        default=5,
+        help="横截面分位数组数，默认 5",
+    )
+    diagnostic_p.add_argument(
+        "--output", help="结果目录，默认写入 workspace/factor_diagnostics"
+    )
+
+    # 18. evaluate-factor-experiments
+    evaluation_p = subparsers.add_parser(
+        "evaluate-factor-experiments",
+        help="按训练/验证/测试和 Walk-forward 评估候选因子实验",
+    )
+    evaluation_p.add_argument(
+        "--research-config", required=True, help="研究评估 TOML 配置文件路径"
+    )
+    evaluation_p.add_argument(
+        "--output", help="结果目录，默认写入 workspace/backtest/evaluations"
+    )
+
     args = parser.parse_args()
 
     if args.command == "sync-stocks":
@@ -1204,6 +1349,28 @@ def main():
         run_backtest(backtest_config_path=args.backtest_config)
     elif args.command == "list-backtest-strategies":
         list_registered_backtest_strategies()
+    elif args.command == "diagnose-factors":
+        try:
+            run_factor_diagnostics(
+                factor_names=args.factor_names,
+                start_date=args.start_date,
+                end_date=args.end_date,
+                horizons=args.horizons,
+                quantile_count=args.quantile_count,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("因子诊断异常退出")
+            sys.exit(1)
+    elif args.command == "evaluate-factor-experiments":
+        try:
+            evaluate_factor_experiments(
+                research_config_path=args.research_config,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("因子实验评估异常退出")
+            sys.exit(1)
     else:
         parser.print_help()
 
