@@ -1,4 +1,0 @@
-interface:
-  display_name: "提交并推送修改"
-  short_description: "审查非工作区变更、通过门禁并经确认后精确提交推送"
-  default_prompt: "使用 $git-commit-and-push 提交当前变更。"
