@@ -61,7 +61,7 @@
 | 点时规模暴露诊断 | 已完成 | 2026-08-21 | 使用 `v_daily_valuation.market_cap` 按信号日分组；反转与价值/成长两套配置各 104 个信号日，市值覆盖率均为 100%；价值/成长组合规模组 4 平均选择提升 1.3991；行业快照暂不用于历史结论；提交 `8075c63` | 评估是否引入规模约束，并先补齐历史行业数据 |
 | 研究专用行业/规模中性化对照 | 已完成 | 2026-08-21 | `diagnose-factor-neutralization`；行业、规模、联合残差化、覆盖率、目标重合和逐日暴露审计；两套真实配置各 104 个信号日 | 残差化不等于严格组合中性，设计带配额/权重约束的下一步对照 |
 | 带组合约束的行业/规模中性化选股 | 已完成 | 2026-08-21 | `diagnose-factor-constrained-selection`；两套真实配置各 104 个信号日，三种模式无失败、最大配额误差为 0；提交 `6d8553f` | 当前只证明约束可执行，不接入正式策略 |
-| 选股变体统一成本与成交回测比较 | 进行中 | 2026-08-21 | `workspace/design_factor_selection_backtest_comparison.md`；已实现七变体统一 `DailyBacktestEngine` 比较器和针对性测试，待真实锁定区间报告与门禁 | 根据固定测试区间的收益、回撤、换手和成本决定是否进入下一项研究 |
+| 选股变体统一成本与成交回测比较 | 已完成 | 2026-08-21 | `evaluate-factor-selection-variants`；反转、价值/成长两套配置均在锁定测试区间完成七变体比较，各 24 个信号日无失败；基准 ETF `510300` 在区间无行情并已显式告警；全量 595 项测试、Review Gate 通过；提交 `3f1bbcb` | 根据固定测试区间结果决定是否进入多因子边际贡献验证，不接入正式策略 |
 | 历史行业点时数据资产 | 已完成 | 2026-08-21 | 已验证 AkShare 申万历史分类文件，新增 staging + 原子晋级的 industry_classification_sw 采集器、Parquet 分区、统一视图和 sync-industry-history 命令；真实导入 12,897 行、5,909 只股票，历史 ASOF 边界通过；Ruff、全量 552 项测试通过 | 审计历史信号日行业覆盖率后开发行业暴露诊断 |
 | 历史行业覆盖率与暴露诊断 | 已完成 | 2026-08-21 | 新增行业 ASOF 加载、覆盖率/选择暴露计算、报告和 `diagnose-factor-industry-exposures` 命令；反转、价值/成长真实配置各 104 个信号日，候选池覆盖率均值 99.7%、最低 99.1%，入选覆盖率最低 95.0%；Ruff、全量 561 项测试通过 | 根据覆盖率和行业选择暴露结果，另行决定是否提出行业中性化方案 |
 | 多因子组合边际贡献验证 | 待开始 | — | 计划阶段三 | 依赖诊断报告和中性化能力 |
@@ -87,6 +87,7 @@
 | 2026-08-21 | 开始带组合约束的行业/规模中性化选股对照 | 采用行业、规模、行业×规模三种有效候选池比例配额，使用 Hamilton 最大余数法分配持仓，分组内保留原始综合评分排序；待完成代码、真实报告和门禁 | `workspace/design_factor_constrained_selection.md` |
 | 2026-08-21 | 完成带组合约束的行业/规模中性化选股对照 | 反转、价值/成长两套真实配置各 104 个信号日，三种模式均无失败信号日，最大配额误差为 0；平均目标重合率：行业 17.9%/13.2%、规模 76.5%/82.5%、联合 8.8%/9.5%；修复 Markdown 摘要换行后重新生成最终报告 | `backtest/constrained_selection_diagnostics.py`、`diagnose-factor-constrained-selection`、`workspace/factor_constrained_selection_diagnostics/` |
 | 2026-08-21 | 开始选股变体统一成本与成交回测比较 | 固定基准、残差化和配额目标，复用同一 `PreparedMarketData` 和日频引擎；增加显式评估日期覆盖，未锁定区间不标记为样本外 | `workspace/design_factor_selection_backtest_comparison.md`、`backtest/selection_comparison.py` |
+| 2026-08-21 | 完成选股变体统一成本与成交回测比较 | 反转、价值/成长两套配置在 2022-07-01..2024-06-30 锁定区间分别运行 baseline、三种残差化和三种配额；七变体均 24 个信号日成功；报告统一记录收益、年化波动、夏普、回撤、换手、成本、覆盖和目标重合；发现 `etf_kline` 无 510300 基准行情并显式记录，未伪造基准 | `3f1bbcb`、`workspace/factor_selection_comparison/` |
 | 2026-08-20 | 完成训练/验证/测试与 Walk-forward 评估 | 完成设计、候选选择、测试集锁定、滚动窗口和短窗口真实烟测；全量测试 498 项通过 | `backtest/research_evaluator.py`、`evaluate-factor-experiments` |
 | 2026-08-20 | 开发真实因子权重训练 | 已接入训练样本构造、未来收益标签、非负 Ridge 拟合和冻结权重传递；正在补充真实数据烟测与门禁验证 | `backtest/factor_trainer.py`、`workspace/design_factor_experiment_evaluation.md` |
 | 2026-08-20 | 完成真实因子权重训练 | 三因子真实点时烟测拟合出非默认权重；默认候选固定切分中记录并排除无正向权重的反转候选，价值成长候选完成验证/测试；Ruff 和全量 503 项测试通过 | `backtest/factor_trainer.py`、`training_models.csv`、`tests/test_factor_trainer.py` |

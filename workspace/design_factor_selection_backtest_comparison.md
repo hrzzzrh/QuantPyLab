@@ -98,4 +98,4 @@ uv run main.py evaluate-factor-selection-variants \
 
 ## 6. 状态
 
-已确认执行（依据用户授权持续自主开发）。
+已完成（代码、测试、两套真实锁定区间报告、文档和 Review Gate 已通过；提交 `3f1bbcb`）。
