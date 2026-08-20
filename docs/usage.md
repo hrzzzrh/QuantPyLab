@@ -109,6 +109,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `diagnose-factor-exposures` | 诊断因子实验的点时规模暴露 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]` |
 | `diagnose-factor-industry-exposures` | 审计因子实验的点时行业覆盖与暴露 | `--backtest-config PATH`、`[--output]`；使用 `industry_classification_sw` 按 `effective_date` ASOF 对齐，不使用 `stocks.industry` 回填 |
 | `diagnose-factor-neutralization` | 对照因子实验的行业/规模残差化选股与暴露变化 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；仅研究，不改变正式策略 |
+| `diagnose-factor-constrained-selection` | 对照因子实验的行业/规模比例配额选股 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；使用 Hamilton 最大余数法，仅研究 |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -197,6 +198,18 @@ uv run main.py diagnose-factor-neutralization \
 ```
 
 结果默认写入 `workspace/factor_neutralization_diagnostics/<name>_<timestamp>/`，包括模式汇总、控制变量覆盖率、与基准目标重合率、逐行业暴露明细和逐规模组暴露明细。行业暴露以全候选池中的已分类股票为 universe 分母，规模暴露以全候选池中的正且有限市值候选为 universe 分母，selected 分母只使用相应有效目标；被排除候选仍记录在覆盖率文件。残差化只改变评分排序，不保证最终组合严格满足行业或规模配额；目标重合率下降、暴露下降也不等于样本外收益提升。因此该命令是研究对照，不接入正式策略，不改变训练权重、交易和净值。
+
+### 3.3.5 因子实验比例配额选股对照 (`diagnose-factor-constrained-selection`)
+
+该命令固定原始综合评分，在有效行业、规模或行业×规模候选池内按候选数量比例分配持仓配额。三种模式分别为 `industry_quota`、`size_quota` 和 `industry_size_quota`；配额使用 Hamilton 最大余数法，组内再按原始 `score` 降序和股票代码升序选股。缺失控制变量的候选不参与对应模式配额，覆盖率和失败信号日单独记录，不回退到基准目标。
+
+```bash
+uv run main.py diagnose-factor-constrained-selection \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --quantile-count 5
+```
+
+结果默认写入 `workspace/factor_constrained_selection_diagnostics/<name>_<timestamp>/`，包含 `summary.md`、`parameters.json`、`constraint_summary.csv`、`constraint_coverage.csv`、`constraint_target_overlap.csv` 和 `constraint_exposure.csv`。配额误差是实际入选数减目标配额，联合行业×规模配额可能显著改变原始目标；该命令只用于风险暴露和可执行性对照，不改变正式策略、训练权重、交易或净值。
 
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 

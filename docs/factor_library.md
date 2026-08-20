@@ -92,6 +92,8 @@ uv run main.py diagnose-factors \
 
 行业覆盖率与选择暴露可通过 `diagnose-factor-industry-exposures` 生成独立报告。该命令只审计候选池和入选持仓，不改变训练、策略和回测；即使覆盖率较高，也不自动将行业中性化接入策略。研究对照命令 `diagnose-factor-neutralization` 进一步比较行业、规模和联合残差化评分，但残差化只改变排序，不保证组合严格满足行业/规模配额，因此当前仍不接入正式策略。
 
+比例配额对照命令 `diagnose-factor-constrained-selection` 固定原始综合评分，按有效行业、规模或行业×规模候选数量分配 `holding_count`，使用 Hamilton 最大余数法并在组内保留原始评分排序。它用于区分“直接风险配额导致的目标变化”和“残差评分导致的目标变化”；配额误差、控制变量覆盖率和目标重合率均写入报告。该命令仍是研究工具，不改变因子定义、训练、正式策略和回测。
+
 ## 6. 回测使用方式
 
 多因子策略 `multi-factor-quality-value-momentum` 使用全部七个内置因子：

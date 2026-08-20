@@ -1323,6 +1323,107 @@ def run_factor_neutralization_diagnostics(
     return output_dir
 
 
+def run_factor_constrained_selection_diagnostics(
+    backtest_config_path: str,
+    quantile_count: int = 5,
+    output_path: str | None = None,
+):
+    """Compare factor targets under proportional industry and size quotas."""
+    if isinstance(quantile_count, bool) or not isinstance(quantile_count, int):
+        raise ValueError("quantile_count 必须是正整数")
+    if quantile_count <= 0:
+        raise ValueError("quantile_count 必须是正整数")
+    from backtest.config import load_backtest_config
+    from backtest.constrained_selection_diagnostics import (
+        calculate_constrained_selection_diagnostics,
+        write_constrained_selection_diagnostic_report,
+    )
+    from backtest.data_access import BacktestDataAccess
+    from backtest.strategy_base import select_equal_weight_targets
+    from backtest.strategy_registry import get_backtest_strategy
+
+    config = load_backtest_config(backtest_config_path)
+    if config.strategy_name != "factor-composite-experiment":
+        raise ValueError(
+            "配额选股诊断当前只支持 factor-composite-experiment，"
+            f"不支持 {config.strategy_name}"
+        )
+    strategy = get_backtest_strategy(config.strategy_name)
+    parameters = strategy.validate_parameters(config.strategy_parameters)
+    factor_names = tuple(parameters["factor_weights"])
+    data_access = BacktestDataAccess(db_manager)
+    signal_data = data_access.load_factor_data(
+        config,
+        factor_names,
+        factor_parameters=parameters["factor_parameters"],
+        minimum_history_days=parameters["min_listing_days"],
+        include_market_cap=True,
+    )
+    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    candidates = strategy.prepare_target_candidates(
+        signal_data,
+        factor_frame,
+        config,
+        parameters,
+    )
+    scored_candidates = strategy.score_target_candidates(candidates, parameters)
+    baseline_targets = select_equal_weight_targets(
+        scored_candidates,
+        parameters["holding_count"],
+    )
+    scored_candidates = scored_candidates.merge(
+        signal_data.loc[:, ["date", "symbol", "market_cap"]],
+        on=["date", "symbol"],
+        how="left",
+        validate="one_to_one",
+    )
+    industry_points = data_access.load_point_in_time_industry(
+        candidates.loc[:, ["date", "symbol"]]
+    )
+    scored_candidates = scored_candidates.merge(
+        industry_points,
+        on=["date", "symbol"],
+        how="left",
+        validate="one_to_one",
+    )
+    report = calculate_constrained_selection_diagnostics(
+        scored_candidates,
+        baseline_targets,
+        holding_count=parameters["holding_count"],
+        quantile_count=quantile_count,
+    )
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/factor_constrained_selection_diagnostics") / (
+            f"{Path(backtest_config_path).stem}_{run_id}"
+        )
+    parameters_payload = {
+        "backtest_config_path": str(Path(backtest_config_path).resolve()),
+        "backtest_config": config.to_dict(),
+        "quantile_count": quantile_count,
+        "quota_method": "Hamilton largest remainder",
+        "constrained_selection_modes": [
+            "industry_quota",
+            "size_quota",
+            "industry_size_quota",
+        ],
+        "industry_data_source": "industry_classification_sw",
+        "industry_effective_date_field": "effective_date",
+        "market_cap_source": "v_daily_valuation.market_cap",
+        "quota_universe_scope": "each mode uses its valid control-variable candidate pool",
+        "industry_snapshot": data_access.get_industry_snapshot_metadata(),
+    }
+    output_dir = write_constrained_selection_diagnostic_report(
+        report,
+        output_dir,
+        parameters=parameters_payload,
+    )
+    logger.info(f"因子配额选股对照诊断完成，结果目录: {output_dir}")
+    return output_dir
+
+
 def run_factor_diagnostics(
     factor_names: list[str],
     start_date: str,
@@ -1621,6 +1722,25 @@ def main():
         help="结果目录，默认写入 workspace/factor_neutralization_diagnostics",
     )
 
+    # 22. diagnose-factor-constrained-selection
+    constrained_selection_p = subparsers.add_parser(
+        "diagnose-factor-constrained-selection",
+        help="对照因子实验的行业/规模比例配额选股",
+    )
+    constrained_selection_p.add_argument(
+        "--backtest-config", required=True, help="因子实验回测 TOML 配置文件路径"
+    )
+    constrained_selection_p.add_argument(
+        "--quantile-count",
+        type=int,
+        default=5,
+        help="规模分组数，默认 5",
+    )
+    constrained_selection_p.add_argument(
+        "--output",
+        help="结果目录，默认写入 workspace/factor_constrained_selection_diagnostics",
+    )
+
     # 19. migrate-kline-source
     migration_p = subparsers.add_parser(
         "migrate-kline-source", help="分阶段重建全部股票日线数据源"
@@ -1810,6 +1930,16 @@ def main():
             )
         except Exception:
             logger.exception("因子中性化对照诊断异常退出")
+            sys.exit(1)
+    elif args.command == "diagnose-factor-constrained-selection":
+        try:
+            run_factor_constrained_selection_diagnostics(
+                backtest_config_path=args.backtest_config,
+                quantile_count=args.quantile_count,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("因子配额选股对照诊断异常退出")
             sys.exit(1)
     elif args.command == "migrate-kline-source":
         from tools.kline_source_migration import run_kline_source_migration

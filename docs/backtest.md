@@ -172,6 +172,18 @@ uv run main.py diagnose-factor-neutralization \
 
 输出包含 `summary.md`、`parameters.json`、`neutralization_summary.csv`、`neutralization_coverage.csv`、`neutralization_target_overlap.csv`、`neutralization_industry_exposure.csv` 和 `neutralization_size_exposure.csv`。行业暴露的 universe 分母是全候选池中已分类股票，规模暴露的 universe 分母是全候选池中正且有限市值候选；selected 分母只使用相应有效目标，覆盖率文件保留被排除候选。残差化不等价于严格的组合行业/规模中性：它可能显著改变目标，却仍保留行业或规模选择偏离；是否开发带配额或权重约束的正式策略，必须基于该对照的覆盖率、目标重合、成本和样本外收益另行决定。命令不改变任何正式策略、训练参数或回测结果。
 
+### 4.8 因子实验比例配额选股对照
+
+`diagnose-factor-constrained-selection` 是残差化对照之后的研究工具。它固定原始综合评分，在每个信号日按有效行业、规模或行业×规模候选数量分配 `holding_count`，使用 Hamilton 最大余数法处理整数配额，组内按原始评分排序。行业使用 `industry_classification_sw` 的 `effective_date` ASOF，规模使用 `v_daily_valuation.market_cap` 的 5 组截面分组。
+
+```bash
+uv run main.py diagnose-factor-constrained-selection \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --quantile-count 5
+```
+
+输出包含 `summary.md`、`parameters.json`、`constraint_summary.csv`、`constraint_coverage.csv`、`constraint_target_overlap.csv` 和 `constraint_exposure.csv`。配额误差为实际入选数减目标配额，报告的占比差以各模式有效控制变量候选池为 universe 分母；缺失控制变量的候选只保留在完整候选池覆盖率中。有效候选不足持仓数时不回退。该命令不接入正式策略，不能把配额可行或目标重合较高解释为样本外收益改善。
+
 ## 5. 成交、成本和净值
 
 单边交易成本为 `commission_bps + slippage_bps`。每次调仓先按开盘时持仓与目标持仓的绝对差额计算名义换手，再从组合净值中扣除成本，最后按扣成本后的净值配置目标权重。因此现金不会因成本而变为负数。
