@@ -6,7 +6,11 @@ import pandas as pd
 
 from backtest.config import BacktestConfig
 from backtest.data_access import BacktestDataAccess
-from backtest.engine import BacktestResult, DailyBacktestEngine
+from backtest.engine import (
+    BacktestResult,
+    DailyBacktestEngine,
+    PreparedMarketData,
+)
 from backtest.strategy_base import validate_target_weights
 from backtest.strategy_registry import get_backtest_strategy
 from storage.database.manager import DBManager
@@ -24,17 +28,27 @@ class BacktestRun:
 class BacktestExecutionCache:
     """在单次研究评估窗口内复用因子策略的回测输入。"""
 
-    def __init__(self, max_entries: int = 4):
+    def __init__(self, max_entries: int = 4, market_data_max_entries: int = 2):
         if isinstance(max_entries, bool) or not isinstance(max_entries, int):
             raise ValueError("max_entries 必须是正整数")
         if max_entries <= 0:
             raise ValueError("max_entries 必须是正整数")
+        if isinstance(market_data_max_entries, bool) or not isinstance(
+            market_data_max_entries, int
+        ):
+            raise ValueError("market_data_max_entries 必须是正整数")
+        if market_data_max_entries <= 0:
+            raise ValueError("market_data_max_entries 必须是正整数")
         self.max_entries = max_entries
+        self.market_data_max_entries = market_data_max_entries
         self._factor_candidates: OrderedDict[
             tuple, tuple[pd.DataFrame, pd.DataFrame]
         ] = OrderedDict()
+        self._market_data: OrderedDict[tuple, PreparedMarketData] = OrderedDict()
         self._cache_hits = 0
         self._cache_misses = 0
+        self._market_cache_hits = 0
+        self._market_cache_misses = 0
 
     @property
     def stats(self) -> dict[str, int]:
@@ -49,6 +63,35 @@ class BacktestExecutionCache:
         """Release cached data frames before moving to another evaluation window."""
 
         self._factor_candidates.clear()
+        self._market_data.clear()
+
+    @property
+    def market_stats(self) -> dict[str, int]:
+        """Return market-data cache counters useful for tests and diagnostics."""
+
+        return {
+            "cache_hits": self._market_cache_hits,
+            "cache_misses": self._market_cache_misses,
+        }
+
+    def prepare_market_data(
+        self, prices: pd.DataFrame, config: BacktestConfig
+    ) -> PreparedMarketData:
+        """Prepare interval-level price structures and reuse them across runs."""
+
+        cache_key = (config.start_date, config.end_date)
+        cached = self._market_data.get(cache_key)
+        if cached is None:
+            self._market_cache_misses += 1
+            cached = DailyBacktestEngine.prepare_market_data(prices, config)
+            self._market_data[cache_key] = cached
+            self._market_data.move_to_end(cache_key)
+            if len(self._market_data) > self.market_data_max_entries:
+                self._market_data.popitem(last=False)
+        else:
+            self._market_cache_hits += 1
+            self._market_data.move_to_end(cache_key)
+        return cached
 
     def prepare_inputs(
         self,
@@ -136,6 +179,7 @@ def execute_backtest(
         strategy.metadata.version, parameters
     )
     data_access = BacktestDataAccess(database_manager)
+    prepared_market_data = None
     if execution_cache is None:
         signal_data = strategy.load_signal_data(
             data_access, resolved_config, parameters
@@ -148,15 +192,25 @@ def execute_backtest(
             resolved_config,
             parameters,
         )
+        prepared_market_data = execution_cache.prepare_market_data(
+            signal_data, resolved_config
+        )
     targets = validate_target_weights(targets)
     benchmark_prices = (
         data_access.load_benchmark_prices(resolved_config)
         if include_benchmark
         else None
     )
-    result = DailyBacktestEngine(resolved_config).run(
-        signal_data, targets, benchmark_prices
-    )
+    engine = DailyBacktestEngine(resolved_config)
+    if prepared_market_data is None:
+        result = engine.run(signal_data, targets, benchmark_prices)
+    else:
+        result = engine.run(
+            signal_data,
+            targets,
+            benchmark_prices,
+            prepared_market_data=prepared_market_data,
+        )
     return BacktestRun(
         config=resolved_config,
         targets=targets,

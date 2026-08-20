@@ -171,12 +171,26 @@ def test_execute_backtest_reuses_factor_candidates_within_cache(monkeypatch):
         def load_benchmark_prices(self, config):
             raise AssertionError("benchmark_symbol=None 时不应加载基准")
 
+    prepare_market_data = runner_module.DailyBacktestEngine.prepare_market_data
+
     class FakeEngine:
         def __init__(self, config):
             pass
 
-        def run(self, signal_data, resolved_targets, benchmark_prices):
+        @staticmethod
+        def prepare_market_data(prices, config):
+            return prepare_market_data(prices, config)
+
+        def run(
+            self,
+            signal_data,
+            resolved_targets,
+            benchmark_prices,
+            *,
+            prepared_market_data=None,
+        ):
             assert benchmark_prices is None
+            assert prepared_market_data is not None
             assert resolved_targets.equals(targets)
             return BacktestResult(
                 daily_nav=pd.DataFrame(
@@ -220,6 +234,7 @@ def test_execute_backtest_reuses_factor_candidates_within_cache(monkeypatch):
     assert first.targets.equals(second.targets)
     assert calls == {"load": 4, "calculate": 4, "prepare": 4, "build": 6}
     assert cache.stats == {"cache_hits": 2, "cache_misses": 4}
+    assert cache.market_stats == {"cache_hits": 2, "cache_misses": 4}
 
 
 def test_factor_execution_cache_matches_real_strategy_and_isolates_keys():

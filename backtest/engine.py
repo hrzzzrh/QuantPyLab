@@ -11,16 +11,24 @@ class BacktestResult:
     trades: pd.DataFrame
 
 
+@dataclass(frozen=True)
+class PreparedMarketData:
+    """Market structures shared by runs with the same price interval."""
+
+    price_data: pd.DataFrame
+    calendar: pd.DatetimeIndex
+    last_trade_dates: dict
+    price_map: dict
+
+
 class DailyBacktestEngine:
     def __init__(self, config: BacktestConfig):
         self.config = config
 
-    def run(
-        self,
-        prices: pd.DataFrame,
-        targets: pd.DataFrame,
-        benchmark_prices: pd.DataFrame | None = None,
-    ) -> BacktestResult:
+    @staticmethod
+    def prepare_market_data(
+        prices: pd.DataFrame, config: BacktestConfig
+    ) -> PreparedMarketData:
         required_columns = {"date", "symbol", "open", "open_hfq", "close_hfq"}
         missing_columns = required_columns - set(prices.columns)
         if missing_columns:
@@ -29,21 +37,39 @@ class DailyBacktestEngine:
         price_data = prices.copy()
         price_data["date"] = pd.to_datetime(price_data["date"])
         price_data = price_data[
-            (price_data["date"].dt.date >= self.config.start_date)
-            & (price_data["date"].dt.date <= self.config.end_date)
+            (price_data["date"].dt.date >= config.start_date)
+            & (price_data["date"].dt.date <= config.end_date)
         ]
         calendar = pd.DatetimeIndex(price_data["date"].drop_duplicates().sort_values())
         if calendar.empty:
             raise ValueError("指定区间没有可用交易日行情")
 
-        # 每只股票在行情数据中的最后交易日 (数据层判定行情终结, 不依赖 stocks 快照)。
-        # 最后交易日收盘后按收盘价强制清算, 后续不再产生任何交易与定价。
         last_trade_dates = price_data.groupby("symbol")["date"].max().to_dict()
-
         price_map = {
             trading_date: frame.set_index("symbol").to_dict("index")
             for trading_date, frame in price_data.groupby("date")
         }
+        return PreparedMarketData(
+            price_data=price_data,
+            calendar=calendar,
+            last_trade_dates=last_trade_dates,
+            price_map=price_map,
+        )
+
+    def run(
+        self,
+        prices: pd.DataFrame,
+        targets: pd.DataFrame,
+        benchmark_prices: pd.DataFrame | None = None,
+        *,
+        prepared_market_data: PreparedMarketData | None = None,
+    ) -> BacktestResult:
+        market_data = prepared_market_data or self.prepare_market_data(
+            prices, self.config
+        )
+        calendar = market_data.calendar
+        last_trade_dates = market_data.last_trade_dates
+        price_map = market_data.price_map
         # 将 T 日收盘后的信号映射至下一个实际交易日，禁止同日成交。
         execution_plans = self._build_execution_plans(targets, calendar)
         positions: dict[str, float] = {}

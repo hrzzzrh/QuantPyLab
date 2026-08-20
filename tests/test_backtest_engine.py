@@ -65,6 +65,30 @@ def test_signal_executes_at_next_trading_day_open():
     )
 
 
+def test_prepared_market_data_preserves_backtest_result():
+    targets = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-02"),
+                "symbol": "000001",
+                "target_weight": 1.0,
+            }
+        ]
+    )
+    engine = DailyBacktestEngine(_config())
+    prepared_market_data = engine.prepare_market_data(_prices(), _config())
+
+    uncached_result = engine.run(_prices(), targets)
+    cached_result = engine.run(
+        _prices(),
+        targets,
+        prepared_market_data=prepared_market_data,
+    )
+
+    pd.testing.assert_frame_equal(uncached_result.daily_nav, cached_result.daily_nav)
+    pd.testing.assert_frame_equal(uncached_result.trades, cached_result.trades)
+
+
 def test_missing_target_open_leaves_capital_as_cash():
     prices = _prices()
     prices.loc[
