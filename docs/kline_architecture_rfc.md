@@ -29,7 +29,7 @@
 
 | 字段 | 类型 | 说明 | 数据源 |
 | :--- | :--- | :--- | :--- |
-| `date` | DATE | 交易日期 | `ak.stock_zh_a_hist(adjust="")` |
+| `date` | DATE | 交易日期 | 当前日常同步为新浪 KLC；历史 canonical 晋级前保持调度暂停 |
 | `open` | DOUBLE | **不复权**开盘价 | |
 | `high` | DOUBLE | **不复权**最高价 | |
 | `low` | DOUBLE | **不复权**最低价 | |
@@ -164,10 +164,11 @@ ASOF JOIN assets_hist a
 
 ### Phase 2: K线数据同步 (K-Line Sync)
 - **任务**: 实现 `DailyKlineCollector`。
-- **数据源**: `ak.stock_zh_a_hist`。
-- **逻辑**: 同时抓取 Raw 和 HFQ，计算并存储 `adj_factor`。
+- **当前生产路径**: 日常同步实现已切换为在市股票使用新浪 KLC raw + `hfq.js` 原始复权因子；退市股票优先通过新浪 KLC 全量重建，新浪整段失败时改用腾讯 `newfqkline` 全量重建。canonical 晋级完成并通过灰度验收前，launchd 和人工同步保持暂停。股票 K 线新增/重建从 `2010-01-01` 开始，已有更早 canonical 数据不主动清理。
+- **目标路径**: 在市股票通过新浪 KLC raw + `hfq.js` 原始复权因子全量重建；退市股票优先使用同一路径，失败时使用腾讯 `newfqkline` 整段重建，再切换后续增量同步。腾讯 raw/hfq 合并前剔除周末记录；已确认的三组供应商坏数据行在来源适配层剔除，并保留过滤数量审计信息。
+- **逻辑**: KLC staging 阶段直接保存原始复权因子；退市股新浪失败时改用腾讯 raw + hfq 整段重建；两条路径均验证字段、日期、OHLC 和复权关系，并在 manifest 中记录实际来源。不使用本地旧分区作质量基准。
 - **存储**: 使用 Parquet 写入，按 Symbol 分区。
-- **退市股专项 (2026-08)**: 已退市股票 (is_active=0) 新浪/东财源均无数据。改用腾讯 `fqkline` 接口 (`web.ifzq.gtimg.cn`) 全量重建该股整个 K线: 不复权 day + 后复权 hfq → `adj_factor = hfq/raw`，整体覆盖本地分片，单一复权口径自洽。腾讯不提供成交额，`amount` 按 `volume×100×收盘价` 估算。重建完成写 `sync_status` (dataset='kline') 后跳过。腾讯 hfq 对退市整理期首日暴跌股可能溢出为负 (实测 000004): 负值段之前因子有效, 尾段按接缝日因子延续 (退市整理期无除权先验) 并记 warning; 全负才放弃重建。注意: 各数据源复权因子算法不同 (实测新浪/腾讯在部分股票上存在除权日分歧与长期漂移)，**禁止跨源拼接复权序列**。
+- **全量 staging 路径 (2026-08)**: 在市股票使用新浪 `klc_kl.js` raw + `hfq.js` 原始复权因子；退市股票先使用同一路径，KLC 无数据或质量校验失败时改用腾讯 `newfqkline` raw + hfq 整段重建。请求起始日统一不早于 `2010-01-01`；禁止新浪历史 + 腾讯尾段拼接；腾讯成交额字段按万元转换为元，`volume` 统一为手，腾讯周末及已知坏行过滤数量写入 manifest；schema 6 `run.json` 保存目标股票数量和清单摘要，resume 时拒绝空/截断/摘要不一致 manifest，缺少历史目标证据的旧 run 不自动补齐；staging 写入 staging Parquet 与 manifest，不写 canonical 或 `sync_status`。canonical 晋级使用 `promote-kline-staging` 逐 symbol 原子替换、backup、rollback 和共享写锁，完成灰度验收后才恢复调度。
 
 ### Phase 3: 估值视图构建 (Analysis Layer)
 - **任务**: 在 `storage/database/manager.py` 中编写 SQL View 注册逻辑。

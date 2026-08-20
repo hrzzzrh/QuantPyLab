@@ -1,17 +1,23 @@
 """单元测试: DailyKlineCollector — Sina klc 解码 / 日级冷却 / CDR fallback"""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 import pytest
 
-from data_ingestion.collectors.kline_collector import DailyKlineCollector
+from data_ingestion.collectors.kline_collector import (
+    DailyKlineCollector,
+    KlineDataTransientError,
+)
 from storage.database import manager as manager_mod
 from storage.database.sync_status import (
     DATASET_KLINE_DAILY,
+    DATASET_KLINE_DAILY_NO_DATA,
+    get_last_sync_date,
     is_synced_today,
     record_sync_success,
 )
+from utils.kline_validation import KlineValidationError
 
 
 @pytest.fixture(autouse=True)
@@ -91,7 +97,7 @@ def test_fetch_sina_klc_decodes_and_merges_hfq(monkeypatch):
     # Mock requests.get: klc_kl.js 由 internal patch 处理, hfq.js 由 global side_effect 处理
     import requests
 
-    hfq_json = {"total": 2, "data": [{"d": "2026-08-03", "f": "2.0"}]}
+    hfq_json = {"total": 1, "data": [{"d": "2026-08-03", "f": "2.0"}]}
     orig_get = requests.get
 
     def side_effect_get(*args, **kwargs):
@@ -172,6 +178,117 @@ def test_fetch_sina_klc_empty_hfq(monkeypatch):
     assert df["close_hfq"].iloc[0] == 10.5
 
 
+def test_fetch_from_sina_rejects_partial_hfq_coverage(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+
+    collector = DailyKlineCollector()
+    raw = pd.DataFrame(
+        {
+            "date": ["2026-08-03", "2026-08-04"],
+            "open": [10.0, 11.0],
+            "high": [10.5, 11.5],
+            "low": [9.5, 10.5],
+            "close": [10.2, 11.2],
+            "volume": [1000.0, 1100.0],
+            "amount": [10000.0, 12000.0],
+        }
+    )
+    hfq = pd.DataFrame({"date": ["2026-08-03"], "close": [20.4]})
+
+    def fake_daily(**kwargs):
+        return raw if kwargs["adjust"] == "" else hfq
+
+    monkeypatch.setattr(kline_mod.ak, "stock_zh_a_daily", fake_daily)
+
+    with pytest.raises(KlineValidationError, match="未覆盖"):
+        collector._fetch_from_sina("600519", "20260801", "20260807")
+
+
+def test_fetch_from_em_rejects_empty_hfq(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+
+    collector = DailyKlineCollector()
+    raw = pd.DataFrame(
+        {
+            "日期": ["2026-08-03"],
+            "开盘": [10.0],
+            "最高": [10.5],
+            "最低": [9.5],
+            "收盘": [10.2],
+            "成交量": [1000.0],
+            "成交额": [10000.0],
+        }
+    )
+    hfq = pd.DataFrame(columns=["日期", "收盘"])
+
+    def fake_hist(**kwargs):
+        return raw if kwargs["adjust"] == "" else hfq
+
+    monkeypatch.setattr(kline_mod.ak, "stock_zh_a_hist", fake_hist)
+
+    with pytest.raises(KlineValidationError, match="后复权数据为空"):
+        collector._fetch_from_em("600519", "20260801", "20260807")
+
+
+def test_collect_kline_propagates_hfq_fetch_error_for_active_stock(monkeypatch):
+    """在市股票复权失败仍应重试后向上抛出"""
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils import retry as retry_mod
+    from utils.sina_klc import SinaHfqFetchError
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda symbol: False)
+    monkeypatch.setattr(
+        kline_mod,
+        "get_latest_trade_date",
+        lambda: type("TradeDate", (), {"strftime": lambda self, fmt: "20260807"})(),
+    )
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda seconds: None)
+
+    def raise_hfq_error(*args, **kwargs):
+        raise SinaHfqFetchError("复权接口失败")
+
+    monkeypatch.setattr(collector, "_fetch_from_sina", raise_hfq_error)
+
+    with pytest.raises(SinaHfqFetchError, match="复权接口失败"):
+        collector.collect_kline("600519", start_date="20260803", end_date="20260807")
+
+
+def test_collect_kline_retries_transient_delisted_source_failure(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils import retry as retry_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda _symbol: True)
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda _seconds: None)
+    calls = []
+    frame = pd.DataFrame(
+        {
+            "date": ["2026-08-07"],
+            "open": [10.0],
+            "high": [10.5],
+            "low": [9.5],
+            "close": [10.2],
+            "volume": [100.0],
+            "amount": [1000.0],
+            "adj_factor": [1.0],
+        }
+    )
+
+    def rebuild(_symbol):
+        calls.append(1)
+        if len(calls) < 3:
+            raise KlineDataTransientError("腾讯暂时不可用")
+        return frame
+
+    monkeypatch.setattr(collector, "_fetch_delisted_rebuild_frame", rebuild)
+    monkeypatch.setattr(kline_mod, "get_last_sync_date", lambda *_args: None)
+    monkeypatch.setattr(kline_mod, "is_synced_today", lambda *_args: False)
+
+    assert collector.collect_kline("600519") is True
+    assert calls == [1, 1, 1]
+
+
 def test_fetch_sina_klc_empty_data(monkeypatch):
     """JS 解密返回空列表时返回空 DataFrame"""
     import requests
@@ -231,11 +348,7 @@ def test_collect_kline_retries_after_cooldown_expires(monkeypatch):
     monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
     monkeypatch.setattr(collector, "_get_local_max_date", lambda s: "20260731")
 
-    yesterday = (
-        date.today().replace(day=date.today().day - 1)
-        if date.today().day > 1
-        else date.today()
-    )
+    yesterday = date.today() - timedelta(days=1)
     record_sync_success(DATASET_KLINE_DAILY, "600519", yesterday)
     assert not is_synced_today(DATASET_KLINE_DAILY, "600519")
 
@@ -258,10 +371,234 @@ def test_collect_kline_retries_after_cooldown_expires(monkeypatch):
         )
 
     monkeypatch.setattr(collector, "_fetch_from_sina", fake_fetch)
-    monkeypatch.setattr(collector, "_save_incremental", lambda df, sym: None)
     result = collector.collect_kline("600519")
     assert result is True
     assert fetched[0] is True
+    assert is_synced_today(DATASET_KLINE_DAILY, "600519")
+
+
+def test_collect_kline_rebuilds_status_for_current_local_partition(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(collector, "_get_local_max_date", lambda s: "20260812")
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    collector.store.save_partition(
+        pd.DataFrame(
+            {
+                "date": ["2026-08-12"],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.5],
+                "close": [10.2],
+                "volume": [100.0],
+                "amount": [1000.0],
+                "adj_factor": [1.0],
+            }
+        ),
+        "daily_kline",
+        "600519",
+    )
+    record_sync_success(DATASET_KLINE_DAILY_NO_DATA, "600519", date.today())
+    fetch_called = []
+    monkeypatch.setattr(
+        collector, "_fetch_from_sina", lambda *args: fetch_called.append(1)
+    )
+
+    result = collector.collect_kline("600519", end_date="20260812")
+
+    assert result is False
+    assert fetch_called == []
+    assert is_synced_today(DATASET_KLINE_DAILY, "600519")
+    assert get_last_sync_date(DATASET_KLINE_DAILY_NO_DATA, "600519") is None
+
+
+def test_collect_kline_records_no_data_without_success_status(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(collector, "_get_local_max_date", lambda s: "20260731")
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    monkeypatch.setattr(collector, "_fetch_from_sina", lambda *args: pd.DataFrame())
+
+    result = collector.collect_kline("600519", end_date="20260812")
+
+    assert result is False
+    assert get_last_sync_date(DATASET_KLINE_DAILY, "600519") is None
+    assert get_last_sync_date(DATASET_KLINE_DAILY_NO_DATA, "600519") == date.today()
+
+
+def test_explicit_start_date_bypasses_no_data_cooldown(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    record_sync_success(DATASET_KLINE_DAILY_NO_DATA, "600519", date.today())
+    fetched = []
+    monkeypatch.setattr(
+        collector,
+        "_fetch_from_sina",
+        lambda *args: fetched.append(args) or pd.DataFrame(),
+    )
+
+    result = collector.collect_kline(
+        "600519", start_date="20260801", end_date="20260812"
+    )
+
+    assert result is False
+    assert len(fetched) == 1
+
+
+def test_collect_kline_repairs_missing_status_after_save(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils import retry as retry_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda seconds: None)
+    fetch_calls = []
+    monkeypatch.setattr(
+        collector,
+        "_fetch_from_sina",
+        lambda *args: (
+            fetch_calls.append(1)
+            or pd.DataFrame(
+                {
+                    "date": ["2026-08-12"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                    "adj_factor": [1.0],
+                }
+            )
+        ),
+    )
+
+    original_record = kline_mod.record_sync_success
+    attempts = []
+
+    def fail_once(dataset, symbol, sync_date):
+        attempts.append(dataset)
+        if len(attempts) == 1:
+            raise RuntimeError("metadata unavailable")
+        return original_record(dataset, symbol, sync_date)
+
+    monkeypatch.setattr(kline_mod, "record_sync_success", fail_once)
+
+    result = collector.collect_kline("600519", end_date="20260812")
+
+    assert result is True
+    assert attempts == [DATASET_KLINE_DAILY, DATASET_KLINE_DAILY]
+    assert fetch_calls == [1]
+    assert get_last_sync_date(DATASET_KLINE_DAILY, "600519") == date.today()
+
+
+def test_collect_kline_retries_no_data_status_without_refetching(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils import retry as retry_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda seconds: None)
+    fetch_calls = []
+    monkeypatch.setattr(
+        collector,
+        "_fetch_from_sina",
+        lambda *args: fetch_calls.append(1) or pd.DataFrame(),
+    )
+    original_record = kline_mod.record_sync_success
+    attempts = []
+
+    def fail_no_data_once(dataset, symbol, sync_date):
+        if dataset == DATASET_KLINE_DAILY_NO_DATA:
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise RuntimeError("metadata unavailable")
+        return original_record(dataset, symbol, sync_date)
+
+    monkeypatch.setattr(kline_mod, "record_sync_success", fail_no_data_once)
+
+    result = collector.collect_kline("600519", end_date="20260812")
+
+    assert result is False
+    assert fetch_calls == [1]
+    assert attempts == [1, 1]
+
+
+def test_collect_kline_does_not_record_status_when_save_fails(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils import retry as retry_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(
+        collector,
+        "_fetch_from_sina",
+        lambda *args: pd.DataFrame(
+            {
+                "date": ["2026-08-12"],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.5],
+                "close": [10.2],
+                "volume": [100.0],
+                "amount": [1000.0],
+                "adj_factor": [1.0],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        collector,
+        "_save_incremental",
+        lambda *args: (_ for _ in ()).throw(RuntimeError("disk unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="disk unavailable"):
+        collector.collect_kline("600519", end_date="20260812")
+
+    assert get_last_sync_date(DATASET_KLINE_DAILY, "600519") is None
+
+
+def test_collect_kline_rejects_invalid_klc_fallback_before_save(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+    from utils import retry as retry_mod
+
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda s: False)
+    monkeypatch.setattr(kline_mod, "get_latest_trade_date", lambda: date(2026, 8, 12))
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda seconds: None)
+    invalid = pd.DataFrame(
+        {
+            "date": ["2026-08-12"],
+            "open": [10.0],
+            "high": [10.5],
+            "low": [10.2],
+            "close": [10.3],
+            "volume": [100.0],
+            "amount": [1000.0],
+            "close_hfq": [10.3],
+            "adj_factor": [1.0],
+        }
+    )
+    invalid.attrs["source"] = "sina-klc"
+    monkeypatch.setattr(collector, "_fetch_from_sina", lambda *args: invalid)
+    saved = []
+    monkeypatch.setattr(collector, "_save_incremental", lambda *args: saved.append(1))
+
+    with pytest.raises(ValueError, match="开盘价"):
+        collector.collect_kline("600519", end_date="20260812")
+
+    assert saved == []
 
 
 def test_collect_kline_does_not_retry_sina_blocked(monkeypatch):
@@ -288,6 +625,146 @@ def test_collect_kline_does_not_retry_sina_blocked(monkeypatch):
     with pytest.raises(SinaBlockedError, match="IP 风控测试"):
         collector.collect_kline("600519", end_date="20260807")
     assert calls == [1]
+
+
+def test_collect_kline_clamps_pre_cutoff_start_date(monkeypatch):
+    collector = DailyKlineCollector()
+    calls = []
+    monkeypatch.setattr(collector, "_is_delisted", lambda symbol: False)
+    monkeypatch.setattr(
+        collector,
+        "_fetch_from_sina",
+        lambda *args: calls.append(args) or pd.DataFrame(),
+    )
+
+    assert (
+        collector.collect_kline("600519", start_date="19900101", end_date="20260807")
+        is False
+    )
+    assert calls == [("600519", "20100101", "20260807")]
+
+
+def test_collect_kline_filters_pre_cutoff_rows_from_any_source(monkeypatch):
+    collector = DailyKlineCollector()
+    monkeypatch.setattr(collector, "_is_delisted", lambda symbol: False)
+    captured = []
+    monkeypatch.setattr(
+        collector,
+        "_fetch_from_sina",
+        lambda *args: pd.DataFrame(
+            {
+                "date": ["2009-12-31", "2024-11-06", "2024-11-07"],
+                "open": [1.0, 0.0, 2.0],
+                "high": [1.1, 0.0, 2.1],
+                "low": [0.9, 0.0, 1.9],
+                "close": [1.0, 20.92, 2.0],
+                "volume": [100.0, 100.0, 200.0],
+                "amount": [1000.0, 1000.0, 2000.0],
+                "close_hfq": [1.0, 20.92, 2.0],
+                "adj_factor": [1.0, 1.0, 1.0],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        collector,
+        "_save_incremental",
+        lambda frame, symbol: captured.append(frame.copy()),
+    )
+
+    assert (
+        collector.collect_kline("688089", start_date="19900101", end_date="20241107")
+        is True
+    )
+    assert captured[0]["date"].astype(str).tolist() == ["2024-11-07"]
+
+
+def test_save_incremental_removes_known_bad_rows_from_existing_partition():
+    collector = DailyKlineCollector()
+    old = pd.DataFrame(
+        {
+            "date": ["2024-11-06", "2024-11-07"],
+            "open": [0.0, 2.0],
+            "high": [0.0, 2.1],
+            "low": [0.0, 1.9],
+            "close": [20.92, 2.0],
+            "volume": [100.0, 200.0],
+            "amount": [1000.0, 2000.0],
+            "adj_factor": [1.0, 1.0],
+        }
+    )
+    collector.store.save_partition(old, "daily_kline", "688089")
+
+    collector._save_incremental(
+        pd.DataFrame(
+            {
+                "date": ["2024-11-08"],
+                "open": [2.0],
+                "high": [2.1],
+                "low": [1.9],
+                "close": [2.0],
+                "volume": [200.0],
+                "amount": [2000.0],
+                "adj_factor": [1.0],
+            }
+        ),
+        "688089",
+    )
+
+    path = collector.store.base_dir / "daily_kline" / "symbol=688089" / "data.parquet"
+    result = pd.read_parquet(path)
+    assert result["date"].astype(str).tolist() == ["2024-11-07", "2024-11-08"]
+
+
+def test_save_incremental_holds_lock_across_read_and_write(monkeypatch):
+    import data_ingestion.collectors.kline_collector as kline_mod
+
+    collector = DailyKlineCollector()
+    old = pd.DataFrame(
+        {
+            "date": ["2024-11-07"],
+            "open": [2.0],
+            "high": [2.1],
+            "low": [1.9],
+            "close": [2.0],
+            "volume": [200.0],
+            "amount": [2000.0],
+            "adj_factor": [1.0],
+        }
+    )
+    collector.store.save_partition(old, "daily_kline", "600519")
+
+    events = []
+
+    class FakeLock:
+        def __enter__(self):
+            events.append("enter")
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            events.append("exit")
+
+    original_read_parquet = kline_mod.pd.read_parquet
+
+    def record_read(path):
+        events.append("read")
+        return original_read_parquet(path)
+
+    monkeypatch.setattr(kline_mod, "canonical_write_lock_held", lambda _path: False)
+    monkeypatch.setattr(
+        kline_mod, "CanonicalWriteLock", lambda *args, **kwargs: FakeLock()
+    )
+    monkeypatch.setattr(kline_mod.pd, "read_parquet", record_read)
+    monkeypatch.setattr(
+        collector.store,
+        "save_partition",
+        lambda *args, **kwargs: events.append("save"),
+    )
+
+    collector._save_incremental(
+        old.assign(date=["2024-11-08"]),
+        "600519",
+    )
+
+    assert events == ["enter", "read", "save", "exit"]
 
 
 # ──────────────────── CDR fallback ────────────────────

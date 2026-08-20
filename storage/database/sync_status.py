@@ -6,6 +6,7 @@ from utils.logger import logger
 DATASET_SHARE_CAPITAL = "share_capital"
 DATASET_KLINE = "kline"
 DATASET_KLINE_DAILY = "kline_daily"
+DATASET_KLINE_DAILY_NO_DATA = "kline_daily_no_data"
 DATASET_STOCK_METADATA = "stock_metadata"
 DATASET_FINANCIAL_INCOMPLETE = "financial_incomplete"
 DATASET_FINANCIAL_OFFICIAL_PENDING = "financial_official_pending"

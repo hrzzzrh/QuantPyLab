@@ -21,7 +21,7 @@
 | **财务报表/指标** | **单股全量抓取** | **增量合并 (Upsert)** | 抓取该股所有历史年度数据；存储时按 `report_date` 合并去重。 |
 | **TTM 计算** | **全量重算** | **全量覆盖** | 基于该股所有历史报表重新计算所有报告期的 TTM 并刷新本地分片。 |
 | **股本变动** | **本地增量过滤** | **增量合并 (Upsert)** | **全量抓取+本地过滤**: 抓取新浪全量历史，仅保存本地最新 `change_date` 之后的数据。另通过 `metadata.db` 的 `sync_status` 表记录每股最后同步成功日期，当日已同步的股票在批量模式下自动跳过 (重跑只补失败的)。 |
-| **日线 K 线** | **真增量抓取** | **增量合并 (Upsert)** | **自动续传**: 仅抓取本地最新 `date` 之后的数据。退市股改用腾讯源全量重建 (见 3.2 表 `sync-kline` 行)。 |
+| **日线 K 线** | **真增量抓取** | **增量合并 (Upsert)** | **自动续传**: 在市股票当前使用新浪 KLC 路径；退市股票优先使用新浪 KLC 全量重建，失败时改用腾讯 `newfqkline` 整股重建。新增/重建起始日不早于 `2010-01-01`，已有更早 canonical 数据不主动清理。全量迁移使用 `migrate-kline-source`，canonical 晋级使用 `promote-kline-staging`。 |
 
 ## 3. 命令详解
 
@@ -40,9 +40,59 @@
 | `sync-indicators`| 同步东财计算指标 | 披露日历驱动 + 孤儿股补全；入库后统一四源日期并触发 TTM 重算；日期协调或 TTM 失败会记录待重试状态 | 无 |
 | `calc-ttm` | 计算 TTM 滚动财务数据 | **差异驱动**: 校验最近 5 季数据齐全后补算，并优先重试 `financial_ttm_pending`。候选集以数据湖实际存在的报表为准 (含孤儿股/退市股)，不依赖 stocks 表 | 无 |
 | `sync-share` | 同步股本变动 (新浪源) | **本地增量**: 从本地最大日期后补全；默认批量模式跳过当日已同步股票 (见 `sync_status` 表)，`--symbol`/`--force-all` 强制绕过 | `--start-date` |
-| `sync-kline` | 同步日线行情 | **自动续传**: 从本地最大日期+1同步；**退市股 (is_active=0) 改用腾讯源全量重建** (单一复权口径, 完成后写 sync_status 跳过) | `--start-date` |
+| `sync-kline` | 同步日线行情 | **自动续传**: 在市股票从本地最大日期+1同步；起始日自动限制为 `2010-01-01`；无行情响应使用独立的 `kline_daily_no_data` 当日冷却标记；**退市股 (is_active=0) 优先使用新浪 KLC 全量重建，失败时改用腾讯 `newfqkline` 整股重建** (单一复权口径, 完成后写 sync_status 跳过) | `--start-date` |
+| `migrate-kline-source` | staging 验证全部股票 K 线数据源 | **仅写 staging**: 默认选取 20 只分层样本，起始日不早于 `2010-01-01`；最后交易日在最低日期前的退市股票不纳入目标；在市股票使用新浪 KLC；退市股票新浪 KLC 失败时整股 fallback 到腾讯 `newfqkline`；共享质量门禁、`source_used`、`weekend_rows_filtered` 和 `known_bad_rows_filtered` 记录实际来源及清洗证据，旧本地数据不参与验收；本阶段不替换 canonical 分区 | `--source sina-klc`, `--symbol`, `--limit`, `--all-stocks`, `--start-date`, `--end-date`, `--stage-only`, `--dry-run`, `--resume`, `--recover-stale-lock` |
+| `promote-kline-staging` | 将已验收 K 线 staging 晋级到 canonical | 校验 schema 6、目标摘要、每个 staged Parquet 的摘要和质量后，逐 symbol 原子替换；默认保留 backup；`--resume` 恢复 promotion run；`--dry-run` 只校验；晋级与 `sync-kline`/`sync-all` 使用共享 canonical 写锁 | `--run-id`, `--symbol`, `--dry-run`, `--resume`, `--recover-stale-lock` |
+| `rollback-kline-promotion` | 回滚指定 K 线 canonical 晋级 | 按指定 promotion run 的 backup 恢复已 committed 或 `rollback-required` 分区；失败时保留 backup 和临时文件 | `--run-id` |
 | `sync-etf-list` | 同步场内交易基金列表 | 每次清空并重建 etfs 表 | 无 |
 | `sync-etf-kline` | 同步ETF日线行情 | **自动续传**: 从本地最大日期后补全 | `--start-date` |
+
+### 3.2.1 K 线数据源 staging (`migrate-kline-source`)
+
+本命令当前只执行安全 staging，不修改 `data/warehouse/daily_kline/` 下的 canonical 分区，也不切换 `sync-kline` 默认数据源。目标股票包含在市和退市股票；所有 staging 产物位于 warehouse 下的 `.migrations/kline-source/<RUN_ID>/`，包括冻结的 symbol 清单、逐股状态、实际 `source_used` 和来源数据质量摘要。在市股票不降级腾讯；退市股票禁止新浪历史与腾讯尾段拼接，只在新浪整段失败时切换腾讯整段重建。schema 6 的 `run.json` 保存 `target_count` 与 `target_symbols_sha256`，用于校验 manifest 未被截断；空 manifest、股票数量或摘要不一致时拒绝 resume。缺少历史目标证据的旧 run 不自动从当前 manifest 补齐，需新建 run。旧 canonical 数据只保持原样，不参与日期、OHLCV 或复权因子比较。
+
+```bash
+# 默认 20 只分层样本，从 2010-01-01 起使用 Sina KLC raw + hfq 因子
+uv run main.py migrate-kline-source --source sina-klc --limit 20 --start-date 20100101 --stage-only
+
+# 只生成目标清单和 manifest，不请求网络
+uv run main.py migrate-kline-source --source sina-klc --limit 20 --stage-only --dry-run
+
+# 指定单只股票（必须存在于 stocks 表）
+uv run main.py migrate-kline-source --source sina-klc --symbol 000011 --stage-only
+
+# 全部股票（含退市股）
+uv run main.py migrate-kline-source --source sina-klc --all-stocks --stage-only
+
+# 固定结束日期，便于审计和复现；不指定时使用最近交易日
+uv run main.py migrate-kline-source --source sina-klc --limit 20 --start-date 20100101 --end-date 20260814 --stage-only
+
+# 进程中断后按 manifest 恢复未完成股票；使用 run.json 中冻结的起止日期；旧起始日早于 2010-01-01 的 run 不恢复，需新建 run
+uv run main.py migrate-kline-source --source sina-klc --resume RUN_ID --stage-only
+```
+
+虽然本阶段不写 canonical，执行期间仍应暂停 launchd `sync-all` 和人工 `sync-kline`，因为新浪请求保护计数器是进程级状态，两个进程并行会叠加请求。命令会在股票之间保留现有的安全等待。若迁移锁因进程异常遗留，只有确认锁内 PID 已退出后才可使用 `--recover-stale-lock`，禁止直接删除锁文件。
+
+### 3.2.2 K 线 staging 晋级 (`promote-kline-staging`)
+
+晋级前必须确认 staging run 全部 `staged`、schema 6 目标摘要完整，并保持 launchd `sync-all` 和人工 `sync-kline` 暂停。默认同步代码已切换到 Sina KLC 主路径，因此在 canonical 晋级和灰度验收完成前不得恢复调度。
+
+```bash
+# 只校验全量 staging，不写 canonical
+uv run main.py promote-kline-staging --run-id 20260814-220242-sina-klc-afb3443b --dry-run
+
+# 先灰度晋级一只股票
+uv run main.py promote-kline-staging --run-id 20260814-220242-sina-klc-afb3443b --symbol 600009
+
+# 灰度或全量 promotion 中断后恢复
+uv run main.py promote-kline-staging --run-id PROMOTION_RUN_ID --resume
+
+# 灰度验收失败时按 promotion run 回滚
+uv run main.py rollback-kline-promotion --run-id PROMOTION_RUN_ID
+```
+
+promotion 使用 `data/warehouse/.locks/daily-kline-write.lock` 与日常 K 线写入互斥。backup 在全量验收和观察期结束前不自动删除。
+promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，正常完成或失败 checkpoint 后会合并回 `manifest.csv`；成功回滚会清理对应 `rollback-temp`，backup 仍保留。
 
 ### 2.3 开发工具命令
 | 子命令 | 说明 | 参数 |

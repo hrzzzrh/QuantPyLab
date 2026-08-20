@@ -25,6 +25,9 @@ LOG_RETENTION_DAYS = 30
 AKSHARE_TIMEOUT = 30
 MAX_RETRIES = 3
 
+# 日线行情只从该日期开始新增/重建；已有更早 canonical 数据不主动清理
+MIN_KLINE_START_DATE = "20100101"
+
 # 定时调度配置 (sync-all 重试策略)
 # 未全部成功时整体重试的最大次数 (总执行次数 = 1 + SYNC_ALL_MAX_RETRIES)
 SYNC_ALL_MAX_RETRIES = 3

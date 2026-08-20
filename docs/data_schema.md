@@ -24,7 +24,7 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
 | `industry` | TEXT | - | 行业 (雪球资料源) | `白酒` |
 | `list_date` | TEXT | - | 上市日期 (格式: YYYYMMDD) | `20010827` |
 | `is_active` | INTEGER | DEFAULT 1 | 存续状态 (1:在市, 0:退市) | `1` |
-| `last_trade_date` | TEXT | - | 最后交易日 (YYYYMMDD)，由退市股 K 线腾讯重建流程写入真实值；未重建前为 NULL | `20260630` |
+| `last_trade_date` | TEXT | - | 最后交易日 (YYYYMMDD)，由退市股 K 线新浪 KLC 重建或腾讯整股 fallback 流程写入真实值；未重建前为 NULL | `20260630` |
 | `updated_at` | DATETIME | DEFAULT ... | 最后同步时间 (UTC) | `2026-02-22 10:00:00` |
 
 ### C. 同步逻辑与维护

@@ -9,6 +9,7 @@ import storage.database.sync_status as sync_status_mod
 from storage.database.sync_status import (
     DATASET_SYNC_ALL,
     SYMBOL_SYNC_ALL,
+    clear_sync_status,
     get_last_sync_date,
     is_synced_today,
     record_sync_success,
@@ -57,6 +58,16 @@ def test_record_is_idempotent_upsert():
     ).fetchone()
     assert rows[0] == 1
     assert get_last_sync_date("share_capital", "600519") == date(2026, 8, 8)
+
+
+def test_clear_sync_status_is_dataset_scoped():
+    record_sync_success("kline_daily", "600519", date(2026, 8, 8))
+    record_sync_success("kline_daily_no_data", "600519", date(2026, 8, 8))
+
+    clear_sync_status("kline_daily_no_data", "600519")
+
+    assert get_last_sync_date("kline_daily", "600519") == date(2026, 8, 8)
+    assert get_last_sync_date("kline_daily_no_data", "600519") is None
 
 
 def test_dataset_isolation():

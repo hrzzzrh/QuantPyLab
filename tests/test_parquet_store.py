@@ -54,6 +54,26 @@ class TestSavePartition:
         leftovers = list((base / "daily_kline/symbol=000001").glob(".tmp_*"))
         assert leftovers == []
 
+    def test_rejects_symlinked_partition_directory(self, store, tmp_path):
+        s, base = store
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        base.mkdir(exist_ok=True)
+        (base / "daily_kline").symlink_to(outside, target_is_directory=True)
+
+        with pytest.raises(OSError):
+            s.save_partition(pd.DataFrame({"a": [1]}), "daily_kline", "000001")
+
+    def test_fsyncs_file_and_directory_entries(self, store, monkeypatch):
+        s, _base = store
+        fsync_calls = []
+        monkeypatch.setattr(parquet_store_mod.os, "fsync", fsync_calls.append)
+
+        s.save_partition(pd.DataFrame({"a": [1]}), "daily_kline", "000001")
+
+        # Temporary file plus partition, category, and warehouse directories.
+        assert len(fsync_calls) >= 4
+
 
 class TestGetPath:
     def test_glob_pattern(self, store):

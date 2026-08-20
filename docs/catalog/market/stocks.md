@@ -13,7 +13,7 @@
 | 5 | `industry` | TEXT | 行业 (雪球资料源) | 白酒 |
 | 6 | `list_date` | TEXT | 上市日期 (YYYYMMDD) | 20010827 |
 | 7 | `is_active` | INTEGER | 是否在交易 (1:在市, 0:退市) | 1 |
-| 8 | `last_trade_date` | TEXT | 最后交易日 (YYYYMMDD)，由退市股 K 线腾讯重建流程写入真实值；未重建前为 NULL | 20260630 |
+| 8 | `last_trade_date` | TEXT | 最后交易日 (YYYYMMDD)，由退市股 K 线新浪 KLC 重建或腾讯整股 fallback 流程写入真实值；未重建前为 NULL | 20260630 |
 | 9 | `updated_at` | DATETIME | 最后同步时间 | 2026-02-08 20:00:00 |
 
 ## 2. 同步方式
@@ -22,7 +22,7 @@
 
 - 新上市股票 → 插入 (is_active=1)
 - 已在市股票 → 更新名称，若曾被误标退市则恢复
-- 从列表消失的股票 → 标记退市 (is_active=0)；`last_trade_date` 由退市股 K 线腾讯重建流程写入真实最后交易日
+- 从列表消失的股票 → 标记退市 (is_active=0)；`last_trade_date` 由退市股 K 线新浪 KLC 重建或腾讯整股 fallback 流程写入真实最后交易日
 - 接口返回空列表时跳过本次更新，防止误标退市
 
 ### 2.1 退市股清单合并
