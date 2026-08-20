@@ -1,3 +1,5 @@
+import json
+from collections import OrderedDict
 from dataclasses import dataclass
 
 import pandas as pd
@@ -19,11 +21,112 @@ class BacktestRun:
     result: BacktestResult
 
 
+class BacktestExecutionCache:
+    """在单次研究评估窗口内复用因子策略的回测输入。"""
+
+    def __init__(self, max_entries: int = 4):
+        if isinstance(max_entries, bool) or not isinstance(max_entries, int):
+            raise ValueError("max_entries 必须是正整数")
+        if max_entries <= 0:
+            raise ValueError("max_entries 必须是正整数")
+        self.max_entries = max_entries
+        self._factor_candidates: OrderedDict[
+            tuple, tuple[pd.DataFrame, pd.DataFrame]
+        ] = OrderedDict()
+        self._cache_hits = 0
+        self._cache_misses = 0
+
+    @property
+    def stats(self) -> dict[str, int]:
+        """Return counters useful for tests and evaluation diagnostics."""
+
+        return {
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+        }
+
+    def clear(self) -> None:
+        """Release cached data frames before moving to another evaluation window."""
+
+        self._factor_candidates.clear()
+
+    def prepare_inputs(
+        self,
+        strategy,
+        data_access: BacktestDataAccess,
+        config: BacktestConfig,
+        parameters: dict,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Load signal data and build targets, reusing factor candidates when possible."""
+
+        calculate_factor_frame = getattr(strategy, "calculate_factor_frame", None)
+        prepare_target_candidates = getattr(strategy, "prepare_target_candidates", None)
+        build_targets_from_candidates = getattr(
+            strategy, "build_targets_from_candidates", None
+        )
+        if not all(
+            callable(method)
+            for method in (
+                calculate_factor_frame,
+                prepare_target_candidates,
+                build_targets_from_candidates,
+            )
+        ):
+            signal_data = strategy.load_signal_data(data_access, config, parameters)
+            targets = strategy.build_targets(signal_data, config, parameters)
+            return signal_data, targets
+
+        cache_key = self._build_factor_cache_key(config, parameters, strategy)
+        cached = self._factor_candidates.get(cache_key)
+        if cached is None:
+            self._cache_misses += 1
+            signal_data = strategy.load_signal_data(data_access, config, parameters)
+            factor_frame = calculate_factor_frame(signal_data, parameters)
+            candidates = prepare_target_candidates(
+                signal_data,
+                factor_frame,
+                config,
+                parameters,
+            )
+            cached = (signal_data, candidates)
+            self._factor_candidates[cache_key] = cached
+            self._factor_candidates.move_to_end(cache_key)
+            if len(self._factor_candidates) > self.max_entries:
+                self._factor_candidates.popitem(last=False)
+        else:
+            self._cache_hits += 1
+            self._factor_candidates.move_to_end(cache_key)
+
+        signal_data, candidates = cached
+        targets = build_targets_from_candidates(candidates, parameters)
+        return signal_data, targets
+
+    @staticmethod
+    def _build_factor_cache_key(config, parameters, strategy) -> tuple:
+        factor_weights = parameters["factor_weights"]
+        factor_parameters = parameters["factor_parameters"]
+        return (
+            strategy.metadata.name,
+            strategy.metadata.version,
+            config.start_date,
+            config.end_date,
+            tuple(factor_weights),
+            json.dumps(
+                factor_parameters,
+                ensure_ascii=False,
+                sort_keys=True,
+                default=str,
+            ),
+            parameters["min_listing_days"],
+        )
+
+
 def execute_backtest(
     config: BacktestConfig,
     database_manager: DBManager,
     *,
     include_benchmark: bool = True,
+    execution_cache: BacktestExecutionCache | None = None,
 ) -> BacktestRun:
     """执行回测但不写结果文件，供 CLI 和研究评估器复用。"""
 
@@ -33,10 +136,19 @@ def execute_backtest(
         strategy.metadata.version, parameters
     )
     data_access = BacktestDataAccess(database_manager)
-    signal_data = strategy.load_signal_data(data_access, resolved_config, parameters)
-    targets = validate_target_weights(
-        strategy.build_targets(signal_data, resolved_config, parameters)
-    )
+    if execution_cache is None:
+        signal_data = strategy.load_signal_data(
+            data_access, resolved_config, parameters
+        )
+        targets = strategy.build_targets(signal_data, resolved_config, parameters)
+    else:
+        signal_data, targets = execution_cache.prepare_inputs(
+            strategy,
+            data_access,
+            resolved_config,
+            parameters,
+        )
+    targets = validate_target_weights(targets)
     benchmark_prices = (
         data_access.load_benchmark_prices(resolved_config)
         if include_benchmark

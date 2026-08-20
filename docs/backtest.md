@@ -30,7 +30,7 @@
 | `backtest/strategy_base.py` | 定义策略契约和标准目标权重表校验 |
 | `backtest/strategy_registry.py` | 显式注册可执行策略 |
 | `backtest/strategies/` | 每个策略独立加载信号数据并生成目标权重 |
-| `backtest/runner.py` | 统一执行已解析的内存回测，供正式回测和研究评估复用 |
+| `backtest/runner.py` | 统一执行已解析的内存回测，供正式回测和研究评估复用；研究评估器可按窗口缓存因子输入 |
 | `backtest/factor_trainer.py` | 使用点时月末因子和未来收益拟合非负 Ridge 因子权重 |
 | `backtest/hyperparameter_search.py` | 展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度的有限组合 |
 | `backtest/research_evaluator.py` | 按固定切分和滚动 Walk-forward 训练、选择候选并锁定测试集 |
@@ -125,6 +125,8 @@ uv run main.py run-backtest \
 ### 4.5 训练/验证/测试与 Walk-forward 评估
 
 研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，所有 `factor-composite-experiment` 候选在各自训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重；如果同时启用 `[hyperparameter_search]`，还会在显式有限网格中展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合分别拟合权重。验证集选择完整参数组合，测试集只运行入选组合。训练失败的组合会记录原因并排除，不会退回默认权重；只有全部组合都失败时窗口才终止。启用 `[validity]` 后，训练默认至少需要 24 个有效信号日，验证和测试默认至少需要 11 个实际可执行信号及 100 个目标观测；低于门槛会阻断对应组合或窗口，而不是仅生成收益报告。开启 Walk-forward 后，每个完整滚动窗口都会重新展开、训练和选择，最终只汇总各窗口测试段。未启用训练时，才是仅比较候选原始配置的兼容模式。
+
+为避免有限参数网格重复加载相同点时数据，研究评估器在每个 split 内以有界 LRU 复用因子实验的原始信号数据和基础候选表；默认最多保留 4 组输入，超出后释放最久未使用项。缩尾边界、因子权重、排名和持仓数量仍按每组试验重新计算。缓存不跨 split，也不改变普通 `run-backtest` 的默认路径。
 
 ```bash
 uv run main.py evaluate-factor-experiments \

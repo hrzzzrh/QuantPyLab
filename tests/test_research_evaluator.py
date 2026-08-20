@@ -135,7 +135,9 @@ def test_research_validity_gate_blocks_short_validation_window(monkeypatch, tmp_
             benchmark_symbol=None,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         calls.append(candidate_config.start_date)
         signal_date = (
             pd.Timestamp("2020-01-31")
@@ -380,7 +382,9 @@ def test_research_evaluator_runs_test_only_for_validation_winner(monkeypatch, tm
             benchmark_symbol=None,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         assert include_benchmark is False
         phase = (
             "validation"
@@ -512,7 +516,9 @@ def test_research_evaluator_fits_weights_before_running_validation(
             ridge_alpha=0.1,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         assert include_benchmark is False
         calls.append(
             (
@@ -611,7 +617,9 @@ def test_research_evaluator_excludes_candidate_with_failed_training(
             ridge_alpha=0.1,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         daily_nav = pd.DataFrame([{"date": pd.Timestamp("2024-01-02"), "nav": 1.0}])
         daily_nav.attrs["score"] = 2.0
         return BacktestRun(
@@ -682,7 +690,9 @@ def test_research_evaluator_excludes_candidate_with_failed_backtest(
             benchmark_symbol=None,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         if (
             candidate_config.strategy_name == "candidate_a"
             and candidate_config.start_date == split.validation.start_date
@@ -747,7 +757,9 @@ def test_research_evaluator_records_invalid_selection_metrics(
             benchmark_symbol=None,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         phase = (
             "validation"
             if candidate_config.start_date == split.validation.start_date
@@ -852,7 +864,9 @@ def test_research_evaluator_searches_hyperparameters_and_tests_one_trial(
             ridge_alpha=ridge_alpha,
         )
 
-    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+    def fake_execute_backtest(
+        candidate_config, database_manager, *, include_benchmark, execution_cache=None
+    ):
         phase = (
             "validation"
             if candidate_config.start_date == split.validation.start_date

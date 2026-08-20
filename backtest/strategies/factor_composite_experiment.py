@@ -141,13 +141,34 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         config: BacktestConfig,
         parameters: dict,
     ) -> pd.DataFrame:
+        factor_frame = self.calculate_factor_frame(signal_data, parameters)
+        candidates = self.prepare_target_candidates(
+            signal_data,
+            factor_frame,
+            config,
+            parameters,
+        )
+        return self.build_targets_from_candidates(candidates, parameters)
+
+    @staticmethod
+    def calculate_factor_frame(
+        signal_data: pd.DataFrame, parameters: dict
+    ) -> pd.DataFrame:
         factor_names = tuple(parameters["factor_weights"])
-        factor_frame = FactorEngine().calculate(
+        return FactorEngine().calculate(
             signal_data,
             factor_names,
             parameters["factor_parameters"],
         )
 
+    @staticmethod
+    def prepare_target_candidates(
+        signal_data: pd.DataFrame,
+        factor_frame: pd.DataFrame,
+        config: BacktestConfig,
+        parameters: dict,
+    ) -> pd.DataFrame:
+        factor_names = tuple(parameters["factor_weights"])
         ordered_input = signal_data.copy()
         ordered_input["date"] = pd.to_datetime(ordered_input["date"])
         ordered_input = ordered_input.sort_values(["symbol", "date"])
@@ -168,8 +189,13 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         candidates = candidates[
             candidates["listing_days"] >= parameters["min_listing_days"]
         ]
-        candidates = filter_valid_factor_rows(candidates, factor_names)
+        return filter_valid_factor_rows(candidates, factor_names)
 
+    @staticmethod
+    def build_targets_from_candidates(
+        candidates: pd.DataFrame, parameters: dict
+    ) -> pd.DataFrame:
+        candidates = candidates.copy()
         score_columns = {}
         for factor_name, weight in parameters["factor_weights"].items():
             transformed = candidates.loc[:, ["date", factor_name]].copy()

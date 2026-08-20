@@ -191,10 +191,22 @@ def test_factor_composite_experiment_selects_lowest_value_small_combination():
     )
 
     targets = strategy.build_targets(pd.DataFrame(rows), config, parameters)
+    signal_data = pd.DataFrame(rows)
+    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    candidates = strategy.prepare_target_candidates(
+        signal_data,
+        factor_frame,
+        config,
+        parameters,
+    )
+    cached_targets = strategy.build_targets_from_candidates(candidates, parameters)
 
     latest_targets = targets[targets["date"] == targets["date"].max()]
     assert latest_targets["symbol"].tolist() == ["000001", "000002"]
     assert latest_targets["target_weight"].tolist() == [0.5, 0.5]
+    pd.testing.assert_frame_equal(
+        targets.reset_index(drop=True), cached_targets.reset_index(drop=True)
+    )
 
 
 def test_factor_composite_experiment_rejects_invalid_factor_configuration():

@@ -23,7 +23,7 @@ from backtest.hyperparameter_search import (
     expand_hyperparameter_trials,
 )
 from backtest.metrics import calculate_performance_metrics
-from backtest.runner import execute_backtest
+from backtest.runner import BacktestExecutionCache, execute_backtest
 from backtest.strategy_registry import get_backtest_strategy
 from storage.database.manager import DBManager
 
@@ -486,6 +486,7 @@ def evaluate_factor_experiments(
         effective_configs = {}
         trial_map = {trial.trial_id: trial for trial in trials}
         training_data_cache = {}
+        execution_cache = BacktestExecutionCache()
         for trial in trials:
             effective_config = trial.config
             training_result = None
@@ -565,6 +566,7 @@ def evaluate_factor_experiments(
                         _replace_backtest_period(effective_config, period),
                         database_manager,
                         include_benchmark=False,
+                        execution_cache=execution_cache,
                     )
                     metrics = calculate_performance_metrics(run.result.daily_nav)
                     coverage = _summarize_target_coverage(
@@ -683,6 +685,7 @@ def evaluate_factor_experiments(
                 _replace_backtest_period(selected_config, test_period),
                 database_manager,
                 include_benchmark=False,
+                execution_cache=execution_cache,
             )
             test_coverage = _summarize_target_coverage(
                 test_run.targets,
