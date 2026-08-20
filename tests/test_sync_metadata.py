@@ -173,6 +173,43 @@ def test_list_info_does_not_record_incomplete_metadata(monkeypatch):
     assert get_last_sync_date(DATASET_STOCK_METADATA, "600519") is None
 
 
+def test_list_info_isolates_sina_klc_failure_per_stock(monkeypatch):
+    import utils.sina_klc as sina_klc_mod
+
+    class FakeDetailCollector:
+        def fetch_from_xueqiu(self, symbol):
+            return {}
+
+        def fetch_from_eastmoney(self, code):
+            return {}
+
+        def fetch_from_cninfo(self, code):
+            return {"area": "贵州"}
+
+    def fail_for_one_stock(code):
+        if code == "600519":
+            raise sina_klc_mod.SinaKlcFetchError("invalid date")
+        return "19930607"
+
+    monkeypatch.setattr(main_mod, "StockDetailCollector", FakeDetailCollector)
+    monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
+    monkeypatch.setattr(
+        sina_klc_mod.SinaKlcFetcher, "fetch_list_date", fail_for_one_stock
+    )
+
+    conn = manager_mod.db_manager.get_sqlite_conn()
+    processed, failed = main_mod.sync_stock_metadata(
+        run_industry=False, run_list_info=True
+    )
+
+    assert processed == 3
+    assert failed == 1
+    row = conn.execute(
+        "SELECT area, list_date FROM stocks WHERE symbol = '600421'"
+    ).fetchone()
+    assert row == ("贵州", "19930607")
+
+
 def test_list_info_retries_missing_metadata_even_if_synced(monkeypatch):
     """元数据不完整时即使有历史成功记录也必须继续补全"""
     from datetime import date

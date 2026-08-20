@@ -41,9 +41,16 @@ EXCLUDED_TITLE_MARKERS = (
     "取消",
     "提示性公告",
 )
+SUMMARY_TITLE_MARKER = "摘要"
 CHINA_TIMEZONE = ZoneInfo("Asia/Shanghai")
 CNINFO_CATEGORY = (
     "category_ndbg_szsh;category_bndbg_szsh;category_yjdbg_szsh;category_sjdbg_szsh"
+)
+CNINFO_CATEGORIES = (
+    "category_ndbg_szsh",
+    "category_bndbg_szsh",
+    "category_yjdbg_szsh",
+    "category_sjdbg_szsh",
 )
 DEFAULT_HTTP_RETRIES = 2
 DEFAULT_HTTP_RETRY_BACKOFF = 0.5
@@ -165,17 +172,44 @@ def is_publish_date_overdue(report_date: str, publish_date: str | date) -> bool:
     return deadline is not None and actual_date is not None and actual_date > deadline
 
 
-def title_matches_report(title: str, report_date: str) -> bool:
-    """判断公告标题是否为指定报告期的原始定期报告。"""
+def _title_matches_report_type(title: str, report_date: str) -> bool:
     normalized = normalize_report_date(report_date)
     report_type = get_report_type(normalized or "")
     if not title or normalized is None or report_type is None:
         return False
     if normalized[:4] not in title:
         return False
+    # 避免年度报告误匹配半年度/季度（年度标记"年度报告"/"年报"是后两者的子串）
+    if report_type == "annual":
+        if "半年度" in title or "半年报" in title or "季度" in title:
+            return False
+    if report_type == "semiannual":
+        if "季度" in title:
+            return False
+    return any(marker in title for marker in REPORT_TYPE_MARKERS[report_type])
+
+
+def title_matches_report(title: str, report_date: str) -> bool:
+    """判断公告标题是否为指定报告期的原始定期报告正文。"""
+    if not _title_matches_report_type(title, report_date):
+        return False
+    normalized = normalize_report_date(report_date)
     if any(marker in title for marker in EXCLUDED_TITLE_MARKERS):
         return False
-    return any(marker in title for marker in REPORT_TYPE_MARKERS[report_type])
+    return normalized is not None
+
+
+def title_matches_report_summary(title: str, report_date: str) -> bool:
+    """判断公告标题是否为正文缺失时可用的定期报告摘要。"""
+    if not _title_matches_report_type(title, report_date):
+        return False
+    if SUMMARY_TITLE_MARKER not in title:
+        return False
+    return not any(
+        marker in title
+        for marker in EXCLUDED_TITLE_MARKERS
+        if marker != SUMMARY_TITLE_MARKER
+    )
 
 
 def select_first_disclosure(
@@ -185,9 +219,24 @@ def select_first_disclosure(
     candidates = [
         item for item in announcements if title_matches_report(item.title, report_date)
     ]
-    if not candidates:
+    if candidates:
+        return min(
+            candidates, key=lambda item: (item.publish_date, item.title, item.url)
+        )
+
+    # 退市公司或历史 B 股在官方索引中可能只保留“报告摘要”。摘要与正文
+    # 的首发日期相同，只有在找不到正文时才作为日期核验的保守兜底。
+    summary_candidates = [
+        item
+        for item in announcements
+        if title_matches_report_summary(item.title, report_date)
+    ]
+    if not summary_candidates:
         return None
-    return min(candidates, key=lambda item: (item.publish_date, item.title, item.url))
+    return min(
+        summary_candidates,
+        key=lambda item: (item.publish_date, item.title, item.url),
+    )
 
 
 def _absolute_url(base_url: str, path: Any) -> str:
@@ -244,13 +293,16 @@ class CninfoDisclosureClient:
         self,
         session: requests.Session | None = None,
         timeout: int = AKSHARE_TIMEOUT,
-        page_size: int = 100,
+        page_size: int = 30,
         max_pages: int = DEFAULT_MAX_PAGE_COUNT,
         max_retries: int = DEFAULT_HTTP_RETRIES,
         retry_backoff: float = DEFAULT_HTTP_RETRY_BACKOFF,
     ) -> None:
         if page_size <= 0 or max_pages <= 0:
             raise ValueError("page_size 和 max_pages 必须为正数")
+        if page_size > 30:
+            # 巨潮接口单页上限为 30，超过会被服务端截断为 30 导致分页提前终止而漏掉早期报告
+            page_size = 30
         self.session = session or requests.Session()
         self.timeout = timeout
         self.page_size = page_size
@@ -303,10 +355,15 @@ class CninfoDisclosureClient:
             source="cninfo",
         )
 
-    def fetch_announcements(
-        self, symbol: str, start_date: date, end_date: date
+    def _fetch_category_announcements(
+        self,
+        symbol: str,
+        org_id: str,
+        column: str,
+        category: str,
+        start_date: date,
+        end_date: date,
     ) -> list[OfficialDisclosure]:
-        org_id, column = self._resolve_org_id(symbol)
         announcements: list[OfficialDisclosure] = []
         seen_pages: set[tuple[str, ...]] = set()
         for page_num in range(1, self.max_pages + 1):
@@ -317,7 +374,7 @@ class CninfoDisclosureClient:
                     "stock": f"{symbol},{org_id}",
                     "searchkey": "",
                     "plate": "",
-                    "category": CNINFO_CATEGORY,
+                    "category": category,
                     "trade": "",
                     "column": column,
                     "pageNum": str(page_num),
@@ -336,14 +393,20 @@ class CninfoDisclosureClient:
             )
             payload = _response_json(response, CNINFO_ANNOUNCEMENT_URL)
             if not isinstance(payload, dict):
-                raise OfficialDisclosureQueryError(f"巨潮公告响应不是对象: {symbol}")
+                raise OfficialDisclosureQueryError(
+                    f"巨潮公告响应不是对象: {symbol} {category}"
+                )
             if "announcements" not in payload:
                 raise OfficialDisclosureQueryError(
-                    f"巨潮公告响应缺少公告列表: {symbol}"
+                    f"巨潮公告响应缺少公告列表: {symbol} {category}"
                 )
             items = payload["announcements"]
+            if items is None:
+                items = []
             if not isinstance(items, list):
-                raise OfficialDisclosureQueryError(f"巨潮公告字段不是列表: {symbol}")
+                raise OfficialDisclosureQueryError(
+                    f"巨潮公告字段不是列表: {symbol} {category}"
+                )
             parsed = [
                 announcement
                 for item in items
@@ -370,9 +433,34 @@ class CninfoDisclosureClient:
                 break
         else:
             raise OfficialDisclosureQueryError(
-                f"巨潮公告分页超过安全上限 {self.max_pages}: {symbol}"
+                f"巨潮公告分页超过安全上限 {self.max_pages}: {symbol} {category}"
             )
         return announcements
+
+    def fetch_announcements(
+        self, symbol: str, start_date: date, end_date: date
+    ) -> list[OfficialDisclosure]:
+        org_id, column = self._resolve_org_id(symbol)
+        unique_announcements: dict[tuple[date, str, str], OfficialDisclosure] = {}
+        for category in CNINFO_CATEGORIES:
+            for announcement in self._fetch_category_announcements(
+                symbol,
+                org_id,
+                column,
+                category,
+                start_date,
+                end_date,
+            ):
+                key = (
+                    announcement.publish_date,
+                    announcement.title,
+                    announcement.url,
+                )
+                unique_announcements[key] = announcement
+        return sorted(
+            unique_announcements.values(),
+            key=lambda item: (item.publish_date, item.title, item.url),
+        )
 
 
 def _decode_jsonp(payload: str) -> Any:

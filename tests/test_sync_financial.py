@@ -119,7 +119,7 @@ def test_official_date_correction_recalculates_ttm(monkeypatch):
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: (
+        lambda code, resolver, *args, **kwargs: (
             verification_calls.append((code, resolver))
             or type(
                 "Verification",
@@ -163,7 +163,7 @@ def test_source_date_correction_recalculates_ttm(monkeypatch):
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: type(
+        lambda code, resolver, *args, **kwargs: type(
             "Verification",
             (),
             {"changed_rows": {}, "unresolved_report_dates": ()},
@@ -190,7 +190,7 @@ def test_official_date_verification_failure_is_retryable(monkeypatch):
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: type(
+        lambda code, resolver, *args, **kwargs: type(
             "Verification",
             (),
             {"changed_rows": {}, "unresolved_report_dates": ("20240930",)},
@@ -206,7 +206,7 @@ def test_official_date_verification_failure_is_retryable(monkeypatch):
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: type(
+        lambda code, resolver, *args, **kwargs: type(
             "Verification",
             (),
             {"changed_rows": {}, "unresolved_report_dates": ()},
@@ -229,7 +229,7 @@ def test_ttm_failure_keeps_official_pending_status(monkeypatch):
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: type(
+        lambda code, resolver, *args, **kwargs: type(
             "Verification",
             (),
             {"changed_rows": {"income": 1}, "unresolved_report_dates": ()},
@@ -255,7 +255,7 @@ def test_ttm_failure_keeps_official_pending_status(monkeypatch):
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: type(
+        lambda code, resolver, *args, **kwargs: type(
             "Verification",
             (),
             {"changed_rows": {}, "unresolved_report_dates": ()},
@@ -291,7 +291,7 @@ def test_partial_official_correction_recalculates_ttm_and_stays_pending(monkeypa
     monkeypatch.setattr(
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
-        lambda code, resolver: type(
+        lambda code, resolver, *args, **kwargs: type(
             "Verification",
             (),
             {"changed_rows": {"income": 1}, "unresolved_report_dates": ("20240930",)},

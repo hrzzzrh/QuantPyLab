@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
+from config.settings import MIN_KLINE_START_DATE
 from data_ingestion.collectors.financial_collector import FinancialCollector
 from data_ingestion.collectors.stock_list import (
     StockDetailCollector,
@@ -23,6 +24,7 @@ from storage.database.manager import db_manager
 from storage.database.official_disclosure_date_resolver import (
     OfficialDisclosureDateResolver,
 )
+from utils.canonical_write_lock import CanonicalWriteLock
 from utils.financial import get_consecutive_reports
 from utils.logger import logger
 from utils.requests_protection import SinaBlockedError
@@ -80,7 +82,7 @@ def sync_stock_list():
     - 新列表有、库中无   -> INSERT (is_active=1)
     - 两边都有          -> 更新 name (若曾被误标退市则恢复)
     - 库中有、新列表无   -> UPDATE is_active=0 (last_trade_date 保持 NULL,
-      由退市股 K 线腾讯重建流程写入真实最后交易日)
+      由退市股 K 线新浪 KLC 重建流程写入真实最后交易日)
     接口返回空列表时跳过, 防止数据源异常导致全库误标退市。
 
     返回 (processed, failed): processed=1, failed=0 表示名单同步成功
@@ -362,9 +364,14 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                 if not info.get("list_date"):
                     # 老退市股兜底: 雪球/东财/巨潮均无元数据, 用新浪 klc_kl.js
                     # 首条记录日期作为上市日 (V8 解密, 须主线程串行)。
-                    from utils.sina_klc import SinaKlcFetcher
+                    from utils.sina_klc import SinaKlcFetcher, SinaKlcFetchError
 
-                    list_date = SinaKlcFetcher.fetch_list_date(code)
+                    try:
+                        list_date = SinaKlcFetcher.fetch_list_date(code)
+                    except SinaKlcFetchError as exc:
+                        failed += 1
+                        logger.warning(f"{symbol} 新浪 KLC 上市日期获取失败: {exc}")
+                        continue
                     if list_date:
                         info["list_date"] = list_date
                 area = normalize_metadata_value(info.get("area"))
@@ -506,6 +513,15 @@ def sync_financial_statements(symbol=None, force_all=False):
         return 0, 0
 
     symbol_name_map = {s[0]: s[1] for s in all_stocks}
+    # 上市日期映射：用于官方核验时过滤上市前报告期，避免招股书回溯期误判超期
+    conn = db_manager.get_sqlite_conn()
+    cursor = conn.cursor()
+    list_date_rows = cursor.execute("SELECT symbol, list_date FROM stocks").fetchall()
+    list_date_map = {
+        symbol: list_date
+        for symbol, list_date in list_date_rows
+        if list_date and str(list_date).strip()
+    }
     pbar = tqdm(list(target_codes), desc="报表同步")
     failed = 0
     official_date_resolver = OfficialDisclosureDateResolver()
@@ -533,9 +549,11 @@ def sync_financial_statements(symbol=None, force_all=False):
                         )
                 time.sleep(random.uniform(3.0, 6.0))
 
+            minimum_report_date = list_date_map.get(code)
             verification = verify_overdue_financial_publish_dates_for_symbol(
                 code,
                 resolver=official_date_resolver,
+                minimum_report_date=minimum_report_date,
             )
             ttm_recalculation_required = ttm_recalculation_required or bool(
                 source_date_changes or verification.changed_rows
@@ -836,7 +854,20 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     return len(target_tasks), failed
 
 
-def sync_daily_kline(symbol=None, force_all=False, start_date=None):
+def sync_daily_kline(
+    symbol=None,
+    force_all=False,
+    start_date=None,
+):
+    with CanonicalWriteLock(operation="sync-kline", run_id=symbol or "ALL"):
+        return _sync_daily_kline(
+            symbol=symbol,
+            force_all=force_all,
+            start_date=start_date,
+        )
+
+
+def _sync_daily_kline(symbol=None, force_all=False, start_date=None):
     """同步日线行情数据 (新浪源, 串行 + 保守节奏)
 
     返回 (processed, failed): failed 为单股同步异常数 (重试耗尽后计入)。
@@ -844,12 +875,12 @@ def sync_daily_kline(symbol=None, force_all=False, start_date=None):
     from data_ingestion.collectors.kline_collector import DailyKlineCollector
     from utils.trade_date import get_latest_trade_date
 
-    collector = DailyKlineCollector()
+    collector = DailyKlineCollector(source="sina-klc")
     all_stocks = get_all_stocks()
     target_tasks = [s for s in all_stocks if s[0] == symbol] if symbol else all_stocks
 
     if force_all and not start_date:
-        start_date = "19900101"
+        start_date = MIN_KLINE_START_DATE
         logger.info(f"强制全量模式：将从 {start_date} 开始同步 K 线数据")
 
     latest_date = get_latest_trade_date().strftime("%Y%m%d")
@@ -1182,13 +1213,13 @@ def main():
     share_p = subparsers.add_parser("sync-share", help="同步股本变动记录")
     share_p.add_argument("--symbol", type=str, help="指定单只股票代码")
     share_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
-    share_p.add_argument("--force-all", action="store_true", help="扫描所有活跃股票")
+    share_p.add_argument("--force-all", action="store_true", help="扫描所有股票")
 
     # 7. sync-kline
     kline_p = subparsers.add_parser("sync-kline", help="同步日线行情数据")
     kline_p.add_argument("--symbol", type=str, help="指定单只股票代码")
     kline_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
-    kline_p.add_argument("--force-all", action="store_true", help="扫描所有活跃股票")
+    kline_p.add_argument("--force-all", action="store_true", help="扫描所有股票")
 
     # 8. sync-etf-list
     subparsers.add_parser("sync-etf-list", help="同步场内交易基金列表 (etfs表)")
@@ -1288,6 +1319,70 @@ def main():
         "--output", help="结果目录，默认写入 workspace/backtest/evaluations"
     )
 
+    # 19. migrate-kline-source
+    migration_p = subparsers.add_parser(
+        "migrate-kline-source", help="分阶段重建全部股票日线数据源"
+    )
+    migration_p.add_argument(
+        "--source", required=True, choices=["sina-klc"], help="明确指定迁移目标源"
+    )
+    migration_p.add_argument("--symbol", type=str, help="仅处理指定股票")
+    migration_p.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="staging 默认处理数量，默认 20；使用 --all-stocks 取消限制",
+    )
+    migration_p.add_argument(
+        "--all-stocks", action="store_true", help="选择全部股票（含退市股）"
+    )
+    migration_p.add_argument(
+        "--start-date",
+        default=MIN_KLINE_START_DATE,
+        help=f"起始日期 (YYYYMMDD，最早 {MIN_KLINE_START_DATE})",
+    )
+    migration_p.add_argument("--end-date", help="结束日期 (YYYYMMDD)，默认最近交易日")
+    migration_p.add_argument(
+        "--stage-only",
+        action="store_true",
+        help="仅写入 staging，不替换 canonical；本阶段为唯一模式",
+    )
+    migration_p.add_argument(
+        "--dry-run", action="store_true", help="只生成目标清单，不请求网络"
+    )
+    migration_p.add_argument("--resume", help="恢复指定 RUN_ID 的未完成迁移")
+    migration_p.add_argument(
+        "--recover-stale-lock",
+        action="store_true",
+        help="仅当锁内 PID 已退出时恢复遗留迁移锁",
+    )
+
+    # 18. promote-kline-staging
+    promotion_p = subparsers.add_parser(
+        "promote-kline-staging", help="将已验收 K 线 staging 晋级到 canonical"
+    )
+    promotion_p.add_argument(
+        "--run-id", required=True, help="staging 或 promotion RUN_ID"
+    )
+    promotion_p.add_argument("--symbol", help="仅晋级指定股票，用于灰度验证")
+    promotion_p.add_argument(
+        "--dry-run", action="store_true", help="只校验 staging，不写 canonical"
+    )
+    promotion_p.add_argument(
+        "--resume", action="store_true", help="恢复 promotion RUN_ID"
+    )
+    promotion_p.add_argument(
+        "--recover-stale-lock",
+        action="store_true",
+        help="仅当 staging 锁内 PID 已退出时恢复遗留迁移锁",
+    )
+
+    # 19. rollback-kline-promotion
+    rollback_p = subparsers.add_parser(
+        "rollback-kline-promotion", help="回滚指定 K 线 canonical 晋级"
+    )
+    rollback_p.add_argument("--run-id", required=True, help="promotion RUN_ID")
+
     args = parser.parse_args()
 
     if args.command == "sync-stocks":
@@ -1307,9 +1402,15 @@ def main():
             symbol=args.symbol, force_all=args.force_all, start_date=args.start_date
         )
     elif args.command == "sync-kline":
-        sync_daily_kline(
-            symbol=args.symbol, force_all=args.force_all, start_date=args.start_date
-        )
+        try:
+            _processed, failed = sync_daily_kline(
+                symbol=args.symbol, force_all=args.force_all, start_date=args.start_date
+            )
+        except Exception:
+            logger.exception("日线同步异常退出")
+            sys.exit(1)
+        if failed:
+            sys.exit(1)
     elif args.command == "sync-etf-list":
         sync_etf_list()
     elif args.command == "sync-etf-kline":
@@ -1371,6 +1472,95 @@ def main():
         except Exception:
             logger.exception("因子实验评估异常退出")
             sys.exit(1)
+    elif args.command == "migrate-kline-source":
+        from tools.kline_source_migration import run_kline_source_migration
+
+        if args.all_stocks and args.symbol:
+            parser.error("--all-stocks 与 --symbol 不能同时使用")
+        if args.resume and (args.symbol or args.limit != 20 or args.all_stocks):
+            parser.error("--resume 不能同时指定 symbol 或 limit")
+        if not args.stage_only:
+            parser.error("当前迁移仅支持 --stage-only staging 模式")
+
+        try:
+            result = run_kline_source_migration(
+                source=args.source,
+                symbol=args.symbol,
+                limit=None if args.all_stocks else args.limit,
+                start_date=args.start_date,
+                end_date=args.end_date,
+                dry_run=args.dry_run,
+                stage_only=args.stage_only,
+                resume_run_id=args.resume,
+                recover_stale_lock=args.recover_stale_lock,
+            )
+        except Exception:
+            logger.exception("K 线数据源迁移异常退出")
+            sys.exit(1)
+        logger.info(
+            "K 线数据源 staging 完成: run_id=%s staged=%d failed=%d",
+            result.run_id,
+            len(result.staged_symbols),
+            len(result.failed_symbols),
+        )
+        print(f"run_id={result.run_id}")
+        print(f"run_dir={result.run_dir}")
+        if result.failed_symbols or result.stopped_by_sina_block:
+            sys.exit(1)
+    elif args.command == "promote-kline-staging":
+        from tools.kline_promotion import (
+            promote_kline_staging,
+            resume_kline_promotion,
+        )
+
+        if args.resume and (args.symbol or args.dry_run):
+            parser.error("--resume 不能同时指定 --symbol 或 --dry-run")
+        try:
+            if args.resume:
+                result = resume_kline_promotion(
+                    args.run_id,
+                    recover_stale_lock=args.recover_stale_lock,
+                )
+            else:
+                result = promote_kline_staging(
+                    args.run_id,
+                    symbol=args.symbol,
+                    dry_run=args.dry_run,
+                    recover_stale_lock=args.recover_stale_lock,
+                )
+        except Exception:
+            logger.exception("K 线 staging 晋级异常退出")
+            sys.exit(1)
+        logger.info(
+            "K 线 staging 晋级完成: promotion_run_id=%s status=%s promoted=%d validated=%d failed=%d dry_run=%s",
+            result.promotion_run_id or "(dry-run)",
+            result.status,
+            len(result.promoted_symbols),
+            len(result.validated_symbols),
+            len(result.failed_symbols),
+            result.dry_run,
+        )
+        print(f"promotion_run_id={result.promotion_run_id}")
+        print(f"staging_run_id={result.staging_run_id}")
+        if result.failed_symbols or result.status not in {
+            "completed",
+            "partial",
+            "validated",
+        }:
+            sys.exit(1)
+    elif args.command == "rollback-kline-promotion":
+        from tools.kline_promotion import rollback_kline_promotion
+
+        try:
+            result = rollback_kline_promotion(args.run_id)
+        except Exception:
+            logger.exception("K 线 canonical 回滚异常退出")
+            sys.exit(1)
+        logger.info(
+            "K 线 canonical 回滚完成: promotion_run_id=%s",
+            result.promotion_run_id,
+        )
+        print(f"promotion_run_id={result.promotion_run_id}")
     else:
         parser.print_help()
 

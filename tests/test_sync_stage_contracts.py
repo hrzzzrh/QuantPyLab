@@ -134,6 +134,9 @@ def test_sync_daily_kline_counts_failure(monkeypatch):
     from utils import trade_date
 
     class FakeDailyKlineCollector:
+        def __init__(self, source=None):
+            self.source = source
+
         def collect_kline(self, *args, **kwargs):
             raise RuntimeError("K线接口异常")
 

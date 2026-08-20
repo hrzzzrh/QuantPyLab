@@ -118,6 +118,36 @@ def test_verify_overdue_dates_queries_resolver_and_returns_changes(tmp_path):
     assert resolver.calls[0][1] == ("20240930",)
 
 
+def test_verify_can_limit_official_checks_to_post_listing_periods(tmp_path):
+    for source_name in SOURCE_CATEGORIES:
+        _write_source(
+            tmp_path,
+            source_name,
+            ["20111231", "20240930"],
+            ["20241102", "20241102"],
+        )
+
+    class FakeResolver:
+        def __init__(self):
+            self.calls = []
+
+        def resolve_overdue_report_dates(self, symbol, report_dates, end_date):
+            self.calls.append((symbol, report_dates, end_date))
+            return {}
+
+    resolver = FakeResolver()
+    result = verify_overdue_financial_publish_dates_for_symbol(
+        SYMBOL,
+        resolver=resolver,
+        warehouse_dir=tmp_path,
+        today=date(2026, 8, 17),
+        minimum_report_date="20240930",
+    )
+
+    assert result.overdue_report_dates == ("20240930",)
+    assert resolver.calls[0][1] == ("20240930",)
+
+
 def test_verify_api_failure_keeps_existing_date(tmp_path):
     _write_all_sources(tmp_path, "20241102")
 

@@ -9,7 +9,7 @@ from utils.logger import setup_logger
 class TestLoggerConfig:
     def _build(self, monkeypatch, tmp_path):
         monkeypatch.setattr("utils.logger.LOG_DIR", tmp_path)
-        logger = setup_logger(f"test_logger_{tmp_path.name}")
+        logger = setup_logger(f"test_logger_{tmp_path.name}", enable_file_handlers=True)
         self.logger = logger
         return logger
 
@@ -34,6 +34,34 @@ class TestLoggerConfig:
         assert "错误日志内容" in app_content
         assert "普通信息日志" not in err_content
         assert "错误日志内容" in err_content
+
+    def test_file_handlers_can_be_disabled_by_environment(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("QUANTPYLAB_DISABLE_FILE_LOGGING", "1")
+        logger = setup_logger(f"test_no_file_logger_{tmp_path.name}")
+        self.logger = logger
+
+        assert not any(
+            isinstance(handler, TimedRotatingFileHandler) for handler in logger.handlers
+        )
+
+    def test_existing_logger_reconfigures_file_handlers(self, monkeypatch, tmp_path):
+        name = f"test_reconfigure_logger_{tmp_path.name}"
+        monkeypatch.setattr("utils.logger.LOG_DIR", tmp_path)
+        logger = setup_logger(name, enable_file_handlers=True)
+        logger = setup_logger(name, enable_file_handlers=False)
+        assert not any(
+            isinstance(handler, TimedRotatingFileHandler) for handler in logger.handlers
+        )
+
+        logger = setup_logger(name, enable_file_handlers=True)
+        self.logger = logger
+        assert (
+            sum(
+                isinstance(handler, TimedRotatingFileHandler)
+                for handler in logger.handlers
+            )
+            == 2
+        )
 
     def teardown_method(self):
         logger = getattr(self, "logger", None)

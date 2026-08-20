@@ -1,4 +1,5 @@
 import logging
+import os
 from logging.handlers import TimedRotatingFileHandler
 
 from tqdm import tqdm
@@ -24,15 +25,28 @@ class TqdmLoggingHandler(logging.Handler):
 
 
 def setup_logger(
-    name: str = "QuantPyLab", log_file: str = "app.log", level=logging.INFO
+    name: str = "QuantPyLab",
+    log_file: str = "app.log",
+    level=logging.INFO,
+    enable_file_handlers: bool | None = None,
 ):
     """设置项目全局日志器"""
     logger = logging.getLogger(name)
 
-    if logger.handlers:
-        return logger
-
     logger.setLevel(level)
+
+    if enable_file_handlers is None:
+        enable_file_handlers = os.getenv("QUANTPYLAB_DISABLE_FILE_LOGGING") != "1"
+
+    if not logger.handlers:
+        # 输出到控制台 (使用 tqdm 兼容的 Handler)
+        console_handler = TqdmLoggingHandler()
+        logger.addHandler(console_handler)
+
+    for handler in list(logger.handlers):
+        if isinstance(handler, TimedRotatingFileHandler):
+            logger.removeHandler(handler)
+            handler.close()
 
     # 格式化
     formatter = logging.Formatter(
@@ -40,10 +54,12 @@ def setup_logger(
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # 输出到控制台 (使用 tqdm 兼容的 Handler)
-    console_handler = TqdmLoggingHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    for handler in logger.handlers:
+        if isinstance(handler, TqdmLoggingHandler):
+            handler.setFormatter(formatter)
+
+    if not enable_file_handlers:
+        return logger
 
     # 输出到文件 (全量, 按天轮转, 保留最近 LOG_RETENTION_DAYS 天)
     file_handler = TimedRotatingFileHandler(

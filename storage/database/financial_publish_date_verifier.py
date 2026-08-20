@@ -219,11 +219,22 @@ def verify_overdue_financial_publish_dates_for_symbol(
     resolver: OfficialDisclosureDateResolver | None = None,
     warehouse_dir: str | Path | None = None,
     today: date | None = None,
+    minimum_report_date: str | date | None = None,
 ) -> OverduePublishDateVerification:
-    """仅对超期报告查询官方公告，并回填已匹配的首发日期。"""
+    """仅对指定范围内的超期报告查询官方公告，并回填首发日期。"""
     current_date = today or date.today()
     source_frames = load_financial_source_frames(symbol, warehouse_dir)
     overdue_dates = find_overdue_publish_dates(source_frames, current_date)
+    if minimum_report_date is not None:
+        minimum_date = parse_date_value(minimum_report_date)
+        if minimum_date is None:
+            raise ValueError(f"minimum_report_date 无法解析: {minimum_report_date}")
+        overdue_dates = {
+            report_date: publish_date
+            for report_date, publish_date in overdue_dates.items()
+            if (report_day := parse_date_value(report_date)) is not None
+            and report_day >= minimum_date
+        }
     if not overdue_dates:
         return OverduePublishDateVerification()
 

@@ -16,6 +16,7 @@ from storage.database.official_disclosure_date_resolver import (
     parse_date_value,
     select_first_disclosure,
     title_matches_report,
+    title_matches_report_summary,
 )
 
 
@@ -57,6 +58,20 @@ def test_title_matching_excludes_non_original_documents():
     assert select_first_disclosure(announcements, "20240331").url == "early"
 
 
+def test_summary_is_fallback_only_when_original_report_is_missing():
+    summary = OfficialDisclosure(
+        date(2012, 4, 28), "公司2011年年度报告摘要", "summary", "test"
+    )
+    corrected_summary = OfficialDisclosure(
+        date(2012, 4, 29), "公司2011年年度报告摘要（修订版）", "corrected", "test"
+    )
+
+    assert not title_matches_report(summary.title, "20111231")
+    assert title_matches_report_summary(summary.title, "20111231")
+    assert select_first_disclosure([corrected_summary], "20111231") is None
+    assert select_first_disclosure([summary], "20111231") == summary
+
+
 def test_cninfo_client_resolves_org_and_parses_announcements():
     class FakeSession:
         def __init__(self):
@@ -89,6 +104,7 @@ def test_cninfo_client_resolves_org_and_parses_announcements():
     assert result[0].url.endswith("2024-04-26/abc.PDF")
     assert session.calls[1][1]["stock"] == "600519,gssh0600519"
     assert session.calls[1][1]["column"] == "sse"
+    assert session.calls[1][1]["category"] == "category_ndbg_szsh"
 
 
 def test_cninfo_client_uses_total_record_for_pagination():
@@ -130,8 +146,66 @@ def test_cninfo_client_uses_total_record_for_pagination():
         "600519", date(2024, 3, 31), date(2024, 5, 1)
     )
 
-    assert session.page_numbers == [1, 2]
+    assert session.page_numbers == [1, 2, 1, 2, 1, 2, 1, 2]
     assert result[-1].title == "公司2024年第一季度报告"
+
+
+def test_cninfo_client_queries_each_report_category_for_historical_records():
+    class FakeSession:
+        def __init__(self):
+            self.headers = {}
+            self.categories = []
+
+        def post(self, url, data, timeout):
+            if "topSearch" in url:
+                return _FakeResponse([{"code": "600519", "orgId": "gssh0600519"}])
+            self.categories.append(data["category"])
+            title = (
+                "公司2010年年度报告"
+                if data["category"] == "category_ndbg_szsh"
+                else "公司2010年其他公告"
+            )
+            return _FakeResponse(
+                {
+                    "announcements": [
+                        {
+                            "announcementTime": "2011-03-01",
+                            "announcementTitle": title,
+                            "adjunctUrl": f"{data['category']}.pdf",
+                        }
+                    ]
+                }
+            )
+
+    session = FakeSession()
+    result = CninfoDisclosureClient(session=session).fetch_announcements(
+        "600519", date(2010, 1, 1), date(2026, 8, 19)
+    )
+
+    assert session.categories == [
+        "category_ndbg_szsh",
+        "category_bndbg_szsh",
+        "category_yjdbg_szsh",
+        "category_sjdbg_szsh",
+    ]
+    assert select_first_disclosure(result, "20101231").publish_date == date(2011, 3, 1)
+
+
+def test_cninfo_client_treats_null_announcements_as_empty():
+    class FakeSession:
+        def __init__(self):
+            self.headers = {}
+
+        def post(self, url, data, timeout):
+            if "topSearch" in url:
+                return _FakeResponse([{"code": "000003", "orgId": "gssz0000003"}])
+            return _FakeResponse({"announcements": None})
+
+    result = CninfoDisclosureClient(session=FakeSession()).fetch_announcements(
+        "000003", date(2010, 1, 1), date(2026, 8, 19)
+    )
+
+    assert result == []
 
 
 def test_cninfo_client_rejects_pagination_safety_limit():
