@@ -22,7 +22,7 @@
 
 | 业务域 | 说明 | 示例 |
 | :--- | :--- | :--- |
-| **market/** | 基础行情映射，直接对应物理文件。 | `daily_kline`, `share_capital` |
+| **market/** | 基础行情映射，直接对应物理文件。 | `daily_kline`, `share_capital`, `industry_classification_sw` |
 | **financial/** | 财务报表映射，直接对应物理文件。 | `fin_balance_sheet`, `fin_ttm` |
 | **analysis/** | **分析衍生层**。通过关联、计算生成的业务视图。 | `v_daily_valuation` |
 

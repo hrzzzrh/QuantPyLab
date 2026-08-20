@@ -1,4 +1,4 @@
-"""Shared process lock for canonical K-line writes."""
+"""Shared process lock for canonical Parquet writes."""
 
 from __future__ import annotations
 

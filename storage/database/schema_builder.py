@@ -12,6 +12,7 @@ DATASET_PATTERNS = {
     "daily_kline": "daily_kline/*/*.parquet",
     "etf_kline": "etf_kline/*/*.parquet",
     "share_capital": "share_capital/*/*.parquet",
+    "industry_classification_sw": "industry_classification_sw/*/*.parquet",
     "fin_ttm": "financial/ttm/*/*.parquet",
     "fin_balance_sheet": "financial_statements/type=balance/*/*.parquet",
     "fin_income_statement": "financial_statements/type=income/*/*.parquet",

@@ -141,13 +141,15 @@ uv run main.py evaluate-factor-experiments \
 
 `diagnose-factor-exposures` 是独立于训练和回测结果的暴露审计命令，仅支持 `factor-composite-experiment`。它按每个信号日的可选股票池计算 `v_daily_valuation.market_cap` 的截面规模分组，再比较最终入选持仓在各组的占比和选择提升；缺失或非正市值会从分组中排除，并单独记录覆盖率。为保证规模组编号有效，每个信号日必须至少有 `quantile_count` 个有效市值候选；不满足时命令会拒绝生成报告。该命令不改变策略目标、因子权重、成交或净值。
 
+历史行业数据资产现已独立存储在 `industry_classification_sw`，按申万 `effective_date` 做 ASOF 对齐；当前命令仍只输出规模暴露，不直接输出行业暴露或实施行业中性化，待行业覆盖率和分类映射完成验证后再扩展。
+
 ```bash
 uv run main.py diagnose-factor-exposures \
   --backtest-config config/backtest/factor_experiment_value_growth.toml \
   --quantile-count 5
 ```
 
-结果默认写入 `workspace/factor_exposure_diagnostics/<name>_<timestamp>/`，包含 `summary.md`、`size_exposure.csv`、`size_exposure_summary.csv`、`size_exposure_coverage.csv` 和 `parameters.json`。报告用于识别规模选择偏向，不构成收益因果归因。当前 `stocks.industry` 只有未版本化的元数据快照，缺少历史生效日期，因此本命令不输出历史行业暴露，也不能据此实施行业中性化；需要先补齐历史行业数据。
+结果默认写入 `workspace/factor_exposure_diagnostics/<name>_<timestamp>/`，包含 `summary.md`、`size_exposure.csv`、`size_exposure_summary.csv`、`size_exposure_coverage.csv` 和 `parameters.json`。报告用于识别规模选择偏向，不构成收益因果归因。当前 `stocks.industry` 仍只有未版本化的元数据快照，不能据此输出历史行业暴露；历史行业数据已经独立存储在 `industry_classification_sw`，行业诊断和中性化仍需先完成覆盖率、分类标准与缺失处理验证。
 
 ## 5. 成交、成本和净值
 

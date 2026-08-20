@@ -411,6 +411,13 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
     return total_processed, total_failed
 
 
+def sync_industry_history(force_refresh=False):
+    """同步申万个股行业分类历史，不覆盖 stocks 当前行业快照。"""
+    from data_ingestion.collectors.industry_collector import IndustryHistoryCollector
+
+    return IndustryHistoryCollector().sync(force_refresh=force_refresh)
+
+
 def get_target_report_dates():
     today = datetime.now()
     dates = []
@@ -1261,7 +1268,15 @@ def main():
     meta_p.add_argument("--industry", action="store_true", help="仅同步行业")
     meta_p.add_argument("--list-info", action="store_true", help="仅同步上市详情")
 
-    # 3. sync-financial
+    # 3. sync-industry-history
+    industry_history_p = subparsers.add_parser(
+        "sync-industry-history", help="同步申万个股行业分类历史"
+    )
+    industry_history_p.add_argument(
+        "--force-refresh", action="store_true", help="忽略当日成功状态并重新下载"
+    )
+
+    # 4. sync-financial
     fin_p = subparsers.add_parser("sync-financial", help="同步历史财务报表")
     fin_p.add_argument("--symbol", type=str, help="指定单只股票代码")
     fin_p.add_argument("--force-all", action="store_true", help="全量扫描所有股票")
@@ -1478,6 +1493,14 @@ def main():
         sync_stock_metadata(
             run_industry=not args.list_info, run_list_info=not args.industry
         )
+    elif args.command == "sync-industry-history":
+        try:
+            _processed, failed = sync_industry_history(force_refresh=args.force_refresh)
+        except Exception:
+            logger.exception("申万行业历史同步异常退出")
+            sys.exit(1)
+        if failed:
+            sys.exit(1)
     elif args.command == "sync-financial":
         sync_financial_statements(symbol=args.symbol, force_all=args.force_all)
     elif args.command == "sync-indicators":
