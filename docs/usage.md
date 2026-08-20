@@ -108,6 +108,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `evaluate-factor-experiments` | 按训练/验证/测试和 Walk-forward 评估候选因子实验 | `--research-config PATH`、`[--output]` |
 | `diagnose-factor-exposures` | 诊断因子实验的点时规模暴露 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]` |
 | `diagnose-factor-industry-exposures` | 审计因子实验的点时行业覆盖与暴露 | `--backtest-config PATH`、`[--output]`；使用 `industry_classification_sw` 按 `effective_date` ASOF 对齐，不使用 `stocks.industry` 回填 |
+| `diagnose-factor-neutralization` | 对照因子实验的行业/规模残差化选股与暴露变化 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；仅研究，不改变正式策略 |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -184,6 +185,18 @@ uv run main.py diagnose-factor-exposures \
 ```
 
 结果写入 `workspace/factor_exposure_diagnostics/`，包含 `summary.md`、`size_exposure.csv`、`size_exposure_summary.csv`、`size_exposure_coverage.csv` 和 `parameters.json`。每个信号日必须至少有 `quantile_count` 个有效市值候选，否则命令会拒绝生成不完整报告。报告给出可选池与入选持仓的规模占比、选择提升和市值覆盖率；它不改变回测行为，也不构成收益因果归因。当前 `stocks.industry` 没有历史生效日期和版本，不能用于历史行业暴露或行业中性结论，报告会明确记录这一限制。
+
+### 3.3.4 因子实验中性化对照 (`diagnose-factor-neutralization`)
+
+该命令在同一候选池、同一综合评分和同一持仓数量下，对照基准选股与三种逐信号日截面残差化选股：`industry`、`size` 和 `industry_size`。行业控制变量来自 `industry_classification_sw` 的 `effective_date` ASOF 结果，规模控制变量是点时 `market_cap` 的 `log` 值。缺失控制变量的候选会被排除并记录覆盖率；有效候选不足持仓数的信号日标记失败，不回退到基准目标。
+
+```bash
+uv run main.py diagnose-factor-neutralization \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --quantile-count 5
+```
+
+结果默认写入 `workspace/factor_neutralization_diagnostics/<name>_<timestamp>/`，包括模式汇总、控制变量覆盖率、与基准目标重合率、逐行业暴露明细和逐规模组暴露明细。行业暴露以全候选池中的已分类股票为 universe 分母，规模暴露以全候选池中的正且有限市值候选为 universe 分母，selected 分母只使用相应有效目标；被排除候选仍记录在覆盖率文件。残差化只改变评分排序，不保证最终组合严格满足行业或规模配额；目标重合率下降、暴露下降也不等于样本外收益提升。因此该命令是研究对照，不接入正式策略，不改变训练权重、交易和净值。
 
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 

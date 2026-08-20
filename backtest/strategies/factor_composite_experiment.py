@@ -195,6 +195,19 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
     def build_targets_from_candidates(
         candidates: pd.DataFrame, parameters: dict
     ) -> pd.DataFrame:
+        scored_candidates = FactorCompositeExperimentStrategy.score_target_candidates(
+            candidates, parameters
+        )
+        return select_equal_weight_targets(
+            scored_candidates, parameters["holding_count"]
+        )
+
+    @staticmethod
+    def score_target_candidates(
+        candidates: pd.DataFrame, parameters: dict
+    ) -> pd.DataFrame:
+        """Score every valid candidate before holding-count selection."""
+
         candidates = candidates.copy()
         score_columns = {}
         for factor_name, weight in parameters["factor_weights"].items():
@@ -217,4 +230,4 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         candidates["rank"] = candidates.groupby("date")["score"].rank(
             method="first", ascending=False
         )
-        return select_equal_weight_targets(candidates, parameters["holding_count"])
+        return candidates

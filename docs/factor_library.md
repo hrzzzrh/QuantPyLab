@@ -90,7 +90,7 @@ uv run main.py diagnose-factors \
 
 历史行业分类已经通过独立数据集 `industry_classification_sw` 提供，使用申万 `effective_date` 做 ASOF 对齐，`stocks.industry` 仍只作为当前快照。行业数据资产本身不参与因子训练和回测；真实覆盖率审计已完成，行业中性化仍需单独明确缺失处理和约束规则。
 
-行业覆盖率与选择暴露可通过 `diagnose-factor-industry-exposures` 生成独立报告。该命令只审计候选池和入选持仓，不改变训练、策略和回测；即使覆盖率较高，也不自动将行业中性化接入策略。
+行业覆盖率与选择暴露可通过 `diagnose-factor-industry-exposures` 生成独立报告。该命令只审计候选池和入选持仓，不改变训练、策略和回测；即使覆盖率较高，也不自动将行业中性化接入策略。研究对照命令 `diagnose-factor-neutralization` 进一步比较行业、规模和联合残差化评分，但残差化只改变排序，不保证组合严格满足行业/规模配额，因此当前仍不接入正式策略。
 
 ## 6. 回测使用方式
 

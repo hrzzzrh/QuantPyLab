@@ -160,6 +160,18 @@ uv run main.py diagnose-factor-industry-exposures \
 
 该命令按候选池和入选持仓的信号日，从 `industry_classification_sw.effective_date` 做 ASOF 对齐，输出行业覆盖率、缺失数量和行业选择提升；不实施行业中性化。结果默认写入 `workspace/factor_industry_exposure_diagnostics/<name>_<timestamp>/`。
 
+### 4.7 因子实验行业/规模中性化对照
+
+`diagnose-factor-neutralization` 是研究专用的残差化对照工具。它固定 `factor-composite-experiment` 的候选池、因子综合评分和持仓数量，逐信号日将评分对行业哑变量、`log(market_cap)` 或二者回归，使用残差重新排序，并与基准目标比较。行业通过 `industry_classification_sw` 的 `effective_date` ASOF 对齐，规模使用 `v_daily_valuation.market_cap`；缺失控制变量和不足持仓数的信号日都保留在覆盖审计中，失败时不回退。
+
+```bash
+uv run main.py diagnose-factor-neutralization \
+  --backtest-config config/backtest/factor_experiment_value_growth.toml \
+  --quantile-count 5
+```
+
+输出包含 `summary.md`、`parameters.json`、`neutralization_summary.csv`、`neutralization_coverage.csv`、`neutralization_target_overlap.csv`、`neutralization_industry_exposure.csv` 和 `neutralization_size_exposure.csv`。行业暴露的 universe 分母是全候选池中已分类股票，规模暴露的 universe 分母是全候选池中正且有限市值候选；selected 分母只使用相应有效目标，覆盖率文件保留被排除候选。残差化不等价于严格的组合行业/规模中性：它可能显著改变目标，却仍保留行业或规模选择偏离；是否开发带配额或权重约束的正式策略，必须基于该对照的覆盖率、目标重合、成本和样本外收益另行决定。命令不改变任何正式策略、训练参数或回测结果。
+
 ## 5. 成交、成本和净值
 
 单边交易成本为 `commission_bps + slippage_bps`。每次调仓先按开盘时持仓与目标持仓的绝对差额计算名义换手，再从组合净值中扣除成本，最后按扣成本后的净值配置目标权重。因此现金不会因成本而变为负数。
