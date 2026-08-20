@@ -9,10 +9,13 @@ import pytest
 
 import backtest.research_evaluator as evaluator_module
 import main as main_module
-from backtest.config import BacktestConfig
+from backtest.config import BacktestConfig, load_backtest_config
 from backtest.engine import BacktestResult
 from backtest.factor_trainer import FactorTrainingResult
-from backtest.hyperparameter_search import HyperparameterSearchSpec
+from backtest.hyperparameter_search import (
+    HyperparameterSearchSpec,
+    expand_hyperparameter_trials,
+)
 from backtest.research_evaluator import (
     EvaluationPeriod,
     EvaluationSplit,
@@ -74,6 +77,52 @@ def test_loads_fixed_and_walk_forward_evaluation_config():
     assert coverage["factor_experiment_value_growth"]["ignored_factor_parameters"] == [
         "price_reversal_20d"
     ]
+
+
+def test_loads_robust_evaluation_config_with_longer_time_windows():
+    config = load_factor_experiment_evaluation_config(
+        "config/backtest/factor_experiment_evaluation_robust.toml"
+    )
+
+    assert len(config.get_splits()) == 10
+    assert config.fixed_split.train == EvaluationPeriod(
+        date(2017, 7, 1), date(2020, 6, 30)
+    )
+    assert config.fixed_split.validation == EvaluationPeriod(
+        date(2020, 7, 1), date(2022, 6, 30)
+    )
+    assert config.fixed_split.test == EvaluationPeriod(
+        date(2022, 7, 1), date(2024, 6, 30)
+    )
+    assert config.training is not None
+    assert config.training.minimum_training_observations == 200
+    assert config.training.minimum_training_dates == 24
+    assert config.validity is not None
+    assert config.validity.minimum_training_signal_dates == 24
+    assert config.validity.minimum_validation_signal_dates == 20
+    assert config.validity.minimum_test_signal_dates == 20
+    assert config.validity.minimum_validation_observations == 100
+    assert config.validity.minimum_test_observations == 100
+    assert config.hyperparameter_search is not None
+    assert config.hyperparameter_search.ridge_alphas == (0.1,)
+    assert config.walk_forward is not None
+    assert config.walk_forward.start_date == date(2011, 1, 1)
+    assert config.walk_forward.end_date == date(2025, 12, 31)
+    assert config.walk_forward.train_years == 3
+    assert config.walk_forward.validation_years == 2
+    assert config.walk_forward.test_years == 2
+    assert config.walk_forward.step_years == 1
+    candidate_configs = [
+        (path.stem, load_backtest_config(path)) for path in config.candidate_configs
+    ]
+    assert (
+        len(
+            expand_hyperparameter_trials(
+                candidate_configs, config.hyperparameter_search
+            )
+        )
+        == 18
+    )
 
 
 def test_research_validity_defaults_when_section_is_omitted(tmp_path):
