@@ -1155,6 +1155,78 @@ def run_factor_exposure_diagnostics(
     return output_dir
 
 
+def run_factor_industry_exposure_diagnostics(
+    backtest_config_path: str,
+    output_path: str | None = None,
+):
+    """Run point-in-time industry coverage and exposure diagnostics."""
+    from backtest.config import load_backtest_config
+    from backtest.data_access import BacktestDataAccess
+    from backtest.industry_exposure_diagnostics import (
+        calculate_industry_exposure_diagnostics,
+        write_industry_exposure_diagnostic_report,
+    )
+    from backtest.strategy_registry import get_backtest_strategy
+
+    config = load_backtest_config(backtest_config_path)
+    if config.strategy_name != "factor-composite-experiment":
+        raise ValueError(
+            "行业暴露诊断当前只支持 factor-composite-experiment，"
+            f"不支持 {config.strategy_name}"
+        )
+    strategy = get_backtest_strategy(config.strategy_name)
+    parameters = strategy.validate_parameters(config.strategy_parameters)
+    factor_names = tuple(parameters["factor_weights"])
+    data_access = BacktestDataAccess(db_manager)
+    signal_data = data_access.load_factor_data(
+        config,
+        factor_names,
+        factor_parameters=parameters["factor_parameters"],
+        minimum_history_days=parameters["min_listing_days"],
+    )
+    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    candidates = strategy.prepare_target_candidates(
+        signal_data, factor_frame, config, parameters
+    )
+    targets = strategy.build_targets_from_candidates(candidates, parameters)
+    industry_points = data_access.load_point_in_time_industry(
+        candidates.loc[:, ["date", "symbol"]]
+    )
+    candidates_with_industry = candidates.merge(
+        industry_points,
+        on=["date", "symbol"],
+        how="left",
+        validate="one_to_one",
+    )
+    report = calculate_industry_exposure_diagnostics(
+        candidates_with_industry,
+        targets,
+    )
+    industry_snapshot = data_access.get_industry_snapshot_metadata()
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/factor_industry_exposure_diagnostics") / (
+            f"{Path(backtest_config_path).stem}_{run_id}"
+        )
+    parameters_payload = {
+        "backtest_config_path": str(Path(backtest_config_path).resolve()),
+        "backtest_config": config.to_dict(),
+        "industry_data_source": "industry_classification_sw",
+        "industry_effective_date_field": "effective_date",
+        "industry_code_field": "industry_code",
+        "industry_snapshot": industry_snapshot,
+    }
+    output_dir = write_industry_exposure_diagnostic_report(
+        report,
+        output_dir,
+        parameters=parameters_payload,
+    )
+    logger.info(f"因子行业暴露诊断完成，结果目录: {output_dir}")
+    return output_dir
+
+
 def run_factor_diagnostics(
     factor_names: list[str],
     start_date: str,
@@ -1421,6 +1493,19 @@ def main():
         "--output", help="结果目录，默认写入 workspace/factor_exposure_diagnostics"
     )
 
+    # 20. diagnose-factor-industry-exposures
+    industry_exposure_p = subparsers.add_parser(
+        "diagnose-factor-industry-exposures",
+        help="诊断因子实验的点时行业覆盖与暴露",
+    )
+    industry_exposure_p.add_argument(
+        "--backtest-config", required=True, help="因子实验回测 TOML 配置文件路径"
+    )
+    industry_exposure_p.add_argument(
+        "--output",
+        help="结果目录，默认写入 workspace/factor_industry_exposure_diagnostics",
+    )
+
     # 19. migrate-kline-source
     migration_p = subparsers.add_parser(
         "migrate-kline-source", help="分阶段重建全部股票日线数据源"
@@ -1591,6 +1676,15 @@ def main():
             )
         except Exception:
             logger.exception("因子规模暴露诊断异常退出")
+            sys.exit(1)
+    elif args.command == "diagnose-factor-industry-exposures":
+        try:
+            run_factor_industry_exposure_diagnostics(
+                backtest_config_path=args.backtest_config,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("因子行业暴露诊断异常退出")
             sys.exit(1)
     elif args.command == "migrate-kline-source":
         from tools.kline_source_migration import run_kline_source_migration

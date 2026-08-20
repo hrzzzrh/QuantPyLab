@@ -88,7 +88,9 @@ uv run main.py diagnose-factors \
 
 因子实验还可以使用 `diagnose-factor-exposures` 审计点时规模暴露。命令从 `v_daily_valuation.market_cap` 读取信号日市值，在每个信号日的可选股票池内重新分组，比较可选池与入选持仓的规模占比、选择提升和覆盖率。该审计不参与训练或回测，也不改变策略行为。当前 `stocks.industry` 是没有历史生效日期的元数据快照，不能用于历史行业暴露或行业中性结论。
 
-历史行业分类已经通过独立数据集 `industry_classification_sw` 提供，使用申万 `effective_date` 做 ASOF 对齐，`stocks.industry` 仍只作为当前快照。行业数据资产本身不参与因子训练和回测；行业暴露诊断与中性化需要先完成覆盖率、分类标准和缺失处理验证。
+历史行业分类已经通过独立数据集 `industry_classification_sw` 提供，使用申万 `effective_date` 做 ASOF 对齐，`stocks.industry` 仍只作为当前快照。行业数据资产本身不参与因子训练和回测；真实覆盖率审计已完成，行业中性化仍需单独明确缺失处理和约束规则。
+
+行业覆盖率与选择暴露可通过 `diagnose-factor-industry-exposures` 生成独立报告。该命令只审计候选池和入选持仓，不改变训练、策略和回测；即使覆盖率较高，也不自动将行业中性化接入策略。
 
 ## 6. 回测使用方式
 

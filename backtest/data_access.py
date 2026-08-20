@@ -1,3 +1,4 @@
+import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
@@ -145,6 +146,91 @@ class BacktestDataAccess:
             data_end_date=data_end_date,
             valuation_fields=tuple(sorted(valuation_fields)),
         )
+
+    def load_point_in_time_industry(self, points: pd.DataFrame) -> pd.DataFrame:
+        """按信号日从历史行业视图加载最近生效的申万行业代码。"""
+
+        required = {"date", "symbol"}
+        missing = required - set(points.columns)
+        if missing:
+            raise ValueError("行业点时查询缺少字段: " + ", ".join(sorted(missing)))
+        normalized = points.loc[:, ["date", "symbol"]].copy()
+        normalized["date"] = pd.to_datetime(normalized["date"], errors="coerce")
+        normalized["symbol"] = normalized["symbol"].astype("string").str.strip()
+        if (
+            normalized["date"].isna().any()
+            or normalized["symbol"].isna().any()
+            or normalized["symbol"].eq("").any()
+        ):
+            raise ValueError("行业点时查询的 date 和 symbol 不能为空")
+        if normalized.duplicated(["date", "symbol"]).any():
+            raise ValueError("行业点时查询不能包含重复的 date/symbol")
+
+        self.db_manager.ensure_views("industry_classification_sw")
+        conn = self.db_manager.get_duckdb_conn()
+        relation_name = "_industry_point_in_time_points"
+        conn.register(relation_name, normalized)
+        try:
+            frame = conn.execute(
+                f"""
+                SELECT points.date, points.symbol, industry.industry_code
+                FROM (
+                    SELECT CAST(date AS DATE) AS date, symbol
+                    FROM {relation_name}
+                    ORDER BY symbol, date
+                ) AS points
+                ASOF LEFT JOIN (
+                    SELECT symbol, effective_date, industry_code
+                    FROM industry_classification_sw
+                    ORDER BY symbol, effective_date
+                ) AS industry
+                  ON points.symbol = industry.symbol
+                 AND points.date >= industry.effective_date
+                ORDER BY points.date, points.symbol
+                """
+            ).df()
+        finally:
+            conn.unregister(relation_name)
+        frame["date"] = pd.to_datetime(frame["date"])
+        frame["symbol"] = frame["symbol"].astype("string")
+        return frame
+
+    def get_industry_snapshot_metadata(self) -> dict[str, object]:
+        """返回当前历史行业 canonical 快照的可复现摘要。"""
+
+        self.db_manager.ensure_views("industry_classification_sw")
+        conn = self.db_manager.get_duckdb_conn()
+        snapshot = conn.execute(
+            """
+            SELECT symbol, effective_date, industry_code, source_updated_date
+            FROM industry_classification_sw
+            ORDER BY symbol, effective_date, industry_code, source_updated_date
+            """
+        ).df()
+        canonical = snapshot.copy()
+        for column in ("effective_date", "source_updated_date"):
+            canonical[column] = pd.to_datetime(
+                canonical[column], errors="coerce"
+            ).dt.strftime("%Y-%m-%d")
+        payload = canonical.to_csv(index=False, header=False, lineterminator="\n")
+        source_dates = pd.to_datetime(
+            snapshot["source_updated_date"], errors="coerce"
+        ).dropna()
+        return {
+            "row_count": int(len(snapshot)),
+            "symbol_count": int(snapshot["symbol"].nunique()),
+            "snapshot_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+            "source_updated_date_min": (
+                source_dates.min().date().isoformat()
+                if not source_dates.empty
+                else None
+            ),
+            "source_updated_date_max": (
+                source_dates.max().date().isoformat()
+                if not source_dates.empty
+                else None
+            ),
+        }
 
     def load_benchmark_prices(self, config: BacktestConfig) -> pd.DataFrame:
         if not config.benchmark_symbol:
