@@ -23,7 +23,8 @@
 - `label_horizon_days`：它定义预测目标是未来几天收益，改变的是研究问题，不应和组合参数混在同一轮搜索中。
 - `min_listing_days`：它改变股票池的上市阶段结构，先作为固定研究口径，避免把新股筛选和因子有效性混淆。
 - `max_iterations`：只是优化算法的计算上限；如果已收敛，增加它不会改变策略。
-- `minimum_training_observations`、`minimum_training_dates`：是数据质量门槛，不是收益优化参数。
+- `minimum_training_observations`、`minimum_training_dates`：是数据质量门槛，不是收益优化参数；当前训练默认至少 24 个有效信号日。
+- `[validity]`：是评估阶段的研究有效性门禁，默认要求训练 24 个信号日、验证和测试各 11 个实际可执行信号，并分别至少有 100 个目标观测；这些门槛不参与收益优化。
 
 以上参数仍可由 TOML 固定配置，训练器继续校验其合法性。
 
@@ -90,6 +91,7 @@ lookback_days = [10, 20, 40]
 |:---|:---|
 | `hyperparameter_trials.csv` | 每个窗口、候选组合、五个搜索维度、训练状态、拟合权重、训练指标和验证指标 |
 | `training_models.csv` | 每个成功组合的训练样本、迭代状态和最终拟合权重；失败组合记录原因 |
+| `research_validity.csv` | 每个窗口、组合和阶段的样本覆盖实际值、门槛及通过 / 失败状态 |
 | `selections.csv` | 每个窗口被选中的候选 ID、五个外层参数、验证得分和测试结果 |
 | `parameters.json` | 完整研究配置、展开数量限制和实际搜索空间快照 |
 | `summary.md` | 入选参数、失败组合数量、验证选择结果和测试结果 |

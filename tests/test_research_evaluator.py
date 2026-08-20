@@ -16,6 +16,7 @@ from backtest.research_evaluator import (
     EvaluationSplit,
     FactorExperimentEvaluationConfig,
     FactorExperimentEvaluationResult,
+    ResearchValiditySpec,
     TrainingSpec,
     WalkForwardSpec,
     build_walk_forward_splits,
@@ -58,6 +59,9 @@ def test_loads_fixed_and_walk_forward_evaluation_config():
     assert len(config.get_splits()) == 5
     assert config.training is not None
     assert config.training.label_horizon_days == 20
+    assert config.training.minimum_training_dates == 24
+    assert config.validity is not None
+    assert config.validity.minimum_validation_signal_dates == 11
     assert config.hyperparameter_search is not None
     assert config.hyperparameter_search.holding_counts == (10, 20, 50)
     audit = evaluator_module._build_reproducibility_audit(config)
@@ -68,6 +72,284 @@ def test_loads_fixed_and_walk_forward_evaluation_config():
     assert coverage["factor_experiment_value_growth"]["ignored_factor_parameters"] == [
         "price_reversal_20d"
     ]
+
+
+def test_research_validity_defaults_when_section_is_omitted(tmp_path):
+    candidate = tmp_path / "candidate.toml"
+    candidate.write_text("", encoding="utf-8")
+    config_path = tmp_path / "evaluation.toml"
+    config_path.write_text(
+        """
+[experiment]
+name = "default-validity"
+candidate_configs = ["candidate.toml"]
+
+[split]
+train_start_date = "2020-01-01"
+train_end_date = "2020-12-31"
+validation_start_date = "2021-01-01"
+validation_end_date = "2021-12-31"
+test_start_date = "2022-01-01"
+test_end_date = "2022-12-31"
+""",
+        encoding="utf-8",
+    )
+
+    config = load_factor_experiment_evaluation_config(config_path)
+
+    assert config.validity is not None
+    assert config.validity.enabled is True
+    assert config.validity.minimum_training_signal_dates == 24
+
+
+def test_research_validity_gate_blocks_short_validation_window(monkeypatch, tmp_path):
+    candidate = tmp_path / "candidate.toml"
+    candidate.write_text("", encoding="utf-8")
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    config = FactorExperimentEvaluationConfig(
+        name="validity-gate",
+        candidate_configs=(candidate,),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+        validity=ResearchValiditySpec(
+            minimum_training_signal_dates=1,
+            minimum_validation_signal_dates=2,
+            minimum_test_signal_dates=2,
+            minimum_validation_observations=2,
+            minimum_test_observations=2,
+        ),
+    )
+    calls = []
+
+    def fake_load_backtest_config(path):
+        return BacktestConfig(
+            start_date=date(2018, 1, 1),
+            end_date=date(2026, 1, 1),
+            strategy_name=path.stem,
+            benchmark_symbol=None,
+        )
+
+    def fake_execute_backtest(candidate_config, database_manager, *, include_benchmark):
+        calls.append(candidate_config.start_date)
+        signal_date = (
+            pd.Timestamp("2020-01-31")
+            if candidate_config.start_date == split.train.start_date
+            else pd.Timestamp("2021-01-31")
+        )
+        daily_nav = pd.DataFrame(
+            [
+                {"date": pd.Timestamp("2024-01-02"), "nav": 1.0},
+                {"date": pd.Timestamp("2024-01-03"), "nav": 1.01},
+            ]
+        )
+        targets = pd.DataFrame(
+            {
+                "date": [signal_date],
+                "symbol": ["000001"],
+            }
+        )
+        return BacktestRun(
+            config=candidate_config,
+            targets=targets,
+            result=BacktestResult(daily_nav=daily_nav, trades=pd.DataFrame()),
+        )
+
+    monkeypatch.setattr(
+        evaluator_module, "load_backtest_config", fake_load_backtest_config
+    )
+    monkeypatch.setattr(evaluator_module, "execute_backtest", fake_execute_backtest)
+    monkeypatch.setattr(
+        evaluator_module,
+        "calculate_performance_metrics",
+        lambda daily_nav: {
+            "total_return": 0.01,
+            "annualized_return": 0.01,
+            "annualized_volatility": 0.1,
+            "sharpe_ratio": 1.0,
+            "max_drawdown": -0.01,
+            "trading_days": 2,
+        },
+    )
+
+    result = evaluate_factor_experiments(config, object())
+
+    assert calls == [split.train.start_date, split.validation.start_date]
+    assert result.selection_rows[0]["status"] == "failed"
+    assert result.evaluation_failure_rows[0]["phase"] == "validation"
+    assert result.validity_rows[-1]["status"] == "failed"
+    assert "研究有效性门禁失败" in result.validity_rows[-1]["error"]
+
+
+def test_research_validity_gate_blocks_short_training_fit(monkeypatch, tmp_path):
+    candidate = tmp_path / "candidate.toml"
+    candidate.write_text("", encoding="utf-8")
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    config = FactorExperimentEvaluationConfig(
+        name="training-validity-gate",
+        candidate_configs=(candidate,),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+        training=TrainingSpec(
+            minimum_training_observations=1,
+            minimum_training_dates=1,
+        ),
+        validity=ResearchValiditySpec(
+            minimum_training_signal_dates=2,
+            minimum_validation_signal_dates=1,
+            minimum_test_signal_dates=1,
+            minimum_validation_observations=1,
+            minimum_test_observations=1,
+        ),
+    )
+
+    def fake_load_backtest_config(path):
+        return BacktestConfig(
+            start_date=date(2018, 1, 1),
+            end_date=date(2026, 1, 1),
+            strategy_name="factor-composite-experiment",
+            strategy_parameters={"factor_weights": {"valuation_pb": 1.0}},
+            benchmark_symbol=None,
+        )
+
+    def fake_fit(candidate_config, train_period, training, database_manager):
+        return candidate_config, FactorTrainingResult(
+            factor_weights={"valuation_pb": 1.0},
+            observation_count=2,
+            signal_date_count=1,
+            iterations=2,
+            converged=True,
+            label_horizon_days=20,
+            ridge_alpha=0.1,
+        )
+
+    monkeypatch.setattr(
+        evaluator_module, "load_backtest_config", fake_load_backtest_config
+    )
+    monkeypatch.setattr(evaluator_module, "_fit_candidate_config", fake_fit)
+
+    result = evaluate_factor_experiments(config, object())
+
+    assert result.selection_rows[0]["status"] == "failed"
+    assert result.training_rows[0]["status"] == "failed"
+    assert result.training_rows[0]["signal_date_count"] == 1
+    assert result.validity_rows[0]["phase"] == "training"
+    assert result.validity_rows[0]["status"] == "failed"
+    assert "minimum_signal_dates=2" in result.validity_rows[0]["error"]
+
+
+def test_research_validity_report_contains_phase_coverage(tmp_path):
+    candidate = tmp_path / "candidate.toml"
+    candidate.write_text("", encoding="utf-8")
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    config = FactorExperimentEvaluationConfig(
+        name="validity-report",
+        candidate_configs=(candidate,),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+        validity=ResearchValiditySpec(
+            minimum_training_signal_dates=1,
+            minimum_validation_signal_dates=1,
+            minimum_test_signal_dates=1,
+            minimum_validation_observations=1,
+            minimum_test_observations=1,
+        ),
+    )
+    result = FactorExperimentEvaluationResult(
+        config=config,
+        metric_rows=(
+            {
+                "split_id": "fixed_split",
+                "phase": "validation",
+                "candidate_id": "candidate",
+                "sharpe_ratio": 1.0,
+                "target_observation_count": 2,
+                "signal_date_count": 1,
+            },
+            {
+                "split_id": "fixed_split",
+                "phase": "test",
+                "candidate_id": "candidate",
+                "sharpe_ratio": 1.0,
+                "target_observation_count": 2,
+                "signal_date_count": 1,
+            },
+        ),
+        selection_rows=(),
+        validity_rows=(
+            {
+                "split_id": "fixed_split",
+                "candidate_id": "candidate",
+                "trial_id": "candidate",
+                "phase": "validation",
+                "status": "passed",
+                "error": "",
+                "observation_count": 2,
+                "signal_date_count": 1,
+                "minimum_observations": 1,
+                "minimum_signal_dates": 1,
+            },
+        ),
+    )
+
+    output_dir = write_factor_experiment_evaluation_report(
+        result, tmp_path / "validity-report-output"
+    )
+
+    assert output_dir.joinpath("research_validity.csv").exists()
+    report = output_dir.joinpath("summary.md").read_text(encoding="utf-8")
+    assert "研究有效性门禁" in report
+    assert "research_validity.csv" in report
+
+
+def test_target_coverage_excludes_signal_without_t_plus_one_execution():
+    period = EvaluationPeriod(date(2021, 1, 1), date(2021, 2, 28))
+    targets = pd.DataFrame(
+        {
+            "date": [
+                pd.Timestamp("2021-01-29"),
+                pd.Timestamp("2021-02-26"),
+            ],
+            "symbol": ["000001", "000002"],
+        }
+    )
+    daily_nav = pd.DataFrame(
+        {
+            "date": [
+                pd.Timestamp("2021-01-29"),
+                pd.Timestamp("2021-02-26"),
+            ],
+            "nav": [1.0, 1.01],
+        }
+    )
+
+    coverage = evaluator_module._summarize_target_coverage(
+        targets,
+        period,
+        daily_nav,
+    )
+
+    assert coverage["target_observation_count"] == 1
+    assert coverage["signal_date_count"] == 1
+    assert coverage["signal_date_start"] == "2021-01-29"
+    assert coverage["signal_date_end"] == "2021-01-29"
 
 
 def test_research_evaluator_runs_test_only_for_validation_winner(monkeypatch, tmp_path):
@@ -805,7 +1087,7 @@ def test_fit_candidate_config_caches_prepared_data_but_refits_weights(
     monkeypatch.setattr(evaluator_module, "fit_factor_weights", fake_fit)
 
     cache = {}
-    evaluator_module._fit_candidate_config(
+    trained_candidate, _ = evaluator_module._fit_candidate_config(
         candidate,
         train_period,
         training,
@@ -826,6 +1108,7 @@ def test_fit_candidate_config_caches_prepared_data_but_refits_weights(
     assert len(prepare_calls) == 1
     assert len(fit_calls) == 2
     assert [call[1]["ridge_alpha"] for call in fit_calls] == [0.1, 1.0]
+    assert "factor_versions" not in trained_candidate.strategy_parameters
 
 
 def test_evaluation_config_rejects_overlapping_periods(tmp_path):

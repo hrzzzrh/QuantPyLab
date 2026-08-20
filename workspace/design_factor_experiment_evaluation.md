@@ -36,7 +36,15 @@ label_horizon_days = 20
 ridge_alpha = 0.1
 max_iterations = 5000
 minimum_training_observations = 200
-minimum_training_dates = 6
+minimum_training_dates = 24
+
+[validity]
+enabled = true
+minimum_training_signal_dates = 24
+minimum_validation_signal_dates = 11
+minimum_test_signal_dates = 11
+minimum_validation_observations = 100
+minimum_test_observations = 100
 
 [split]
 train_start_date = "2020-01-01"
@@ -66,6 +74,7 @@ step_years = 1
 
 - 训练集对全部候选方案分别拟合权重并运行拟合后的样本内回测；验证集使用各自训练出的冻结权重运行全部候选方案。
 - 如果某个候选在当前窗口因训练样本不足、没有足够信号日或权重全部退化为零而训练失败，记录失败原因并排除该候选；不使用未训练的默认权重替代。只有全部候选都无法训练时，当前窗口才失败。
+- `[validity]` 是研究有效性硬门禁：训练默认至少需要 24 个有效信号日，验证和测试默认各需要至少 11 个实际可执行信号及 100 个目标观测；一年月频窗口最后一个月末信号没有区间内 T+1 执行日，因此门禁按实际可执行信号计数。候选或窗口低于门槛时记录实际值、阈值和失败原因，并阻断对应阶段的结论。
 - 每个窗口只按验证集的 `selection_metric` 选择一个候选方案；默认方向为最大化夏普比率。
 - 指标相同按候选配置在 TOML 中的先后顺序确定，保证结果稳定。
 - 测试集只运行入选方案；未入选方案不会读取测试区间，不允许用测试结果反向调参。
@@ -89,6 +98,7 @@ step_years = 1
 | `candidate_metrics.csv` | 训练/验证的全部候选指标，以及测试阶段入选候选的指标 |
 | `selections.csv` | 每个固定或滚动窗口的入选候选、验证得分和测试得分 |
 | `evaluation_failures.csv` | 训练、验证、测试回测或指标计算失败的窗口、候选、试验和原因 |
+| `research_validity.csv` | 各窗口、候选和阶段的目标观测数、信号日数、门槛、通过状态和失败原因 |
 | `summary.md` | 固定章节标准结果报告：执行状态、点时样本覆盖、训练状态、失败原因、入选权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界 |
 
 不保存每个候选的完整日净值和交易明细，避免一次参数实验产生大量重复产物；需要深入检查的入选方案可使用其原始回测 TOML 单独运行 `run-backtest`。
@@ -104,6 +114,7 @@ step_years = 1
 ## 6. 验收标准
 
 - 配置解析拒绝日期重叠、空候选、非法选择指标和不完整 Walk-forward 参数。
+- 研究有效性检查拒绝训练、验证或测试阶段的不足样本，并在 `research_validity.csv` 和 `summary.md` 中保留实际值与阈值。
 - 单元测试验证窗口生成、候选选择、测试集只执行入选候选及输出文件。
 - 既有 `run-backtest` 结果生成路径和三个正式策略行为不变。
 - 使用真实点时数据至少完成一个固定切分和一个 Walk-forward 烟测。

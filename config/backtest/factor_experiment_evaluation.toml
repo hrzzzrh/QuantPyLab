@@ -13,7 +13,15 @@ label_horizon_days = 20
 ridge_alpha = 0.1
 max_iterations = 5000
 minimum_training_observations = 200
-minimum_training_dates = 6
+minimum_training_dates = 24
+
+[validity]
+enabled = true
+minimum_training_signal_dates = 24
+minimum_validation_signal_dates = 11
+minimum_test_signal_dates = 11
+minimum_validation_observations = 100
+minimum_test_observations = 100
 
 [hyperparameter_search]
 enabled = true

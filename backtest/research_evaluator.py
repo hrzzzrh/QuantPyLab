@@ -41,6 +41,11 @@ REPORT_SCHEMA_VERSION = "1"
 REPORT_SIGNAL_DATE_WARNING_THRESHOLD = 12
 REPORT_TRAIN_VALIDATION_GAP_THRESHOLD = 0.25
 REPORT_EXTREME_DRAWDOWN_THRESHOLD = -0.50
+DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES = 24
+DEFAULT_MINIMUM_VALIDATION_SIGNAL_DATES = 11
+DEFAULT_MINIMUM_TEST_SIGNAL_DATES = 11
+DEFAULT_MINIMUM_VALIDATION_OBSERVATIONS = 100
+DEFAULT_MINIMUM_TEST_OBSERVATIONS = 100
 TRAINING_MODEL_COLUMNS = (
     "split_id",
     "candidate_id",
@@ -81,12 +86,30 @@ HYPERPARAMETER_TRIAL_COLUMNS = (
     "train_sharpe_ratio",
     "train_max_drawdown",
     "train_trading_days",
+    "train_target_observation_count",
+    "train_signal_date_count",
     "validation_total_return",
     "validation_annualized_return",
     "validation_annualized_volatility",
     "validation_sharpe_ratio",
     "validation_max_drawdown",
     "validation_trading_days",
+    "validation_target_observation_count",
+    "validation_signal_date_count",
+)
+VALIDITY_COLUMNS = (
+    "split_id",
+    "candidate_id",
+    "trial_id",
+    "phase",
+    "status",
+    "error",
+    "observation_count",
+    "signal_date_count",
+    "signal_date_start",
+    "signal_date_end",
+    "minimum_observations",
+    "minimum_signal_dates",
 )
 EVALUATION_FAILURE_COLUMNS = (
     "split_id",
@@ -172,7 +195,7 @@ class TrainingSpec:
     ridge_alpha: float = 0.1
     max_iterations: int = 5000
     minimum_training_observations: int = 200
-    minimum_training_dates: int = 6
+    minimum_training_dates: int = DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
 
     def __post_init__(self):
         if not isinstance(self.enabled, bool):
@@ -211,6 +234,46 @@ class TrainingSpec:
 
 
 @dataclass(frozen=True)
+class ResearchValiditySpec:
+    """Hard sample-coverage gates for research evaluation phases."""
+
+    enabled: bool = True
+    minimum_training_signal_dates: int = DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
+    minimum_validation_signal_dates: int = DEFAULT_MINIMUM_VALIDATION_SIGNAL_DATES
+    minimum_test_signal_dates: int = DEFAULT_MINIMUM_TEST_SIGNAL_DATES
+    minimum_validation_observations: int = DEFAULT_MINIMUM_VALIDATION_OBSERVATIONS
+    minimum_test_observations: int = DEFAULT_MINIMUM_TEST_OBSERVATIONS
+
+    def __post_init__(self):
+        if not isinstance(self.enabled, bool):
+            raise ValueError("[validity].enabled 必须是布尔值")
+        for name in (
+            "minimum_training_signal_dates",
+            "minimum_validation_signal_dates",
+            "minimum_test_signal_dates",
+            "minimum_validation_observations",
+            "minimum_test_observations",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"[validity].{name} 必须是正整数")
+
+    def to_dict(self) -> dict:
+        return {
+            "enabled": self.enabled,
+            "minimum_training_signal_dates": self.minimum_training_signal_dates,
+            "minimum_validation_signal_dates": self.minimum_validation_signal_dates,
+            "minimum_test_signal_dates": self.minimum_test_signal_dates,
+            "minimum_validation_observations": self.minimum_validation_observations,
+            "minimum_test_observations": self.minimum_test_observations,
+        }
+
+
+class ResearchValidityError(ValueError):
+    """Raised when a research phase cannot support a reliable conclusion."""
+
+
+@dataclass(frozen=True)
 class FactorExperimentEvaluationConfig:
     name: str
     candidate_configs: tuple[Path, ...]
@@ -220,6 +283,7 @@ class FactorExperimentEvaluationConfig:
     walk_forward: WalkForwardSpec | None = None
     training: TrainingSpec | None = None
     hyperparameter_search: HyperparameterSearchSpec | None = None
+    validity: ResearchValiditySpec | None = None
 
     def __post_init__(self):
         if not self.name:
@@ -258,6 +322,9 @@ class FactorExperimentEvaluationConfig:
                 if self.hyperparameter_search
                 else {"enabled": False}
             ),
+            "validity": (
+                self.validity.to_dict() if self.validity else {"enabled": False}
+            ),
         }
 
 
@@ -269,6 +336,7 @@ class FactorExperimentEvaluationResult:
     training_rows: tuple[dict, ...] = ()
     hyperparameter_rows: tuple[dict, ...] = ()
     evaluation_failure_rows: tuple[dict, ...] = ()
+    validity_rows: tuple[dict, ...] = ()
 
 
 def load_factor_experiment_evaluation_config(
@@ -324,6 +392,7 @@ def load_factor_experiment_evaluation_config(
     hyperparameter_search = _parse_hyperparameter_search(
         document.get("hyperparameter_search")
     )
+    validity = _parse_validity(document.get("validity"))
     return FactorExperimentEvaluationConfig(
         name=name,
         candidate_configs=tuple(candidate_configs),
@@ -333,6 +402,7 @@ def load_factor_experiment_evaluation_config(
         walk_forward=walk_forward,
         training=training,
         hyperparameter_search=hyperparameter_search,
+        validity=validity,
     )
 
 
@@ -409,13 +479,17 @@ def evaluate_factor_experiments(
     training_rows = []
     hyperparameter_rows = []
     evaluation_failure_rows = []
+    validity_rows = []
     for split in config.get_splits():
         validation_scores = {}
+        validation_coverage = {}
         effective_configs = {}
         trial_map = {trial.trial_id: trial for trial in trials}
         training_data_cache = {}
         for trial in trials:
             effective_config = trial.config
+            training_result = None
+            training_fit_completed = False
             if training_enabled:
                 try:
                     if search_enabled:
@@ -434,9 +508,39 @@ def evaluate_factor_experiments(
                             config.training,
                             database_manager,
                         )
+                    training_fit_completed = True
+                    _append_training_validity_check(
+                        validity_rows,
+                        split,
+                        trial,
+                        training_result,
+                        config.validity,
+                        config.training,
+                    )
                 except Exception as error:
+                    if (
+                        config.validity is not None
+                        and config.validity.enabled
+                        and not training_fit_completed
+                    ):
+                        validity_rows.append(
+                            _build_training_validity_row(
+                                split,
+                                trial,
+                                training_result,
+                                status="failed",
+                                error=str(error),
+                                training=config.training,
+                                validity=config.validity,
+                            )
+                        )
                     training_rows.append(
-                        _build_failed_training_row(split, trial, error)
+                        _build_failed_training_row(
+                            split,
+                            trial,
+                            error,
+                            training_result=training_result,
+                        )
                     )
                     if search_enabled:
                         hyperparameter_rows.append(
@@ -463,6 +567,11 @@ def evaluate_factor_experiments(
                         include_benchmark=False,
                     )
                     metrics = calculate_performance_metrics(run.result.daily_nav)
+                    coverage = _summarize_target_coverage(
+                        run.targets,
+                        period,
+                        run.result.daily_nav,
+                    )
                     metric_rows.append(
                         _build_metric_row(
                             split,
@@ -471,19 +580,30 @@ def evaluate_factor_experiments(
                             run.config,
                             period,
                             metrics,
+                            coverage=coverage,
                             trial_id=trial.trial_id if search_enabled else None,
                         )
                     )
+                    if phase_name == "validation":
+                        _append_backtest_validity_check(
+                            validity_rows,
+                            split,
+                            trial,
+                            phase_name,
+                            coverage,
+                            config.validity,
+                        )
                     selection_metric_value = _require_finite_selection_metric(
                         metrics,
                         config.selection_metric,
                         phase_name,
                     )
                     if phase_name == "validation":
-                        validation_metrics = metrics
+                        validation_metrics = {**metrics, **coverage}
                         validation_scores[trial.trial_id] = selection_metric_value
+                        validation_coverage[trial.trial_id] = coverage
                     else:
-                        train_metrics = metrics
+                        train_metrics = {**metrics, **coverage}
             except Exception as error:
                 evaluation_failure_rows.append(
                     _build_evaluation_failure_row(
@@ -564,6 +684,19 @@ def evaluate_factor_experiments(
                 database_manager,
                 include_benchmark=False,
             )
+            test_coverage = _summarize_target_coverage(
+                test_run.targets,
+                test_period,
+                test_run.result.daily_nav,
+            )
+            _append_backtest_validity_check(
+                validity_rows,
+                split,
+                selected_trial,
+                "test",
+                test_coverage,
+                config.validity,
+            )
             test_metrics = calculate_performance_metrics(test_run.result.daily_nav)
             _require_finite_selection_metric(
                 test_metrics,
@@ -584,6 +717,7 @@ def evaluate_factor_experiments(
                     training_enabled=training_enabled,
                     training=config.training,
                     effective_config=selected_config,
+                    validation_coverage=validation_coverage.get(selected_trial_id),
                 )
             )
             continue
@@ -595,6 +729,7 @@ def evaluate_factor_experiments(
                 test_run.config,
                 test_period,
                 test_metrics,
+                coverage=test_coverage,
                 trial_id=selected_trial_id if search_enabled else None,
             )
         )
@@ -609,6 +744,8 @@ def evaluate_factor_experiments(
                 training=config.training,
                 effective_config=selected_config,
                 test_metrics=test_metrics,
+                validation_coverage=validation_coverage.get(selected_trial_id),
+                test_coverage=test_coverage,
             )
         )
 
@@ -619,6 +756,7 @@ def evaluate_factor_experiments(
         training_rows=tuple(training_rows),
         hyperparameter_rows=tuple(hyperparameter_rows),
         evaluation_failure_rows=tuple(evaluation_failure_rows),
+        validity_rows=tuple(validity_rows),
     )
 
 
@@ -654,6 +792,9 @@ def write_factor_experiment_evaluation_report(
         result.evaluation_failure_rows,
         columns=EVALUATION_FAILURE_COLUMNS,
     ).to_csv(output_path / "evaluation_failures.csv", index=False)
+    pd.DataFrame(result.validity_rows, columns=VALIDITY_COLUMNS).to_csv(
+        output_path / "research_validity.csv", index=False
+    )
     _write_evaluation_summary(output_path / "summary.md", result, audit)
     return output_path
 
@@ -717,7 +858,39 @@ def _parse_training(section: object) -> TrainingSpec | None:
         ridge_alpha=section.get("ridge_alpha", 0.1),
         max_iterations=section.get("max_iterations", 5000),
         minimum_training_observations=section.get("minimum_training_observations", 200),
-        minimum_training_dates=section.get("minimum_training_dates", 6),
+        minimum_training_dates=section.get(
+            "minimum_training_dates", DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
+        ),
+    )
+
+
+def _parse_validity(section: object) -> ResearchValiditySpec:
+    if section is None:
+        return ResearchValiditySpec()
+    if not isinstance(section, dict):
+        raise ValueError("[validity] 必须是 TOML 表")
+    enabled = section.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise ValueError("[validity].enabled 必须是布尔值")
+    if not enabled:
+        return ResearchValiditySpec(enabled=False)
+    return ResearchValiditySpec(
+        enabled=True,
+        minimum_training_signal_dates=section.get(
+            "minimum_training_signal_dates", DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
+        ),
+        minimum_validation_signal_dates=section.get(
+            "minimum_validation_signal_dates", DEFAULT_MINIMUM_VALIDATION_SIGNAL_DATES
+        ),
+        minimum_test_signal_dates=section.get(
+            "minimum_test_signal_dates", DEFAULT_MINIMUM_TEST_SIGNAL_DATES
+        ),
+        minimum_validation_observations=section.get(
+            "minimum_validation_observations", DEFAULT_MINIMUM_VALIDATION_OBSERVATIONS
+        ),
+        minimum_test_observations=section.get(
+            "minimum_test_observations", DEFAULT_MINIMUM_TEST_OBSERVATIONS
+        ),
     )
 
 
@@ -824,6 +997,8 @@ def _build_selection_row(
     training: TrainingSpec | None,
     effective_config: BacktestConfig,
     test_metrics: dict | None = None,
+    validation_coverage: dict | None = None,
+    test_coverage: dict | None = None,
 ) -> dict:
     try:
         resolved = get_backtest_strategy(
@@ -840,6 +1015,8 @@ def _build_selection_row(
         "factor_parameters", resolved.get("factor_parameters", {})
     )
     metrics = test_metrics or {}
+    validation_coverage = validation_coverage or {}
+    test_coverage = test_coverage or {}
     return {
         "split_id": split.split_id,
         "status": status,
@@ -853,6 +1030,10 @@ def _build_selection_row(
         "selected_candidate": trial.candidate_id,
         "selected_trial_id": trial.trial_id,
         "validation_score": selected_score,
+        "validation_target_observation_count": validation_coverage.get(
+            "target_observation_count"
+        ),
+        "validation_signal_date_count": validation_coverage.get("signal_date_count"),
         "selected_holding_count": resolved.get("holding_count"),
         "selected_winsorize_lower": resolved.get("winsorize_lower"),
         "selected_winsorize_upper": resolved.get("winsorize_upper"),
@@ -869,6 +1050,8 @@ def _build_selection_row(
         "test_sharpe_ratio": metrics.get("sharpe_ratio"),
         "test_max_drawdown": metrics.get("max_drawdown"),
         "test_trading_days": metrics.get("trading_days"),
+        "test_target_observation_count": test_coverage.get("target_observation_count"),
+        "test_signal_date_count": test_coverage.get("signal_date_count"),
     }
 
 
@@ -975,15 +1158,260 @@ def _fit_candidate_config(
         name: dict(resolved_parameters["factor_parameters"].get(name, {}))
         for name in trained_weights
     }
-    trained_parameters["factor_versions"] = {
-        name: resolved_parameters["factor_versions"][name] for name in trained_weights
-    }
     trained_config = replace(
         candidate_config,
         strategy_parameters=trained_parameters,
         strategy_version=strategy.metadata.version,
     )
     return trained_config, training_result
+
+
+def _summarize_target_coverage(
+    targets: pd.DataFrame,
+    period: EvaluationPeriod,
+    daily_nav: pd.DataFrame | None = None,
+) -> dict[str, object]:
+    """Summarize executable signal targets and reject dates outside the phase."""
+
+    if not isinstance(targets, pd.DataFrame):
+        raise ValueError("策略目标必须是 pandas.DataFrame")
+    if targets.empty:
+        return {
+            "target_observation_count": 0,
+            "signal_date_count": 0,
+            "signal_date_start": None,
+            "signal_date_end": None,
+        }
+    if "date" not in targets.columns:
+        raise ValueError("策略目标缺少 date 字段，无法检查信号覆盖")
+    parsed_dates = pd.to_datetime(targets["date"], errors="coerce")
+    if parsed_dates.isna().any():
+        raise ValueError("策略目标包含无法解析的信号日期")
+    phase_dates = parsed_dates.dt.date
+    outside_period = (phase_dates < period.start_date) | (phase_dates > period.end_date)
+    if outside_period.any():
+        invalid_dates = sorted(
+            {value.isoformat() for value in phase_dates[outside_period]}
+        )
+        raise ValueError(
+            f"策略目标信号日期超出 {period.start_date.isoformat()} ~ "
+            f"{period.end_date.isoformat()}: {', '.join(invalid_dates[:3])}"
+        )
+    unique_dates = parsed_dates.dt.normalize().drop_duplicates().sort_values()
+    if daily_nav is None:
+        executable_dates = unique_dates
+    else:
+        if not isinstance(daily_nav, pd.DataFrame) or "date" not in daily_nav.columns:
+            raise ValueError("每日净值缺少 date 字段，无法检查 T+1 执行覆盖")
+        trading_dates = pd.to_datetime(daily_nav["date"], errors="coerce")
+        if trading_dates.isna().any():
+            raise ValueError("每日净值包含无法解析的交易日期")
+        trading_calendar = trading_dates.dt.normalize()
+        trading_calendar = trading_calendar[
+            (trading_calendar.dt.date >= period.start_date)
+            & (trading_calendar.dt.date <= period.end_date)
+        ].drop_duplicates()
+        executable_dates = pd.Series(
+            [
+                signal_date
+                for signal_date in unique_dates
+                if (trading_calendar > signal_date).any()
+            ],
+            dtype="datetime64[ns]",
+        )
+    executable_date_set = set(executable_dates)
+    executable_rows = parsed_dates.dt.normalize().isin(executable_date_set)
+    executable_dates = executable_dates.sort_values()
+    if executable_dates.empty:
+        return {
+            "target_observation_count": 0,
+            "signal_date_count": 0,
+            "signal_date_start": None,
+            "signal_date_end": None,
+        }
+    return {
+        "target_observation_count": int(executable_rows.sum()),
+        "signal_date_count": int(len(executable_dates)),
+        "signal_date_start": executable_dates.iloc[0].date().isoformat(),
+        "signal_date_end": executable_dates.iloc[-1].date().isoformat(),
+    }
+
+
+def _build_training_validity_row(
+    split: EvaluationSplit,
+    trial: HyperparameterTrial,
+    training_result: FactorTrainingResult | None,
+    *,
+    status: str,
+    error: str,
+    training: TrainingSpec | None,
+    validity: ResearchValiditySpec,
+) -> dict:
+    return {
+        "split_id": split.split_id,
+        "candidate_id": trial.candidate_id,
+        "trial_id": trial.trial_id,
+        "phase": "training",
+        "status": status,
+        "error": error,
+        "observation_count": (
+            training_result.observation_count if training_result is not None else None
+        ),
+        "signal_date_count": (
+            training_result.signal_date_count if training_result is not None else None
+        ),
+        "signal_date_start": (
+            training_result.signal_date_start if training_result is not None else None
+        ),
+        "signal_date_end": (
+            training_result.signal_date_end if training_result is not None else None
+        ),
+        "minimum_observations": (
+            training.minimum_training_observations if training is not None else None
+        ),
+        "minimum_signal_dates": validity.minimum_training_signal_dates,
+    }
+
+
+def _build_backtest_validity_row(
+    split: EvaluationSplit,
+    trial: HyperparameterTrial,
+    phase: str,
+    coverage: dict[str, object],
+    validity: ResearchValiditySpec,
+    *,
+    status: str,
+    error: str,
+) -> dict:
+    minimum_observations, minimum_signal_dates = _get_validity_thresholds(
+        validity, phase
+    )
+    return {
+        "split_id": split.split_id,
+        "candidate_id": trial.candidate_id,
+        "trial_id": trial.trial_id,
+        "phase": phase,
+        "status": status,
+        "error": error,
+        "observation_count": coverage.get("target_observation_count"),
+        "signal_date_count": coverage.get("signal_date_count"),
+        "signal_date_start": coverage.get("signal_date_start"),
+        "signal_date_end": coverage.get("signal_date_end"),
+        "minimum_observations": minimum_observations,
+        "minimum_signal_dates": minimum_signal_dates,
+    }
+
+
+def _append_training_validity_check(
+    validity_rows: list[dict],
+    split: EvaluationSplit,
+    trial: HyperparameterTrial,
+    training_result: FactorTrainingResult,
+    validity: ResearchValiditySpec | None,
+    training: TrainingSpec | None,
+) -> None:
+    if validity is None or not validity.enabled:
+        return
+    row = _build_training_validity_row(
+        split,
+        trial,
+        training_result,
+        status="passed",
+        error="",
+        training=training,
+        validity=validity,
+    )
+    validity_rows.append(row)
+    try:
+        _enforce_validity_thresholds(
+            phase="training",
+            observation_count=training_result.observation_count,
+            signal_date_count=training_result.signal_date_count,
+            minimum_observations=(
+                training.minimum_training_observations if training is not None else 0
+            ),
+            minimum_signal_dates=validity.minimum_training_signal_dates,
+        )
+    except Exception as error:
+        row["status"] = "failed"
+        row["error"] = str(error)
+        raise
+
+
+def _append_backtest_validity_check(
+    validity_rows: list[dict],
+    split: EvaluationSplit,
+    trial: HyperparameterTrial,
+    phase: str,
+    coverage: dict[str, object],
+    validity: ResearchValiditySpec | None,
+) -> None:
+    if validity is None or not validity.enabled:
+        return
+    row = _build_backtest_validity_row(
+        split,
+        trial,
+        phase,
+        coverage,
+        validity,
+        status="passed",
+        error="",
+    )
+    validity_rows.append(row)
+    minimum_observations, minimum_signal_dates = _get_validity_thresholds(
+        validity, phase
+    )
+    try:
+        _enforce_validity_thresholds(
+            phase=phase,
+            observation_count=int(coverage["target_observation_count"]),
+            signal_date_count=int(coverage["signal_date_count"]),
+            minimum_observations=minimum_observations,
+            minimum_signal_dates=minimum_signal_dates,
+        )
+    except Exception as error:
+        row["status"] = "failed"
+        row["error"] = str(error)
+        raise
+
+
+def _get_validity_thresholds(
+    validity: ResearchValiditySpec, phase: str
+) -> tuple[int, int]:
+    if phase == "validation":
+        return (
+            validity.minimum_validation_observations,
+            validity.minimum_validation_signal_dates,
+        )
+    if phase == "test":
+        return (
+            validity.minimum_test_observations,
+            validity.minimum_test_signal_dates,
+        )
+    raise ValueError(f"不支持的研究有效性阶段: {phase}")
+
+
+def _enforce_validity_thresholds(
+    *,
+    phase: str,
+    observation_count: int,
+    signal_date_count: int,
+    minimum_observations: int,
+    minimum_signal_dates: int,
+) -> None:
+    failures = []
+    if observation_count < minimum_observations:
+        failures.append(
+            f"观测数 {observation_count} < minimum_observations={minimum_observations}"
+        )
+    if signal_date_count < minimum_signal_dates:
+        failures.append(
+            f"信号日 {signal_date_count} < minimum_signal_dates={minimum_signal_dates}"
+        )
+    if failures:
+        raise ResearchValidityError(
+            f"研究有效性门禁失败 [{phase}]: " + "; ".join(failures)
+        )
 
 
 def _build_training_row(
@@ -1010,9 +1438,14 @@ def _build_training_row(
 
 
 def _build_failed_training_row(
-    split: EvaluationSplit, trial: HyperparameterTrial, error: Exception
+    split: EvaluationSplit,
+    trial: HyperparameterTrial,
+    error: Exception,
+    *,
+    training_result: FactorTrainingResult | None = None,
 ) -> dict:
     parameter_fields = _build_trial_parameter_fields(trial.parameters)
+    details = training_result.to_dict() if training_result is not None else {}
     return {
         "split_id": split.split_id,
         "candidate_id": trial.candidate_id,
@@ -1022,14 +1455,20 @@ def _build_failed_training_row(
         "status": "failed",
         "error": str(error),
         **parameter_fields,
-        "factor_weights": "",
-        "observation_count": None,
-        "signal_date_count": None,
-        "signal_date_start": None,
-        "signal_date_end": None,
-        "iterations": None,
-        "converged": None,
-        "label_horizon_days": None,
+        "factor_weights": json.dumps(
+            details.get("factor_weights", {}),
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        if training_result is not None
+        else "",
+        "observation_count": details.get("observation_count"),
+        "signal_date_count": details.get("signal_date_count"),
+        "signal_date_start": details.get("signal_date_start"),
+        "signal_date_end": details.get("signal_date_end"),
+        "iterations": details.get("iterations"),
+        "converged": details.get("converged"),
+        "label_horizon_days": details.get("label_horizon_days"),
     }
 
 
@@ -1041,6 +1480,7 @@ def _build_metric_row(
     period: EvaluationPeriod,
     metrics: dict,
     *,
+    coverage: dict | None = None,
     trial_id: str | None = None,
 ) -> dict:
     row = {
@@ -1051,6 +1491,7 @@ def _build_metric_row(
         "start_date": period.start_date.isoformat(),
         "end_date": period.end_date.isoformat(),
         **metrics,
+        **(coverage or {}),
     }
     if trial_id is not None:
         row["trial_id"] = trial_id
@@ -1115,6 +1556,10 @@ def _build_hyperparameter_trial_row(
             "trading_days",
         ):
             row[f"{prefix}_{metric_name}"] = metrics.get(metric_name)
+        row[f"{prefix}_target_observation_count"] = metrics.get(
+            "target_observation_count"
+        )
+        row[f"{prefix}_signal_date_count"] = metrics.get("signal_date_count")
     return row
 
 
@@ -1320,6 +1765,10 @@ def _build_evaluation_summary(
                 _format_training_parameters(config.training),
             ),
             (
+                "研究有效性门槛",
+                _format_validity_parameters(config.validity),
+            ),
+            (
                 "外层搜索空间",
                 _format_search_parameters(config.hyperparameter_search),
             ),
@@ -1412,6 +1861,108 @@ def _build_evaluation_summary(
                 "训练结束日之后可能额外读取标签所需行情；这些行情只用于未来收益标签，不进入训练回测收益统计。",
             ]
         )
+
+    lines.extend(["", "### 研究有效性门禁", ""])
+    if config.validity is None or not config.validity.enabled:
+        lines.append("本次未启用研究有效性门禁。")
+    elif not result.validity_rows:
+        lines.append("研究有效性门禁已配置，但本次没有产生可检查的阶段记录。")
+    else:
+        lines.append(
+            "门禁只判断样本覆盖和时序可用性，不代表策略收益有效；完整逐组合记录见 `research_validity.csv`。"
+        )
+        lines.append("")
+        validity_summary_rows = []
+        for split_id in _ordered_split_ids(config):
+            for phase in ("training", "validation", "test"):
+                phase_rows = [
+                    row
+                    for row in result.validity_rows
+                    if row.get("split_id") == split_id and row.get("phase") == phase
+                ]
+                if not phase_rows:
+                    continue
+                signal_counts = [
+                    int(value)
+                    for value in (
+                        _coerce_finite_number(row.get("signal_date_count"))
+                        for row in phase_rows
+                    )
+                    if value is not None
+                ]
+                observation_counts = [
+                    int(value)
+                    for value in (
+                        _coerce_finite_number(row.get("observation_count"))
+                        for row in phase_rows
+                    )
+                    if value is not None
+                ]
+                minimum_signal_dates = next(
+                    (
+                        row.get("minimum_signal_dates")
+                        for row in phase_rows
+                        if row.get("minimum_signal_dates") is not None
+                    ),
+                    "—",
+                )
+                minimum_observations = next(
+                    (
+                        row.get("minimum_observations")
+                        for row in phase_rows
+                        if row.get("minimum_observations") is not None
+                    ),
+                    "—",
+                )
+                validity_summary_rows.append(
+                    (
+                        split_id,
+                        phase,
+                        len(phase_rows),
+                        sum(row.get("status") == "passed" for row in phase_rows),
+                        sum(row.get("status") != "passed" for row in phase_rows),
+                        _format_range(signal_counts),
+                        minimum_signal_dates,
+                        _format_range(observation_counts),
+                        minimum_observations,
+                    )
+                )
+        _append_markdown_table(
+            lines,
+            [
+                "窗口",
+                "阶段",
+                "检查数",
+                "通过",
+                "失败",
+                "信号日（最小~最大）",
+                "信号日门槛",
+                "观测数（最小~最大）",
+                "观测数门槛",
+            ],
+            validity_summary_rows,
+        )
+        failed_validity_rows = [
+            row for row in result.validity_rows if row.get("status") != "passed"
+        ]
+        if failed_validity_rows:
+            lines.extend(["", "门禁失败示例：", ""])
+            _append_markdown_table(
+                lines,
+                ["窗口", "候选", "试验", "阶段", "原因"],
+                [
+                    (
+                        row.get("split_id"),
+                        row.get("candidate_id"),
+                        row.get("trial_id"),
+                        row.get("phase"),
+                        row.get("error"),
+                    )
+                    for row in failed_validity_rows[:20]
+                ],
+            )
+            if len(failed_validity_rows) > 20:
+                lines.append("仅展示前 20 条，完整失败记录见 `research_validity.csv`。")
 
     lines.extend(["", "## 4. 搜索与训练状态", ""])
     if not training_enabled:
@@ -1619,6 +2170,12 @@ def _build_evaluation_summary(
                     _format_report_value(metrics.get("trading_days"))
                     if metrics
                     else "—",
+                    _format_report_value(metrics.get("target_observation_count"))
+                    if metrics
+                    else "—",
+                    _format_report_value(metrics.get("signal_date_count"))
+                    if metrics
+                    else "—",
                 )
             )
     _append_markdown_table(
@@ -1632,6 +2189,8 @@ def _build_evaluation_summary(
             "夏普",
             "最大回撤",
             "交易日数",
+            "目标观测数",
+            "信号日数",
         ],
         metric_rows,
     )
@@ -1763,6 +2322,10 @@ def _build_evaluation_summary(
                 "`evaluation_failures.csv`",
                 "训练/验证/测试回测或指标计算失败的组合与原因",
             ),
+            (
+                "`research_validity.csv`",
+                "各窗口、候选和阶段的样本覆盖门禁实际值、阈值及失败原因",
+            ),
         ],
     )
     return "\n".join(lines) + "\n"
@@ -1868,6 +2431,18 @@ def _format_training_parameters(training: TrainingSpec | None) -> str:
         f"max_iterations={training.max_iterations}, "
         f"minimum_training_observations={training.minimum_training_observations}, "
         f"minimum_training_dates={training.minimum_training_dates}"
+    )
+
+
+def _format_validity_parameters(validity: ResearchValiditySpec | None) -> str:
+    if validity is None or not validity.enabled:
+        return "未启用"
+    return (
+        f"training_signal_dates>={validity.minimum_training_signal_dates}, "
+        f"validation_signal_dates>={validity.minimum_validation_signal_dates}, "
+        f"test_signal_dates>={validity.minimum_test_signal_dates}, "
+        f"validation_observations>={validity.minimum_validation_observations}, "
+        f"test_observations>={validity.minimum_test_observations}"
     )
 
 
@@ -2059,6 +2634,13 @@ def _build_report_warnings(
     walk_forward_selections: list[dict],
 ) -> list[str]:
     warnings = []
+    failed_validity_rows = [
+        row for row in result.validity_rows if row.get("status") != "passed"
+    ]
+    if failed_validity_rows:
+        warnings.append(
+            f"有 {len(failed_validity_rows)} 条研究有效性门禁失败；相关窗口不能作为有效研究结论。"
+        )
     if failed_training_rows:
         warnings.append(f"有 {len(failed_training_rows)} 个训练组合失败并被排除。")
     if result.evaluation_failure_rows:

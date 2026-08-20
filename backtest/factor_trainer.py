@@ -148,7 +148,7 @@ def fit_factor_weights(
     ridge_alpha: float = 0.1,
     max_iterations: int = 5000,
     minimum_training_observations: int = 200,
-    minimum_training_dates: int = 6,
+    minimum_training_dates: int = 24,
     prepared_data: pd.DataFrame | None = None,
 ) -> FactorTrainingResult:
     """Fit nonnegative Ridge weights from monthly point-in-time factor rows.
