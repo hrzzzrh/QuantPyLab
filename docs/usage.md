@@ -163,7 +163,7 @@ uv run main.py evaluate-factor-experiments \
   --research-config config/backtest/factor_experiment_evaluation.toml
 ```
 
-结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`research_validity.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、研究有效性门禁、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 文件提供完整审计明细。默认研究门槛是训练至少 24 个信号日，验证和测试各至少 11 个实际可执行信号及 100 个目标观测，实际门槛可在 `[validity]` 中显式调整。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
+结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`research_validity.csv`、`selection_diagnostics.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、研究有效性门禁、验证集选择稳健性、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 文件提供完整审计明细。`selection_diagnostics.csv` 记录每个窗口比较的组合数、验证信号日、第一/二名差距、并列数量和选择负担风险；验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变测试集隔离。默认研究门槛是训练至少 24 个信号日，验证和测试各至少 11 个实际可执行信号及 100 个目标观测，实际门槛可在 `[validity]` 中显式调整。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
 
 完整参数搜索会在每个 split 内以最多 4 组因子输入和 2 个市场区间的有界 LRU 缓存，复用因子实验的原始点时输入、基础候选表以及行情索引结构，减少重复查询、因子计算和行情准备；缓存不跨 split，且每组参数仍重新计算缩尾、排名、组合权重和持仓状态。
 

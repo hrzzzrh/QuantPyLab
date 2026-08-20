@@ -41,6 +41,7 @@ REPORT_SCHEMA_VERSION = "1"
 REPORT_SIGNAL_DATE_WARNING_THRESHOLD = 12
 REPORT_TRAIN_VALIDATION_GAP_THRESHOLD = 0.25
 REPORT_EXTREME_DRAWDOWN_THRESHOLD = -0.50
+SELECTION_SCORE_TOLERANCE = 1e-12
 DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES = 24
 DEFAULT_MINIMUM_VALIDATION_SIGNAL_DATES = 11
 DEFAULT_MINIMUM_TEST_SIGNAL_DATES = 11
@@ -110,6 +111,27 @@ VALIDITY_COLUMNS = (
     "signal_date_end",
     "minimum_observations",
     "minimum_signal_dates",
+)
+SELECTION_DIAGNOSTIC_COLUMNS = (
+    "split_id",
+    "status",
+    "error",
+    "candidate_count",
+    "fitted_trial_count",
+    "validation_signal_date_count",
+    "validation_observation_count",
+    "selected_candidate",
+    "selected_trial_id",
+    "selected_validation_score",
+    "selected_rank",
+    "second_validation_score",
+    "selection_score_margin",
+    "tied_best_trial_count",
+    "validation_score_mean",
+    "validation_score_std",
+    "validation_score_median",
+    "trials_per_validation_signal_date",
+    "risk_level",
 )
 EVALUATION_FAILURE_COLUMNS = (
     "split_id",
@@ -337,6 +359,7 @@ class FactorExperimentEvaluationResult:
     hyperparameter_rows: tuple[dict, ...] = ()
     evaluation_failure_rows: tuple[dict, ...] = ()
     validity_rows: tuple[dict, ...] = ()
+    selection_diagnostic_rows: tuple[dict, ...] = ()
 
 
 def load_factor_experiment_evaluation_config(
@@ -480,6 +503,7 @@ def evaluate_factor_experiments(
     hyperparameter_rows = []
     evaluation_failure_rows = []
     validity_rows = []
+    selection_diagnostic_rows = []
     for split in config.get_splits():
         validation_scores = {}
         validation_coverage = {}
@@ -666,6 +690,19 @@ def evaluate_factor_experiments(
                 split.split_id,
             )
         except ValueError as error:
+            selection_diagnostic_rows.append(
+                _build_selection_diagnostic_row(
+                    split,
+                    validation_scores,
+                    trial_map,
+                    selected_trial_id=None,
+                    selected_score=None,
+                    validation_coverage=None,
+                    status="failed",
+                    error=str(error),
+                    selection_direction=config.selection_direction,
+                )
+            )
             selection_rows.append(
                 {
                     "split_id": split.split_id,
@@ -679,6 +716,19 @@ def evaluate_factor_experiments(
             continue
         selected_trial = trial_map[selected_trial_id]
         selected_config = effective_configs[selected_trial_id]
+        selection_diagnostic_rows.append(
+            _build_selection_diagnostic_row(
+                split,
+                validation_scores,
+                trial_map,
+                selected_trial_id=selected_trial_id,
+                selected_score=selected_score,
+                validation_coverage=validation_coverage.get(selected_trial_id),
+                status="completed",
+                error="",
+                selection_direction=config.selection_direction,
+            )
+        )
         test_period = split.test
         try:
             test_run = execute_backtest(
@@ -760,6 +810,7 @@ def evaluate_factor_experiments(
         hyperparameter_rows=tuple(hyperparameter_rows),
         evaluation_failure_rows=tuple(evaluation_failure_rows),
         validity_rows=tuple(validity_rows),
+        selection_diagnostic_rows=tuple(selection_diagnostic_rows),
     )
 
 
@@ -798,6 +849,10 @@ def write_factor_experiment_evaluation_report(
     pd.DataFrame(result.validity_rows, columns=VALIDITY_COLUMNS).to_csv(
         output_path / "research_validity.csv", index=False
     )
+    pd.DataFrame(
+        result.selection_diagnostic_rows,
+        columns=SELECTION_DIAGNOSTIC_COLUMNS,
+    ).to_csv(output_path / "selection_diagnostics.csv", index=False)
     _write_evaluation_summary(output_path / "summary.md", result, audit)
     return output_path
 
@@ -1056,6 +1111,115 @@ def _build_selection_row(
         "test_target_observation_count": test_coverage.get("target_observation_count"),
         "test_signal_date_count": test_coverage.get("signal_date_count"),
     }
+
+
+def _build_selection_diagnostic_row(
+    split: EvaluationSplit,
+    validation_scores: dict[str, float],
+    trial_map: dict[str, HyperparameterTrial],
+    *,
+    selected_trial_id: str | None,
+    selected_score: float | None,
+    validation_coverage: dict | None,
+    status: str,
+    error: str,
+    selection_direction: str,
+) -> dict:
+    valid_scores = [
+        (trial_id, float(score))
+        for trial_id, score in validation_scores.items()
+        if score is not None and math.isfinite(float(score))
+    ]
+    valid_scores.sort(
+        key=lambda item: item[1],
+        reverse=selection_direction == "max",
+    )
+    score_values = [score for _, score in valid_scores]
+    selected_rank = next(
+        (
+            index
+            for index, (trial_id, _) in enumerate(valid_scores, start=1)
+            if trial_id == selected_trial_id
+        ),
+        None,
+    )
+    top_score = valid_scores[0][1] if valid_scores else None
+    second_score = valid_scores[1][1] if len(valid_scores) > 1 else None
+    if top_score is None or second_score is None:
+        score_margin = None
+    elif selection_direction == "max":
+        score_margin = top_score - second_score
+    else:
+        score_margin = second_score - top_score
+    tied_best_count = (
+        sum(
+            math.isclose(
+                score,
+                top_score,
+                rel_tol=0.0,
+                abs_tol=SELECTION_SCORE_TOLERANCE,
+            )
+            for score in score_values
+        )
+        if top_score is not None
+        else 0
+    )
+    coverage = validation_coverage or {}
+    signal_date_count = _coerce_finite_number(coverage.get("signal_date_count"))
+    observation_count = _coerce_finite_number(coverage.get("target_observation_count"))
+    trials_per_signal_date = (
+        len(valid_scores) / signal_date_count
+        if signal_date_count is not None and signal_date_count > 0
+        else None
+    )
+    candidate_count = len(
+        {
+            trial_map[trial_id].candidate_id
+            for trial_id, _ in valid_scores
+            if trial_id in trial_map
+        }
+    )
+    selected_candidate = (
+        trial_map[selected_trial_id].candidate_id
+        if selected_trial_id in trial_map
+        else None
+    )
+    return {
+        "split_id": split.split_id,
+        "status": status,
+        "error": error,
+        "candidate_count": candidate_count,
+        "fitted_trial_count": len(valid_scores),
+        "validation_signal_date_count": signal_date_count,
+        "validation_observation_count": observation_count,
+        "selected_candidate": selected_candidate,
+        "selected_trial_id": selected_trial_id,
+        "selected_validation_score": selected_score,
+        "selected_rank": selected_rank,
+        "second_validation_score": second_score,
+        "selection_score_margin": score_margin,
+        "tied_best_trial_count": tied_best_count,
+        "validation_score_mean": _mean(score_values),
+        "validation_score_std": _population_std(score_values),
+        "validation_score_median": _median(score_values),
+        "trials_per_validation_signal_date": trials_per_signal_date,
+        "risk_level": _get_selection_risk_level(len(valid_scores), signal_date_count),
+    }
+
+
+def _get_selection_risk_level(
+    fitted_trial_count: int, validation_signal_date_count: float | None
+) -> str:
+    if fitted_trial_count <= 0 or validation_signal_date_count is None:
+        return "not_available"
+    if (
+        validation_signal_date_count <= REPORT_SIGNAL_DATE_WARNING_THRESHOLD
+        and fitted_trial_count > 1
+    ):
+        return "high"
+    if fitted_trial_count > validation_signal_date_count:
+        return "elevated"
+    return "not_flagged"
 
 
 def _build_evaluation_failure_row(
@@ -2047,6 +2211,52 @@ def _build_evaluation_summary(
                 ],
             )
 
+    lines.extend(["", "### 验证集选择稳健性", ""])
+    diagnostic_rows = list(result.selection_diagnostic_rows)
+    if not diagnostic_rows:
+        lines.append("本次没有产生验证集选择诊断。")
+    else:
+        lines.append(
+            "本节只量化验证集选择负担，不改变入选规则；完整明细见 `selection_diagnostics.csv`。"
+        )
+        lines.append("")
+        _append_markdown_table(
+            lines,
+            [
+                "窗口",
+                "状态",
+                "候选数",
+                "比较组合数",
+                "验证信号日",
+                "验证观测数",
+                "入选试验",
+                "入选分数",
+                "第二名分数",
+                "第一/二名差距",
+                "并列第一数",
+                "组合/信号日",
+                "风险级别",
+            ],
+            [
+                (
+                    row.get("split_id"),
+                    row.get("status"),
+                    row.get("candidate_count"),
+                    row.get("fitted_trial_count"),
+                    row.get("validation_signal_date_count"),
+                    row.get("validation_observation_count"),
+                    row.get("selected_trial_id"),
+                    _format_metric(row.get("selected_validation_score")),
+                    _format_metric(row.get("second_validation_score")),
+                    _format_metric(row.get("selection_score_margin")),
+                    row.get("tied_best_trial_count"),
+                    _format_metric(row.get("trials_per_validation_signal_date")),
+                    row.get("risk_level"),
+                )
+                for row in diagnostic_rows
+            ],
+        )
+
     lines.extend(["", "## 5. 入选模型与拟合权重", ""])
     training_lookup = {
         (row.get("split_id"), row.get("trial_id")): row for row in training_rows
@@ -2328,6 +2538,10 @@ def _build_evaluation_summary(
             (
                 "`research_validity.csv`",
                 "各窗口、候选和阶段的样本覆盖门禁实际值、阈值及失败原因",
+            ),
+            (
+                "`selection_diagnostics.csv`",
+                "各窗口验证选择的比较规模、排名差距和多重比较风险",
             ),
         ],
     )
@@ -2650,6 +2864,37 @@ def _build_report_warnings(
         warnings.append(
             f"有 {len(result.evaluation_failure_rows)} 个训练/验证/测试执行失败，详情见 evaluation_failures.csv。"
         )
+    for diagnostic in result.selection_diagnostic_rows:
+        if diagnostic.get("status") != "completed":
+            continue
+        split_id = diagnostic.get("split_id")
+        signal_date_count = _coerce_finite_number(
+            diagnostic.get("validation_signal_date_count")
+        )
+        trial_count = _coerce_finite_number(diagnostic.get("fitted_trial_count"))
+        if (
+            signal_date_count is not None
+            and signal_date_count < REPORT_SIGNAL_DATE_WARNING_THRESHOLD
+        ):
+            warnings.append(
+                f"{split_id} 验证集只有 {int(signal_date_count)} 个可执行信号日，低于 "
+                f"{REPORT_SIGNAL_DATE_WARNING_THRESHOLD} 个提示阈值；验证排序和入选结果需要谨慎解释。"
+            )
+        if (
+            signal_date_count is not None
+            and trial_count is not None
+            and trial_count > signal_date_count
+        ):
+            warnings.append(
+                f"{split_id} 在 {int(signal_date_count)} 个验证信号日上比较了 "
+                f"{int(trial_count)} 组组合，存在多重比较负担；验证高分不能视为无偏表现。"
+            )
+        tied_best_count = _coerce_finite_number(diagnostic.get("tied_best_trial_count"))
+        if tied_best_count is not None and tied_best_count > 1:
+            warnings.append(
+                f"{split_id} 有 {int(tied_best_count)} 组组合在浮点容差内并列验证第一名，"
+                "入选依赖稳定排序，差异不足以支持唯一方案。"
+            )
     for row in selected_training_rows:
         split_id = row.get("split_id")
         signal_date_count = _coerce_finite_number(row.get("signal_date_count"))
@@ -2719,6 +2964,17 @@ def _build_report_warnings(
                     f"{REPORT_TRAIN_VALIDATION_GAP_THRESHOLD:.2f} 提示阈值。"
                 )
         test_drawdown = _coerce_finite_number(selection.get("test_max_drawdown"))
+        test_signal_date_count = _coerce_finite_number(
+            selection.get("test_signal_date_count")
+        )
+        if (
+            test_signal_date_count is not None
+            and test_signal_date_count < REPORT_SIGNAL_DATE_WARNING_THRESHOLD
+        ):
+            warnings.append(
+                f"{selection.get('split_id')} 测试段只有 {int(test_signal_date_count)} 个可执行信号日，"
+                "测试证据有限，即使测试结果为正也不能据此确认长期有效。"
+            )
         if (
             test_drawdown is not None
             and test_drawdown <= REPORT_EXTREME_DRAWDOWN_THRESHOLD

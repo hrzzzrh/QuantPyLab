@@ -1,6 +1,8 @@
 import json
 from dataclasses import replace
 from datetime import date
+from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -449,6 +451,18 @@ def test_research_evaluator_runs_test_only_for_validation_winner(monkeypatch, tm
     assert output_dir.joinpath("training_models.csv").exists()
     assert output_dir.joinpath("hyperparameter_trials.csv").exists()
     assert output_dir.joinpath("evaluation_failures.csv").exists()
+    assert output_dir.joinpath("selection_diagnostics.csv").exists()
+    diagnostics = pd.read_csv(output_dir / "selection_diagnostics.csv")
+    assert list(diagnostics.columns) == list(
+        evaluator_module.SELECTION_DIAGNOSTIC_COLUMNS
+    )
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics.iloc[0]
+    assert diagnostic["candidate_count"] == 2
+    assert diagnostic["fitted_trial_count"] == 2
+    assert diagnostic["selected_candidate"] == "candidate_b"
+    assert diagnostic["selected_rank"] == 1
+    assert diagnostic["selection_score_margin"] == pytest.approx(1.0)
     parameters = json.loads(
         output_dir.joinpath("parameters.json").read_text(encoding="utf-8")
     )
@@ -457,8 +471,108 @@ def test_research_evaluator_runs_test_only_for_validation_winner(monkeypatch, tm
     report = output_dir.joinpath("summary.md").read_text(encoding="utf-8")
     assert "# 因子训练标准结果报告" in report
     assert "未启用权重训练" in report
+    assert "验证集选择稳健性" in report
     assert "## 9. 审计文件" in report
     assert "测试窗口只有 1 个有效窗口" in report
+
+
+def test_selection_diagnostic_quantifies_maximization_search_burden():
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    trial_map = {
+        "trial_a": SimpleNamespace(candidate_id="candidate_a"),
+        "trial_b": SimpleNamespace(candidate_id="candidate_b"),
+        "trial_c": SimpleNamespace(candidate_id="candidate_b"),
+    }
+
+    diagnostic = evaluator_module._build_selection_diagnostic_row(
+        split,
+        {"trial_a": 0.8, "trial_b": 0.6, "trial_c": 0.4},
+        trial_map,
+        selected_trial_id="trial_a",
+        selected_score=0.8,
+        validation_coverage={
+            "signal_date_count": 2,
+            "target_observation_count": 20,
+        },
+        status="completed",
+        error="",
+        selection_direction="max",
+    )
+
+    assert diagnostic["candidate_count"] == 2
+    assert diagnostic["fitted_trial_count"] == 3
+    assert diagnostic["selected_rank"] == 1
+    assert diagnostic["second_validation_score"] == 0.6
+    assert diagnostic["selection_score_margin"] == pytest.approx(0.2)
+    assert diagnostic["validation_score_median"] == 0.6
+    assert diagnostic["trials_per_validation_signal_date"] == 1.5
+    assert diagnostic["risk_level"] == "high"
+
+    config = FactorExperimentEvaluationConfig(
+        name="selection-warning",
+        candidate_configs=(Path("candidate.toml"),),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+    )
+    result = FactorExperimentEvaluationResult(
+        config=config,
+        metric_rows=(),
+        selection_rows=(),
+        selection_diagnostic_rows=(diagnostic,),
+    )
+    warnings = evaluator_module._build_report_warnings(result, [], [], [])
+    assert any("多重比较负担" in warning for warning in warnings)
+    assert any("验证集只有 2 个" in warning for warning in warnings)
+
+
+def test_selection_diagnostic_handles_minimization_ties_and_failed_selection():
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    trial_map = {
+        "trial_a": SimpleNamespace(candidate_id="candidate_a"),
+        "trial_b": SimpleNamespace(candidate_id="candidate_b"),
+    }
+
+    diagnostic = evaluator_module._build_selection_diagnostic_row(
+        split,
+        {"trial_a": 0.1, "trial_b": 0.1},
+        trial_map,
+        selected_trial_id="trial_a",
+        selected_score=0.1,
+        validation_coverage={"signal_date_count": 20},
+        status="completed",
+        error="",
+        selection_direction="min",
+    )
+    failed = evaluator_module._build_selection_diagnostic_row(
+        split,
+        {},
+        trial_map,
+        selected_trial_id=None,
+        selected_score=None,
+        validation_coverage=None,
+        status="failed",
+        error="没有有效分数",
+        selection_direction="min",
+    )
+
+    assert diagnostic["selected_rank"] == 1
+    assert diagnostic["selection_score_margin"] == 0.0
+    assert diagnostic["tied_best_trial_count"] == 2
+    assert diagnostic["risk_level"] == "not_flagged"
+    assert failed["status"] == "failed"
+    assert failed["risk_level"] == "not_available"
+    assert failed["selection_score_margin"] is None
 
 
 def test_research_evaluator_fits_weights_before_running_validation(
@@ -733,8 +847,10 @@ def test_research_evaluator_excludes_candidate_with_failed_backtest(
 
 def test_research_evaluator_records_invalid_selection_metrics(
     monkeypatch,
+    tmp_path,
 ):
-    candidate = type("CandidatePath", (), {"stem": "candidate"})()
+    candidate = tmp_path / "candidate.toml"
+    candidate.write_text("", encoding="utf-8")
     split = EvaluationSplit(
         split_id="fixed_split",
         train=EvaluationPeriod(date(2020, 1, 1), date(2021, 12, 31)),
@@ -797,6 +913,16 @@ def test_research_evaluator_records_invalid_selection_metrics(
     assert len(result.evaluation_failure_rows) == 1
     assert result.evaluation_failure_rows[0]["phase"] == "validation"
     assert "sharpe_ratio" in result.evaluation_failure_rows[0]["error"]
+
+    output_dir = write_factor_experiment_evaluation_report(
+        result, tmp_path / "invalid-metric-output"
+    )
+    diagnostics = pd.read_csv(output_dir / "selection_diagnostics.csv")
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics.iloc[0]
+    assert diagnostic["status"] == "failed"
+    assert "所有候选验证指标均为空" in diagnostic["error"]
+    assert pd.isna(diagnostic["selected_trial_id"])
 
 
 def test_research_evaluator_searches_hyperparameters_and_tests_one_trial(
