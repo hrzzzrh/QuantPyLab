@@ -501,6 +501,7 @@ def test_research_evaluator_runs_test_only_for_validation_winner(monkeypatch, tm
     assert output_dir.joinpath("hyperparameter_trials.csv").exists()
     assert output_dir.joinpath("evaluation_failures.csv").exists()
     assert output_dir.joinpath("selection_diagnostics.csv").exists()
+    assert output_dir.joinpath("factor_weight_diagnostics.csv").exists()
     diagnostics = pd.read_csv(output_dir / "selection_diagnostics.csv")
     assert list(diagnostics.columns) == list(
         evaluator_module.SELECTION_DIAGNOSTIC_COLUMNS
@@ -520,6 +521,7 @@ def test_research_evaluator_runs_test_only_for_validation_winner(monkeypatch, tm
     report = output_dir.joinpath("summary.md").read_text(encoding="utf-8")
     assert "# 因子训练标准结果报告" in report
     assert "未启用权重训练" in report
+    assert "本次未启用权重训练，无法计算权重集中度。" in report
     assert "验证集选择稳健性" in report
     assert "## 9. 审计文件" in report
     assert "测试窗口只有 1 个有效窗口" in report
@@ -1097,10 +1099,95 @@ def test_research_evaluator_searches_hyperparameters_and_tests_one_trial(
     output_dir = write_factor_experiment_evaluation_report(
         result, tmp_path / "hyperparameter-report"
     )
+    weight_diagnostics = pd.read_csv(output_dir / "factor_weight_diagnostics.csv")
+    assert list(weight_diagnostics.columns) == list(
+        evaluator_module.FACTOR_WEIGHT_DIAGNOSTIC_COLUMNS
+    )
+    assert len(weight_diagnostics) == 8
+    assert set(weight_diagnostics["collapse_level"]) == {"single_factor"}
+    assert int(weight_diagnostics["selected"].sum()) == 1
+    assert weight_diagnostics["effective_factor_count"].tolist() == pytest.approx(
+        [1.0] * 8
+    )
     report = output_dir.joinpath("summary.md").read_text(encoding="utf-8")
     assert "验证集 Top 10 组合" in report
+    assert "全部训练组合的权重集中度" in report
     assert "valuation_pb=1.0000" in report
     assert "信号日数量" in report
+
+
+def test_factor_weight_diagnostic_classifies_concentration_and_selection():
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    config = FactorExperimentEvaluationConfig(
+        name="weight-diagnostic",
+        candidate_configs=(Path("candidate.toml"),),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+    )
+    result = FactorExperimentEvaluationResult(
+        config=config,
+        metric_rows=(),
+        selection_rows=(
+            {
+                "split_id": "fixed_split",
+                "status": "failed",
+                "error": "测试执行失败",
+                "selected_candidate": "candidate",
+                "selected_trial_id": "trial_single",
+            },
+        ),
+        training_rows=(
+            {
+                "split_id": "fixed_split",
+                "candidate_id": "candidate",
+                "trial_id": "trial_equal",
+                "status": "fitted",
+                "factor_weights": '{"factor_a": 0.5, "factor_b": 0.5}',
+            },
+            {
+                "split_id": "fixed_split",
+                "candidate_id": "candidate",
+                "trial_id": "trial_concentrated",
+                "status": "fitted",
+                "factor_weights": '{"factor_a": 0.8, "factor_b": 0.2}',
+            },
+            {
+                "split_id": "fixed_split",
+                "candidate_id": "candidate",
+                "trial_id": "trial_single",
+                "status": "fitted",
+                "factor_weights": '{"factor_a": 1.0, "factor_b": 0.0}',
+            },
+            {
+                "split_id": "fixed_split",
+                "candidate_id": "candidate",
+                "trial_id": "trial_failed",
+                "status": "failed",
+                "error": "训练失败",
+                "factor_parameters": '{"factor_a": {}, "factor_b": {}}',
+                "factor_weights": "",
+            },
+        ),
+    )
+
+    rows = evaluator_module._build_factor_weight_diagnostic_rows(result)
+    by_trial = {row["trial_id"]: row for row in rows}
+
+    assert by_trial["trial_equal"]["collapse_level"] == "diversified"
+    assert by_trial["trial_equal"]["effective_factor_count"] == pytest.approx(2.0)
+    assert by_trial["trial_equal"]["normalized_weight_entropy"] == pytest.approx(1.0)
+    assert by_trial["trial_concentrated"]["collapse_level"] == "concentrated"
+    assert by_trial["trial_single"]["collapse_level"] == "single_factor"
+    assert by_trial["trial_single"]["selected"] is True
+    assert by_trial["trial_failed"]["collapse_level"] == "not_available"
+    assert by_trial["trial_failed"]["factor_count"] == 2
+    assert by_trial["trial_failed"]["selected"] is False
 
 
 def test_evaluation_report_summarizes_walk_forward_and_weight_stability(tmp_path):

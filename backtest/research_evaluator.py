@@ -133,6 +133,22 @@ SELECTION_DIAGNOSTIC_COLUMNS = (
     "trials_per_validation_signal_date",
     "risk_level",
 )
+FACTOR_WEIGHT_DIAGNOSTIC_COLUMNS = (
+    "split_id",
+    "candidate_id",
+    "trial_id",
+    "status",
+    "error",
+    "selected",
+    "factor_count",
+    "nonzero_factor_count",
+    "max_factor",
+    "max_weight",
+    "effective_factor_count",
+    "weight_entropy",
+    "normalized_weight_entropy",
+    "collapse_level",
+)
 EVALUATION_FAILURE_COLUMNS = (
     "split_id",
     "candidate_id",
@@ -853,6 +869,10 @@ def write_factor_experiment_evaluation_report(
         result.selection_diagnostic_rows,
         columns=SELECTION_DIAGNOSTIC_COLUMNS,
     ).to_csv(output_path / "selection_diagnostics.csv", index=False)
+    pd.DataFrame(
+        _build_factor_weight_diagnostic_rows(result),
+        columns=FACTOR_WEIGHT_DIAGNOSTIC_COLUMNS,
+    ).to_csv(output_path / "factor_weight_diagnostics.csv", index=False)
     _write_evaluation_summary(output_path / "summary.md", result, audit)
     return output_path
 
@@ -2313,6 +2333,84 @@ def _build_evaluation_summary(
     else:
         lines.append("没有可展示的入选模型。")
 
+    weight_diagnostic_rows = _build_factor_weight_diagnostic_rows(result)
+    fitted_weight_diagnostic_rows = [
+        row for row in weight_diagnostic_rows if row.get("status") == "fitted"
+    ]
+    lines.extend(["", "### 全部训练组合的权重集中度", ""])
+    if not training_enabled:
+        lines.append("本次未启用权重训练，无法计算权重集中度。")
+    elif fitted_weight_diagnostic_rows:
+        weight_summary_rows = []
+        for split_id in _ordered_split_ids(result.config):
+            split_rows = [
+                row
+                for row in fitted_weight_diagnostic_rows
+                if row.get("split_id") == split_id
+            ]
+            if not split_rows:
+                continue
+            single_factor_count = sum(
+                row.get("collapse_level") == "single_factor" for row in split_rows
+            )
+            effective_factor_counts = [
+                value
+                for value in (
+                    _coerce_finite_number(row.get("effective_factor_count"))
+                    for row in split_rows
+                )
+                if value is not None
+            ]
+            max_weights = [
+                value
+                for value in (
+                    _coerce_finite_number(row.get("max_weight")) for row in split_rows
+                )
+                if value is not None
+            ]
+            selected_rows = [row for row in split_rows if row.get("selected")]
+            selected_level = (
+                selected_rows[0].get("collapse_level") if selected_rows else "—"
+            )
+            max_weight_range = (
+                f"{_format_metric(min(max_weights))}~{_format_metric(max(max_weights))}"
+                if max_weights
+                else "—"
+            )
+            weight_summary_rows.append(
+                (
+                    split_id,
+                    len(split_rows),
+                    single_factor_count,
+                    _format_percent(single_factor_count / len(split_rows)),
+                    selected_level,
+                    _format_metric(_mean(effective_factor_counts)),
+                    _format_metric(min(effective_factor_counts))
+                    if effective_factor_counts
+                    else "—",
+                    max_weight_range,
+                )
+            )
+        _append_markdown_table(
+            lines,
+            [
+                "窗口",
+                "成功训练组合",
+                "单因子组合",
+                "单因子比例",
+                "入选塌缩级别",
+                "平均有效因子数",
+                "最小有效因子数",
+                "最大权重范围",
+            ],
+            weight_summary_rows,
+        )
+        lines.append(
+            "该表统计全部成功训练组合；失败组合及逐组合指标见 `factor_weight_diagnostics.csv`。"
+        )
+    else:
+        lines.append("本次没有成功训练组合，无法计算权重集中度。")
+
     walk_forward_training_rows = [
         row
         for row in selected_training_rows
@@ -2543,6 +2641,10 @@ def _build_evaluation_summary(
                 "`selection_diagnostics.csv`",
                 "各窗口验证选择的比较规模、排名差距和多重比较风险",
             ),
+            (
+                "`factor_weight_diagnostics.csv`",
+                "逐训练组合的权重数量、集中度、有效因子数和入选标记",
+            ),
         ],
     )
     return "\n".join(lines) + "\n"
@@ -2679,6 +2781,81 @@ def _parse_json_mapping(value) -> dict[str, object]:
     except (TypeError, ValueError):
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _build_factor_weight_diagnostic_rows(
+    result: FactorExperimentEvaluationResult,
+) -> list[dict]:
+    selected_trial_ids = {
+        (row.get("split_id"), selected_id)
+        for row in result.selection_rows
+        if (
+            selected_id := row.get("selected_trial_id") or row.get("selected_candidate")
+        )
+    }
+    diagnostic_rows = []
+    for training_row in result.training_rows:
+        weights = _parse_json_mapping(training_row.get("factor_weights"))
+        factor_parameters = _parse_json_mapping(training_row.get("factor_parameters"))
+        numeric_weights = {
+            factor_name: numeric
+            for factor_name, weight in weights.items()
+            if (numeric := _coerce_finite_number(weight)) is not None and numeric >= 0
+        }
+        factor_count = len(weights) or len(factor_parameters) or None
+        nonzero_weights = {
+            factor_name: weight
+            for factor_name, weight in numeric_weights.items()
+            if weight > 1e-12
+        }
+        max_factor = (
+            max(numeric_weights, key=numeric_weights.get) if numeric_weights else None
+        )
+        max_weight = max(numeric_weights.values()) if numeric_weights else None
+        if numeric_weights:
+            squared_sum = sum(weight**2 for weight in numeric_weights.values())
+            effective_factor_count = 1 / squared_sum if squared_sum > 1e-12 else None
+            positive_weights = [
+                weight for weight in numeric_weights.values() if weight > 1e-12
+            ]
+            weight_entropy = -sum(
+                weight * math.log(weight) for weight in positive_weights
+            )
+            normalized_weight_entropy = (
+                weight_entropy / math.log(factor_count) if factor_count > 1 else 0.0
+            )
+            if len(nonzero_weights) <= 1 or max_weight >= 0.90:
+                collapse_level = "single_factor"
+            elif max_weight >= 0.60:
+                collapse_level = "concentrated"
+            else:
+                collapse_level = "diversified"
+        else:
+            effective_factor_count = None
+            weight_entropy = None
+            normalized_weight_entropy = None
+            collapse_level = "not_available"
+        split_id = training_row.get("split_id")
+        trial_id = training_row.get("trial_id")
+        diagnostic_rows.append(
+            {
+                "split_id": split_id,
+                "candidate_id": training_row.get("candidate_id"),
+                "trial_id": trial_id,
+                "status": training_row.get("status"),
+                "error": training_row.get("error", ""),
+                "selected": (split_id, trial_id) in selected_trial_ids,
+                "factor_count": factor_count,
+                "nonzero_factor_count": len(nonzero_weights),
+                "max_factor": max_factor,
+                "max_weight": max_weight,
+                "effective_factor_count": effective_factor_count,
+                "weight_entropy": weight_entropy,
+                "normalized_weight_entropy": normalized_weight_entropy,
+                "collapse_level": collapse_level,
+            }
+        )
+    return diagnostic_rows
 
 
 def _format_weights(weights: dict[str, object]) -> str:
@@ -2864,6 +3041,32 @@ def _build_report_warnings(
         warnings.append(
             f"有 {len(result.evaluation_failure_rows)} 个训练/验证/测试执行失败，详情见 evaluation_failures.csv。"
         )
+    weight_diagnostic_rows = _build_factor_weight_diagnostic_rows(result)
+    for split_id in _ordered_split_ids(result.config):
+        split_rows = [
+            row
+            for row in weight_diagnostic_rows
+            if row.get("split_id") == split_id and row.get("status") == "fitted"
+        ]
+        if not split_rows:
+            continue
+        single_factor_rows = [
+            row for row in split_rows if row.get("collapse_level") == "single_factor"
+        ]
+        selected_rows = [row for row in split_rows if row.get("selected")]
+        selected_single_factor = any(
+            row.get("collapse_level") == "single_factor" for row in selected_rows
+        )
+        if len(single_factor_rows) == len(split_rows):
+            warnings.append(
+                f"{split_id} 的全部 {len(split_rows)} 个成功训练组合都为 single_factor，"
+                "权重塌缩是训练结果的普遍现象，不能只归因于验证集选择。"
+            )
+        elif selected_single_factor:
+            warnings.append(
+                f"{split_id} 的入选组合为 single_factor，但全部成功训练组合中只有 "
+                f"{len(single_factor_rows)}/{len(split_rows)} 组如此，验证集选择可能放大权重集中。"
+            )
     for diagnostic in result.selection_diagnostic_rows:
         if diagnostic.get("status") != "completed":
             continue
