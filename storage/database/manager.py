@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -22,6 +23,7 @@ class DBManager:
 
         self._sqlite_conn: sqlite3.Connection | None = None
         self._duckdb_conn: duckdb.DuckDBPyConnection | None = None
+        self._duckdb_lock = threading.RLock()
 
         # 初始化表结构
         self.initialize_schema()
@@ -88,10 +90,17 @@ class DBManager:
         默认不注册任何视图，调用方通过 ensure_views() 声明所需视图，
         避免一次性加载全部视图导致的分片元数据扫描内存暴涨。
         """
-        if self._duckdb_conn is None:
-            # 使用内存模式
-            self._duckdb_conn = duckdb.connect(":memory:")
-        return self._duckdb_conn
+        with self._duckdb_lock:
+            if self._duckdb_conn is None:
+                # 使用内存模式
+                self._duckdb_conn = duckdb.connect(":memory:")
+            return self._duckdb_conn
+
+    @property
+    def duckdb_lock(self) -> threading.RLock:
+        """返回 DuckDB 连接级锁，保护跨多条语句的独占操作。"""
+
+        return self._duckdb_lock
 
     def _get_view_loader(self) -> ViewLoader:
         views_dir = Path(__file__).parent / "views"
@@ -104,6 +113,10 @@ class DBManager:
 
         使用 DAG 拓扑排序保证依赖视图先于依赖者创建。
         """
+        with self._duckdb_lock:
+            self._ensure_views(*view_names)
+
+    def _ensure_views(self, *view_names: str):
         from utils.logger import logger
 
         conn = self.get_duckdb_conn()
@@ -204,20 +217,28 @@ class DBManager:
 
     def list_available_views(self) -> list[str]:
         """获取当前 DuckDB 中可用的所有视图列表"""
-        conn = self.get_duckdb_conn()
-        res = conn.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_type='VIEW'"
-        ).fetchall()
-        return [row[0] for row in res]
+        with self._duckdb_lock:
+            conn = self.get_duckdb_conn()
+            res = conn.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_type='VIEW'"
+            ).fetchall()
+            return [row[0] for row in res]
+
+    def close_duckdb(self) -> None:
+        """关闭 DuckDB 连接并释放其查询缓存，不影响 SQLite 元数据连接。"""
+
+        with self._duckdb_lock:
+            connection = self._duckdb_conn
+            self._duckdb_conn = None
+            if connection is not None:
+                connection.close()
 
     def close_all(self):
         """关闭所有数据库连接"""
         if self._sqlite_conn:
             self._sqlite_conn.close()
             self._sqlite_conn = None
-        if self._duckdb_conn:
-            self._duckdb_conn.close()
-            self._duckdb_conn = None
+        self.close_duckdb()
 
 
 # 创建全局单例

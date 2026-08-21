@@ -1624,6 +1624,93 @@ def evaluate_factor_marginal_contributions(
     return output_dir
 
 
+def run_factor_liquidity_capacity_diagnostics(
+    backtest_config_path: str,
+    evaluation_start_date: str | None = None,
+    evaluation_end_date: str | None = None,
+    liquidity_lookback_days: int = 20,
+    liquidity_bucket_count: int = 5,
+    participation_limits: list[float] | tuple[float, ...] = (0.05, 0.10, 0.20),
+    output_path: str | None = None,
+):
+    """Audit formal multi-factor orders against signal-date liquidity."""
+    from dataclasses import replace
+    from datetime import date
+
+    from backtest.config import load_backtest_config
+    from backtest.data_access import BacktestDataAccess
+    from backtest.liquidity_capacity_diagnostics import (
+        run_factor_liquidity_capacity_diagnostic,
+        write_factor_liquidity_capacity_report,
+    )
+
+    if (evaluation_start_date is None) != (evaluation_end_date is None):
+        raise ValueError("evaluation_start_date 和 evaluation_end_date 必须同时指定")
+    source_config = load_backtest_config(backtest_config_path)
+    actual_config = source_config
+    explicit_evaluation_scope = evaluation_start_date is not None
+    if explicit_evaluation_scope:
+        try:
+            start_date = date.fromisoformat(evaluation_start_date)
+            end_date = date.fromisoformat(evaluation_end_date)
+        except (TypeError, ValueError) as error:
+            raise ValueError("评估日期必须使用 YYYY-MM-DD 格式") from error
+        actual_config = replace(
+            source_config,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    report, metadata = run_factor_liquidity_capacity_diagnostic(
+        actual_config,
+        db_manager,
+        lookback_days=liquidity_lookback_days,
+        bucket_count=liquidity_bucket_count,
+        participation_limits=participation_limits,
+    )
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/factor_liquidity_capacity") / (
+            f"{Path(backtest_config_path).stem}_{run_id}"
+        )
+    data_access = BacktestDataAccess(db_manager)
+    benchmark_prices = data_access.load_benchmark_prices(actual_config)
+    benchmark_dates = pd.to_datetime(
+        benchmark_prices.get("date", pd.Series(dtype="datetime64[ns]")),
+        errors="coerce",
+    ).dropna()
+    benchmark_data_status = (
+        f"可用 {len(benchmark_prices)} 行，日期 {benchmark_dates.min().date().isoformat()}..{benchmark_dates.max().date().isoformat()}"
+        if not benchmark_dates.empty
+        else f"不可用：{actual_config.benchmark_symbol or '未配置'} 在评估区间没有行情"
+    )
+    parameters_payload = {
+        "backtest_config_path": str(Path(backtest_config_path).resolve()),
+        "backtest_config": source_config.to_dict(),
+        "evaluation_config": actual_config.to_dict(),
+        "evaluation_scope": (
+            f"{actual_config.start_date.isoformat()}..{actual_config.end_date.isoformat()}（显式锁定评估区间）"
+            if explicit_evaluation_scope
+            else f"{actual_config.start_date.isoformat()}..{actual_config.end_date.isoformat()}（使用配置原始区间，未标记为样本外）"
+        ),
+        "commission_bps": actual_config.commission_bps,
+        "slippage_bps": actual_config.slippage_bps,
+        "benchmark_symbol": actual_config.benchmark_symbol,
+        "benchmark_data_status": benchmark_data_status,
+        "market_data_execution_engine": "DailyBacktestEngine",
+        "market_data_scope": "formal multi-factor targets and one prepared market data object",
+        **metadata,
+    }
+    output_dir = write_factor_liquidity_capacity_report(
+        report,
+        output_dir,
+        parameters=parameters_payload,
+    )
+    logger.info(f"交易容量与流动性诊断完成，结果目录: {output_dir}")
+    return output_dir
+
+
 def run_factor_diagnostics(
     factor_names: list[str],
     start_date: str,
@@ -1989,7 +2076,47 @@ def main():
         help="结果目录，默认写入 workspace/factor_marginal_contribution",
     )
 
-    # 25. migrate-kline-source
+    # 25. diagnose-factor-liquidity-capacity
+    liquidity_capacity_p = subparsers.add_parser(
+        "diagnose-factor-liquidity-capacity",
+        help="诊断正式多因子组合的点时流动性、订单参与率和简化容量",
+    )
+    liquidity_capacity_p.add_argument(
+        "--backtest-config", required=True, help="正式多因子回测 TOML 配置文件路径"
+    )
+    liquidity_capacity_p.add_argument(
+        "--evaluation-start-date",
+        help="显式锁定评估起始日期 (YYYY-MM-DD)，必须与结束日期同时指定",
+    )
+    liquidity_capacity_p.add_argument(
+        "--evaluation-end-date",
+        help="显式锁定评估结束日期 (YYYY-MM-DD)，必须与起始日期同时指定",
+    )
+    liquidity_capacity_p.add_argument(
+        "--liquidity-lookback-days",
+        type=int,
+        default=20,
+        help="滚动成交额窗口交易日数，默认 20",
+    )
+    liquidity_capacity_p.add_argument(
+        "--liquidity-bucket-count",
+        type=int,
+        default=5,
+        help="逐信号日平均成交额分组数，默认 5",
+    )
+    liquidity_capacity_p.add_argument(
+        "--participation-limits",
+        type=float,
+        nargs="+",
+        default=[0.05, 0.10, 0.20],
+        help="订单参与率上限，取 0 到 1 之间的小数，默认 0.05 0.10 0.20",
+    )
+    liquidity_capacity_p.add_argument(
+        "--output",
+        help="结果目录，默认写入 workspace/factor_liquidity_capacity",
+    )
+
+    # 26. migrate-kline-source
     migration_p = subparsers.add_parser(
         "migrate-kline-source", help="分阶段重建全部股票日线数据源"
     )
@@ -2211,6 +2338,20 @@ def main():
             )
         except Exception:
             logger.exception("多因子组合边际贡献验证异常退出")
+            sys.exit(1)
+    elif args.command == "diagnose-factor-liquidity-capacity":
+        try:
+            run_factor_liquidity_capacity_diagnostics(
+                backtest_config_path=args.backtest_config,
+                evaluation_start_date=args.evaluation_start_date,
+                evaluation_end_date=args.evaluation_end_date,
+                liquidity_lookback_days=args.liquidity_lookback_days,
+                liquidity_bucket_count=args.liquidity_bucket_count,
+                participation_limits=args.participation_limits,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("交易容量与流动性诊断异常退出")
             sys.exit(1)
     elif args.command == "migrate-kline-source":
         from tools.kline_source_migration import run_kline_source_migration

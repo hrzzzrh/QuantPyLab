@@ -34,7 +34,10 @@ class DailyBacktestEngine:
         if missing_columns:
             raise ValueError(f"行情数据缺少字段: {', '.join(sorted(missing_columns))}")
 
-        price_data = prices.copy()
+        price_columns = ["date", "symbol", "open", "open_hfq", "close_hfq"]
+        if "raw_close" in prices.columns:
+            price_columns.append("raw_close")
+        price_data = prices.loc[:, price_columns].copy()
         price_data["date"] = pd.to_datetime(price_data["date"])
         price_data = price_data[
             (price_data["date"].dt.date >= config.start_date)
@@ -45,10 +48,15 @@ class DailyBacktestEngine:
             raise ValueError("指定区间没有可用交易日行情")
 
         last_trade_dates = price_data.groupby("symbol")["date"].max().to_dict()
-        price_map = {
-            trading_date: frame.set_index("symbol").to_dict("index")
-            for trading_date, frame in price_data.groupby("date")
-        }
+        daily_columns = [
+            column for column in price_columns if column not in {"date", "symbol"}
+        ]
+        price_map = {}
+        for trading_date, frame in price_data.groupby("date", sort=False):
+            daily_frame = frame.set_index("symbol").loc[:, daily_columns]
+            if daily_frame.index.duplicated().any():
+                raise ValueError(f"行情存在重复的 date/symbol: {trading_date.date()}")
+            price_map[trading_date] = daily_frame
         return PreparedMarketData(
             price_data=price_data,
             calendar=calendar,
@@ -182,8 +190,8 @@ class DailyBacktestEngine:
         open_values = {}
         blocked_symbols = set()
         for symbol, value in positions.items():
-            row = today_prices.get(symbol)
-            open_price = row.get("open_hfq") if row else None
+            row = self._get_price_row(today_prices, symbol)
+            open_price = row.get("open_hfq") if row is not None else None
             previous_close = last_close_prices.get(symbol)
             if pd.isna(open_price) or not open_price or not previous_close:
                 open_values[symbol] = value
@@ -202,11 +210,11 @@ class DailyBacktestEngine:
         planned_weights,
         today_prices,
     ):
-        available_weights = {
-            symbol: weight
-            for symbol, weight in planned_weights.items()
-            if symbol in today_prices and pd.notna(today_prices[symbol].get("open_hfq"))
-        }
+        available_weights = {}
+        for symbol, weight in planned_weights.items():
+            row = self._get_price_row(today_prices, symbol)
+            if row is not None and pd.notna(row.get("open_hfq")):
+                available_weights[symbol] = weight
         before_nav = cash + sum(open_values.values())
         symbols = sorted(set(open_values) | set(available_weights))
         notional_by_symbol = {
@@ -233,7 +241,7 @@ class DailyBacktestEngine:
                 continue
             target_value = available_weights.get(symbol, 0.0) * before_nav
             current_value = open_values.get(symbol, 0.0)
-            row = today_prices[symbol]
+            row = self._get_price_row(today_prices, symbol)
             trades.append(
                 {
                     "date": trading_date,
@@ -253,9 +261,9 @@ class DailyBacktestEngine:
     def _mark_positions_to_close(positions, last_close_prices, today_prices):
         close_values = {}
         for symbol, value in positions.items():
-            row = today_prices.get(symbol)
-            open_price = row.get("open_hfq") if row else None
-            close_price = row.get("close_hfq") if row else None
+            row = DailyBacktestEngine._get_price_row(today_prices, symbol)
+            open_price = row.get("open_hfq") if row is not None else None
+            close_price = row.get("close_hfq") if row is not None else None
             if (
                 pd.notna(open_price)
                 and open_price
@@ -287,8 +295,8 @@ class DailyBacktestEngine:
         for symbol in list(positions):
             if last_trade_dates.get(symbol) != trading_date:
                 continue
-            row = today_prices.get(symbol)
-            if not row or pd.isna(row.get("close_hfq")) or not row.get("close_hfq"):
+            row = DailyBacktestEngine._get_price_row(today_prices, symbol)
+            if row is None or pd.isna(row.get("close_hfq")) or not row.get("close_hfq"):
                 continue
             value = positions.pop(symbol)
             previous_close = last_close_prices.get(symbol)
@@ -303,7 +311,7 @@ class DailyBacktestEngine:
                     "signal_date": None,
                     "symbol": symbol,
                     "side": "DELIST",
-                    "raw_open": row.get("close"),
+                    "raw_open": row.get("raw_close", row.get("close")),
                     "adjusted_open": row.get("close_hfq"),
                     "notional": value,
                     "cost": 0.0,
@@ -311,6 +319,19 @@ class DailyBacktestEngine:
                 }
             )
         return positions, cash, last_close_prices, delist_trades
+
+    @staticmethod
+    def _get_price_row(today_prices, symbol):
+        """Return one symbol's price row from either compact or legacy price maps."""
+
+        if isinstance(today_prices, pd.DataFrame):
+            if symbol not in today_prices.index:
+                return None
+            row = today_prices.loc[symbol]
+            if isinstance(row, pd.DataFrame):
+                return row.iloc[-1]
+            return row
+        return today_prices.get(symbol)
 
     def _calculate_benchmark_nav(self, daily_nav, benchmark_prices):
         if benchmark_prices is None or benchmark_prices.empty:

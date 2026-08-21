@@ -72,12 +72,15 @@ class FactorDefinition(ABC):
 
 
 def validate_factor_input(data: pd.DataFrame, required_columns: tuple[str, ...]):
+    """Validate and retain only the columns needed by the requested factor."""
+
     required = {"date", "symbol", *required_columns}
     missing = required - set(data.columns)
     if missing:
         raise ValueError(f"因子输入缺少字段: {', '.join(sorted(missing))}")
 
-    normalized = data.copy()
+    selected_columns = ["date", "symbol", *required_columns]
+    normalized = data.loc[:, list(dict.fromkeys(selected_columns))].copy()
     normalized["date"] = pd.to_datetime(normalized["date"], errors="coerce")
     if normalized["date"].isna().any():
         raise ValueError("因子输入包含无效日期")

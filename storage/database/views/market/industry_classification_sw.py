@@ -9,7 +9,7 @@ class IndustryClassificationShenwanView(DuckDBView):
         return rf"""CREATE OR REPLACE VIEW {self.name} AS
             SELECT *, regexp_extract(filename, 'symbol=(\d+)', 1) AS symbol
             FROM read_parquet(
-                '{warehouse_dir}/industry_classification_sw/*/*.parquet',
+                '{warehouse_dir}/industry_classification_sw/*/data.parquet',
                 filename=true,
                 schema={schema_expr}
             )"""

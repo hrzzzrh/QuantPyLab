@@ -10,8 +10,11 @@
 
 ```plantuml
 @startuml
-[v_daily_valuation] --> [Data Access]
-[daily_kline] --> [Data Access]
+[share_capital] --> [Data Access]
+[fin_ttm] --> [Data Access]
+[fin_balance_sheet] --> [Data Access]
+[daily_kline_raw] --> [Data Access]
+[daily_kline_calendar] --> [Data Access]
 [fin_indicator] --> [Data Access]
 [etf_kline] --> [Daily Backtest Engine]
 [Data Access] --> [Strategy Registry]
@@ -21,12 +24,12 @@
 @enduml
 ```
 
-回测启动时通过 `db_manager.ensure_views(...)` 按策略数据需求显式加载 `v_daily_valuation`、`daily_kline`、`fin_indicator` 和 `etf_kline`。所有市场与财务查询均经统一视图完成，不直接读取 Parquet 文件。
+回测启动时通过 `db_manager.ensure_views(...)` 按策略数据需求显式加载 `daily_kline_raw`、`daily_kline_calendar`、`share_capital`、`fin_ttm`、`fin_balance_sheet`、`fin_indicator` 和 `etf_kline`。所有市场与财务查询均经统一视图完成，不直接读取 Parquet 文件；视图只匹配原子晋级后的 `*/data.parquet`，不会把同步过程中的 `.tmp_*.parquet` 或备份文件读入查询。`BacktestDataAccess` 先用轻量行情日历确定回看区间和股票集合，再物化请求股票的财务历史，在 Python 中确定性去重并按 `effective_date <= signal_date` 回溯，最后读取原始行情；只有检测到重复 `date/symbol` 时才按 `daily_kline` 的排序口径补充字段并去重，避免为正常行情执行全量窗口排序。
 
 | 模块 | 职责 |
 |:---|:---|
 | `backtest/config.py` | 读取 TOML、校验日期、资金、费用与基准参数 |
-| `backtest/data_access.py` | 通过统一视图加载行情、按 TTM 公告日和指标数据可用日期对齐财务因子 |
+| `backtest/data_access.py` | 通过统一视图加载行情和财务历史，在 Python 中按 TTM 公告日、资产负债表可用日和指标可用日做确定性点时回溯 |
 | `backtest/strategy_base.py` | 定义策略契约和标准目标权重表校验 |
 | `backtest/strategy_registry.py` | 显式注册可执行策略 |
 | `backtest/strategies/` | 每个策略独立加载信号数据并生成目标权重 |
@@ -39,12 +42,14 @@
 | `backtest/metrics.py` | 计算收益、波动率、夏普和最大回撤 |
 | `backtest/reporter.py` | 将输入参数、目标、交易、净值和摘要写入独立结果目录 |
 
+回测引擎只保留成交所需的行情列，并按交易日保存紧凑数值表；不把每条行情转换成嵌套 Python 字典。`BacktestDataAccess` 对大型 DuckDB 查询设置 2GB 内存上限和 2 个工作线程；财务与行情结果在返回前脱离 DuckDB 结果缓冲区，避免下一次查询覆盖仍被 Pandas 使用的数组。`DBManager` 提供连接级可重入锁，回测点时查询、视图注册和连接释放在同一锁协议内串行化，避免资源设置恢复或连接关闭与并发查询交错。研究诊断在完成信号数据物化后关闭 DuckDB 查询连接、完成候选和目标后释放宽因子表，只向引擎传递 `date`、`symbol`、`open`、`open_hfq`、`close_hfq` 五列。正式报告和重复性验证应串行执行，避免同一进程同时保留多份全量信号数据。
+
 ## 3. 无未来函数规则
 
 1. 信号在调仓日 T 收盘后生成。
-2. T 日估值来自 `v_daily_valuation`：TTM 估值分母按 `fin_ttm.pub_date` ASOF 对齐，净资产按资产负债表的 `数据可用日期` ASOF 对齐，均不能使用各自生效日之前的数据。TTM 的 `pub_date` 是当前报告期四源统一后的公告日期；四源最大日期仍作为财务源全部可用性的派生边界。同步时若公告日期超过法定期限，还会通过对应交易所官方公告二次核验并覆盖该字段。
-3. `daily_kline` 视图按 `(symbol, date)` 做确定性去重，避免存量 Parquet 中的重复行污染滚动窗口；`v_daily_valuation` 和 `fin_indicator` 的 ASOF 右表均按股票及生效日期排序，保证不同 DuckDB 连接得到同一条历史记录。
-4. `fin_indicator` 的质量因子在回测查询中以 `数据可用日期` ASOF 对齐，不能以 `report_date` 直接对齐；同一股票同一生效日的多条记录按 `report_date` 降序确定性去重。
+2. T 日估值由 `BacktestDataAccess` 从 `share_capital`、`fin_ttm` 和 `fin_balance_sheet` 构造：TTM 分母按 `fin_ttm.pub_date` 回溯，净资产按资产负债表的 `数据可用日期` 回溯，均不能使用各自生效日之后的数据。TTM 的 `pub_date` 是当前报告期四源统一后的公告日期；同步时若公告日期超过法定期限，还会通过对应交易所官方公告二次核验并覆盖该字段。
+3. `daily_kline_raw` 用于受日期过滤的低内存行情读取；若发现重复 `(symbol, date)`，回测会加载完整 tie-break 字段并按 `daily_kline` 视图的排序口径确定性去重，避免存量 Parquet 中的重复行污染滚动窗口。财务历史按股票及唯一生效日确定性去重，并由 Python 使用最近的 `effective_date <= signal_date` 行，避免依赖 DuckDB ASOF 或大型区间连接的执行计划。
+4. `fin_indicator` 的质量因子在回测查询中以 `数据可用日期` 回溯对齐，不能以 `report_date` 直接对齐；同一股票同一生效日的多条记录按 `report_date`、文件名和字段值确定性去重。
 5. 调仓最早在下一个实际有行情的交易日 T+1 开盘执行，禁止 T 日收盘信号以 T 日价格成交。
 6. 不复权价用于估值与原始成交价记录；后复权价用于持仓收益、净值和基准收益。
 7. 持仓证券的行情在其最后交易日收盘后终结（退市/摘牌），当日收盘后按收盘价强制清算为现金并记录 `DELIST` 交易；清算后不再产生交易与定价，亦不再阻塞后续调仓。行情终结判定基于数据湖实际行情（该股最后一条日线），不依赖 `stocks` 快照的 `is_active` 状态。
@@ -214,6 +219,21 @@ uv run main.py evaluate-factor-marginal-contributions \
 
 评估日期必须成对指定，显式区间才标记为锁定评估。结果默认写入 `workspace/factor_marginal_contribution/<name>_<timestamp>/`，包括标准摘要、解析参数、组合收益/风险/换手/成本、逐日净值、逐笔成交、目标、公共候选覆盖率和相对完整组合的目标重合率。该命令只用于判断因子的边际信息和组合互补性，不自动修改正式因子权重或策略配置；基准没有行情时会明确告警，不会伪造基准收益。
 
+### 4.11 交易容量与流动性诊断
+
+`diagnose-factor-liquidity-capacity` 只接受正式 `multi-factor-quality-value-momentum` 策略，沿用正式策略的目标、成本、滑点和 `DailyBacktestEngine`，不改变策略行为。它从 `daily_kline.amount` 计算信号日及此前 20 个交易日的平均成交额，并从 `v_daily_valuation.market_cap` 读取点时市值；执行日的完整成交额不会进入容量分母。
+
+```bash
+uv run main.py diagnose-factor-liquidity-capacity \
+  --backtest-config config/backtest/multi_factor_quality_value_momentum.toml \
+  --evaluation-start-date 2022-07-01 \
+  --evaluation-end-date 2024-06-30 \
+  --liquidity-lookback-days 20 \
+  --participation-limits 0.05 0.10 0.20
+```
+
+结果默认写入 `workspace/factor_liquidity_capacity/<name>_<timestamp>/`，包括逐信号日覆盖与分布、平均成交额分组、逐笔订单参与率、5%/10%/20% 参与率上限下的容量分位数、正式策略目标/回测基线和逐日净值。窗口字段使用通用名称，实际交易日窗口记录在 `parameters.json` 和 `summary.md` 中。容量是按单笔订单的参与率近似估算，不是盘口冲击或成交概率模型；缺少信号日流动性、无效名义金额、SKIP_REBALANCE 和 DELIST 会分开记录，不会被伪装成容量结果。
+
 ## 5. 成交、成本和净值
 
 单边交易成本为 `commission_bps + slippage_bps`。每次调仓先按开盘时持仓与目标持仓的绝对差额计算名义换手，再从组合净值中扣除成本，最后按扣成本后的净值配置目标权重。因此现金不会因成本而变为负数。
@@ -276,4 +296,4 @@ uv run main.py run-backtest \
 
 单元测试覆盖 TOML 配置、策略注册、因子计算与截面变换、质量价值与动量策略排序、多因子策略权重、T+1 成交、交易成本、缺失目标开盘价处理和行情终结（退市）清算。两个旧策略迁移后还通过固定同一份点时输入的前后回测文件比较，验证目标、交易、净值和摘要保持一致。修改时间线、费用、复权口径、目标权重或清算逻辑时，必须先补充对应的可手算测试样例。
 
-因子 IC、分位收益、覆盖率、换手、信号自相关和因子相关性诊断已由 `diagnose-factors` 提供；训练/验证/测试与 Walk-forward 评估由 `evaluate-factor-experiments` 提供。后续可独立扩展行业权重约束、卖出印花税、停牌与涨跌停规则、整手仿真、因子归因和参数敏感性分析。这些功能不得改变本模块现有的点时数据和 T+1 成交约束。
+因子 IC、分位收益、覆盖率、换手、信号自相关和因子相关性诊断已由 `diagnose-factors` 提供；训练/验证/测试与 Walk-forward 评估由 `evaluate-factor-experiments` 提供；交易容量和流动性审计由 `diagnose-factor-liquidity-capacity` 提供。后续可独立扩展行业权重约束、卖出印花税、停牌与涨跌停规则、整手仿真、因子归因、市场冲击模型和参数敏感性分析。这些功能不得改变本模块现有的点时数据和 T+1 成交约束。

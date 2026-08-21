@@ -8,4 +8,4 @@ class ETFKlineView(DuckDBView):
         schema_expr = build_schema_map_expr(self.name)
         return rf"""CREATE OR REPLACE VIEW {self.name} AS
             SELECT *, regexp_extract(filename, 'symbol=(\d+)', 1) AS symbol
-            FROM read_parquet('{warehouse_dir}/etf_kline/*/*.parquet', filename=true, schema={schema_expr})"""
+            FROM read_parquet('{warehouse_dir}/etf_kline/*/data.parquet', filename=true, schema={schema_expr})"""

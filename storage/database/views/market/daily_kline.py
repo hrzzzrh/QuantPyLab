@@ -12,7 +12,7 @@ class DailyKlineView(DuckDBView):
                     *,
                     regexp_extract(filename, 'symbol=(\d+)', 1) AS partition_symbol
                 FROM read_parquet(
-                    '{warehouse_dir}/daily_kline/*/*.parquet',
+                    '{warehouse_dir}/daily_kline/*/data.parquet',
                     filename=true,
                     schema={schema_expr}
                 )

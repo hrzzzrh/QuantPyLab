@@ -4,17 +4,19 @@
 
 `analysis/factors/` 是 QuantPyLab 的可复用点时因子计算层。因子负责把统一视图加载的行情、估值和公告日对齐财务数据转换为股票截面特征；策略负责组合因子、筛选标的和生成目标权重。
 
-当前因子按回测任务按需计算，不直接读取 Parquet，不写入独立因子数据表。数据访问由 `backtest/data_access.py` 统一完成：估值因子通过 `v_daily_valuation` 使用 `fin_ttm.pub_date` ASOF 对齐，质量因子通过 `fin_indicator.数据可用日期` ASOF 对齐。
+当前因子按回测任务按需计算，不直接读取 Parquet，不写入独立因子数据表。数据访问由 `backtest/data_access.py` 统一完成：估值因子从 `share_capital`、`fin_ttm` 和 `fin_balance_sheet` 构造点时估值，质量因子从 `fin_indicator` 的 `数据可用日期` 回溯对齐。行情先通过轻量日历和原始行情视图按区间读取，重复键仅在检测到时按确定性规则去重；财务历史先在 Python 中确定性去重，再使用最近的 `effective_date <= signal_date` 行，不依赖 DuckDB ASOF 或大型区间连接的执行计划。
 
 ```plantuml
 @startuml
 skinparam componentStyle uml2
 title 因子库数据流
 
-[daily_kline] --> [BacktestDataAccess]
-[fin_ttm] --> [v_daily_valuation]
+[daily_kline_raw] --> [BacktestDataAccess]
+[daily_kline_calendar] --> [BacktestDataAccess]
+[share_capital] --> [BacktestDataAccess]
+[fin_ttm] --> [BacktestDataAccess]
+[fin_balance_sheet] --> [BacktestDataAccess]
 [fin_indicator] --> [BacktestDataAccess]
-[v_daily_valuation] --> [BacktestDataAccess]
 [BacktestDataAccess] --> [FactorEngine]
 [FactorRegistry] --> [FactorEngine]
 [FactorEngine] --> [FactorFrame]
@@ -98,6 +100,8 @@ uv run main.py diagnose-factors \
 
 多因子组合的边际贡献由 `evaluate-factor-marginal-contributions` 独立验证。它在同一公共候选池中运行正式七因子组合、七个单因子和七个 leave-one-out 组合，统一使用正式策略的因子方向、截面变换、持仓数量、成交和成本口径，并输出逐因子收益、风险、换手、成本、候选覆盖和目标重合。leave-one-out 只移除一个因子并按剩余正式权重重新归一化；结果用于识别单因子信号、因子互补性与组合依赖，不直接改写正式权重。显式传入预先锁定的评估区间后，报告才可作为样本外边际贡献证据。
 
+交易容量与流动性由 `diagnose-factor-liquidity-capacity` 独立审计。该命令只对正式多因子策略运行，使用 `daily_kline.amount` 的信号日及此前配置窗口（默认 20 个交易日）滚动平均成交额，以及 `BacktestDataAccess` 构造的点时 `market_cap`，计算候选/入选覆盖率、成交额分组和逐笔订单参与率，并保留正式目标权重作为审计文件。容量按 `initial_capital × 参与率上限 / 实际订单参与率` 做单笔订单近似，默认检查 5%、10%、20% 上限；执行日成交额不进入分母，缺失流动性、无效名义金额、SKIP_REBALANCE 和 DELIST 单独记录。诊断只保留候选信号日快照和回测所需五列行情，回测引擎按交易日使用紧凑数值表，避免多份宽行情表和嵌套 Python 字典同时驻留。它是研究有效性审计，不把流动性直接注册为 alpha 因子，也不自动修改正式策略。
+
 ## 6. 回测使用方式
 
 多因子策略 `multi-factor-quality-value-momentum` 使用全部七个内置因子：
@@ -149,7 +153,7 @@ lookback_days = 20
 ## 8. 未来函数约束
 
 1. 估值因子只能使用 `fin_ttm.pub_date` 当天及之后可见的 TTM；质量因子只能使用 `fin_indicator.数据可用日期` 当天及之后可见的指标。
-2. `daily_kline` 视图按 `(symbol, date)` 确定性去重，估值和指标 ASOF 右表按股票及生效日期排序，避免重复记录和连接执行计划造成研究结果变化。
+2. `daily_kline_raw` 按区间读取，检测到 `(symbol, date)` 重复时按 `daily_kline` 的 tie-break 口径确定性去重；估值和指标先按股票、生效日去重，再由 Python 使用不晚于信号日的最近生效记录，避免重复记录和 DuckDB ASOF 物理排序造成研究结果变化。
 3. 滚动窗口只能使用当前日期及之前的行情。
 4. 截面排名、缩尾和标准化只能在同一交易日内计算。
 5. 因子数据访问根据因子最大历史窗口和策略最小历史要求向回取数。

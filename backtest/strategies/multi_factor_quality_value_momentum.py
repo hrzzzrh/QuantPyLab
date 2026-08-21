@@ -117,33 +117,54 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
             minimum_history_days=parameters["min_listing_days"],
         )
 
-    def build_targets(
+    def build_candidates(
         self, signal_data: pd.DataFrame, config: BacktestConfig, parameters: dict
     ) -> pd.DataFrame:
-        factor_names = tuple(parameters["factor_weights"])
-        factor_frame = FactorEngine().calculate(signal_data, factor_names)
+        """Build the scored monthly candidate universe once for reuse by reports."""
 
-        ordered_input = signal_data.copy()
+        factor_names = tuple(parameters["factor_weights"])
+        signal_dates = get_month_end_dates(signal_data["date"])
+        signal_date_mask = signal_data["date"].isin(signal_dates) & (
+            signal_data["date"].dt.date >= config.start_date
+        )
+        candidates = signal_data.loc[signal_date_mask, ["date", "symbol"]].copy()
+
+        ordered_input = signal_data.loc[:, ["date", "symbol"]].copy()
         ordered_input["date"] = pd.to_datetime(ordered_input["date"])
         ordered_input = ordered_input.sort_values(["symbol", "date"])
         listing_days = ordered_input[["date", "symbol"]].copy()
         listing_days["listing_days"] = (
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
         ).to_numpy()
-        factor_frame = factor_frame.merge(
+        candidates = candidates.merge(
             listing_days,
             on=["date", "symbol"],
             how="left",
             validate="one_to_one",
         )
-
-        candidates = factor_frame[
-            factor_frame["date"].isin(get_month_end_dates(factor_frame["date"]))
-        ].copy()
-        candidates = candidates[candidates["date"].dt.date >= config.start_date]
         candidates = candidates[
             candidates["listing_days"] >= parameters["min_listing_days"]
         ]
+
+        factor_engine = FactorEngine()
+        factor_parameters = parameters.get("factor_parameters")
+        for factor_name in factor_names:
+            factor_frame = factor_engine.calculate(
+                signal_data,
+                (factor_name,),
+                factor_parameters,
+            )
+            factor_frame = factor_frame.loc[
+                factor_frame["date"].isin(signal_dates)
+                & (factor_frame["date"].dt.date >= config.start_date),
+                ["date", "symbol", factor_name],
+            ]
+            candidates = candidates.merge(
+                factor_frame,
+                on=["date", "symbol"],
+                how="left",
+                validate="one_to_one",
+            )
         candidates = filter_valid_factor_rows(candidates, factor_names)
 
         score_columns = {}
@@ -167,4 +188,12 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
         candidates["rank"] = candidates.groupby("date")["score"].rank(
             method="first", ascending=False
         )
-        return select_equal_weight_targets(candidates, parameters["holding_count"])
+        return candidates
+
+    def build_targets(
+        self, signal_data: pd.DataFrame, config: BacktestConfig, parameters: dict
+    ) -> pd.DataFrame:
+        return select_equal_weight_targets(
+            self.build_candidates(signal_data, config, parameters),
+            parameters["holding_count"],
+        )

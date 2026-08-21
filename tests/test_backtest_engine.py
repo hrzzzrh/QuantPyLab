@@ -89,6 +89,25 @@ def test_prepared_market_data_preserves_backtest_result():
     pd.testing.assert_frame_equal(uncached_result.trades, cached_result.trades)
 
 
+def test_prepared_market_data_keeps_compact_daily_frames():
+    prices = _prices().assign(unused_signal_column=1.0)
+
+    prepared = DailyBacktestEngine(_config()).prepare_market_data(prices, _config())
+
+    assert prepared.price_data.columns.tolist() == [
+        "date",
+        "symbol",
+        "open",
+        "open_hfq",
+        "close_hfq",
+    ]
+    assert all(isinstance(frame, pd.DataFrame) for frame in prepared.price_map.values())
+    assert all(
+        frame.columns.tolist() == ["open", "open_hfq", "close_hfq"]
+        for frame in prepared.price_map.values()
+    )
+
+
 def test_missing_target_open_leaves_capital_as_cash():
     prices = _prices()
     prices.loc[

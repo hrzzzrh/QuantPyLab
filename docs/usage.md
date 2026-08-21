@@ -112,6 +112,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `diagnose-factor-constrained-selection` | 对照因子实验的行业/规模比例配额选股 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；使用 Hamilton 最大余数法，仅研究 |
 | `evaluate-factor-selection-variants` | 在同一成交与成本口径下比较基准、残差化和配额选股 | `--backtest-config PATH`、`[--evaluation-start-date]`、`[--evaluation-end-date]`、`[--quantile-count]`、`[--output]`；日期参数成对出现，显式区间才标记为锁定评估 |
 | `evaluate-factor-marginal-contributions` | 在同一公共候选池和成交口径下比较完整组合、单因子与 leave-one-out 组合 | `--backtest-config PATH`、`--evaluation-start-date DATE`、`--evaluation-end-date DATE`、`[--output]`；仅支持正式多因子策略，日期参数成对出现 |
+| `diagnose-factor-liquidity-capacity` | 审计正式多因子组合的点时流动性、订单参与率和简化容量 | `--backtest-config PATH`、`[--evaluation-start-date]`、`[--evaluation-end-date]`、`[--liquidity-lookback-days]`、`[--liquidity-bucket-count]`、`[--participation-limits]`、`[--output]`；仅支持正式多因子策略，日期参数成对出现 |
 
 > **何时需要 `rebuild-schemas`**：视图采用 schema 预声明机制（见 4.4 节），schema 缓存为静态快照。当财务字段新增/变更（东财新增指标列、报表科目调整）或同步后出现 schema 相关错误时，必须执行 `uv run main.py rebuild-schemas` 重建缓存，否则新列查询会静默返回 NULL。
 
@@ -240,6 +241,19 @@ uv run main.py evaluate-factor-marginal-contributions \
 
 结果写入 `workspace/factor_marginal_contribution/`。该验证用于判断因子是否提供独立信息或与其他因子形成互补，不会自动修改正式策略；若基准行情不可用，报告会保留缺失状态并告警。
 
+### 3.3.8 交易容量与流动性诊断 (`diagnose-factor-liquidity-capacity`)
+
+该命令固定正式 `multi-factor-quality-value-momentum` 的因子、目标和回测成交路径，读取 `daily_kline.amount` 与 `BacktestDataAccess` 构造的点时 `market_cap`。滚动平均成交额只包含信号日及更早的交易日，订单参与率使用信号日快照与回测订单名义金额计算；执行日的成交额不用于容量估算。诊断只保留候选信号日快照和回测所需的五列行情；行情读取使用轻量日历和重复键按需去重，统一视图只读取原子晋级后的 `data.parquet`，查询结果在进入 Pandas 后脱离 DuckDB 缓冲区并在信号物化后释放 DuckDB 缓存，避免多份宽表、同步临时文件和逐行嵌套字典造成不必要的峰值内存。
+
+```bash
+uv run main.py diagnose-factor-liquidity-capacity \
+  --backtest-config config/backtest/multi_factor_quality_value_momentum.toml \
+  --evaluation-start-date 2022-07-01 \
+  --evaluation-end-date 2024-06-30
+```
+
+结果写入 `workspace/factor_liquidity_capacity/`，包含 `liquidity_signal_summary.csv`、`liquidity_buckets.csv`、`liquidity_trades.csv`、`liquidity_capacity_summary.csv`、`liquidity_targets.csv`、正式策略基线和 `summary.md`。默认滚动窗口为 20 个交易日，实际窗口会写入 `parameters.json`；默认参与率上限为 5%、10%、20%，可以用 `--participation-limits` 传入其他 `(0, 1]` 小数。该容量是单笔订单参与率近似，不是市场冲击、盘口深度或成交概率模型；缺失流动性、无效名义金额、跳过调仓和退市清算单独审计，诊断不会删除目标或修改正式策略。
+
 ### 3.4 定时调度 (每日凌晨 03:00 sync-all)
 
 基于 **launchd LaunchAgent** 实现每日自动同步，入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。
@@ -302,7 +316,7 @@ uv run python tools/schedule_sync_all.py
 duckdb -c "
 INSTALL icu; LOAD icu;
 SELECT report_date, revenue_ttm/1e8 as rev_100m, net_profit_ttm/1e8 as np_100m 
-FROM read_parquet('data/warehouse/financial/ttm/symbol=002487/*.parquet') 
+FROM read_parquet('data/warehouse/financial/ttm/symbol=002487/data.parquet')
 ORDER BY report_date DESC LIMIT 5;"
 ```
 
@@ -418,11 +432,11 @@ WHERE report_date >= '2020-01-01'  # 格式不匹配
 若需直接读 Parquet（而非通过视图），Hive 分区的路径格式必须精确匹配，不可猜测：
 ```
 # 正确路径格式（参考 docs/view_definition.sql）
-data/warehouse/daily_kline/*/*.parquet
-data/warehouse/financial/ttm/*/*.parquet
-data/warehouse/financial_statements/type=balance/*/*.parquet
-data/warehouse/indicators/*/*.parquet
-data/warehouse/share_capital/*/*.parquet
+data/warehouse/daily_kline/*/data.parquet
+data/warehouse/financial/ttm/*/data.parquet
+data/warehouse/financial_statements/type=balance/*/data.parquet
+data/warehouse/indicators/*/data.parquet
+data/warehouse/share_capital/*/data.parquet
 ```
 
 ### 5.6 `report_date` 格式在 TTM 表中为 `YYYYMMDD`
