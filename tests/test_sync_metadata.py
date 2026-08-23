@@ -109,7 +109,7 @@ def test_sync_list_info_falls_back_to_cninfo_on_main_thread(monkeypatch):
     )
     rows = conn.execute("SELECT symbol, area, list_date FROM stocks").fetchall()
     row_map = {r[0]: (r[1], r[2]) for r in rows}
-    assert row_map["600519"] == ("贵州", "20200101")
+    assert row_map["600519"] == (None, "20200101")
 
 
 def test_list_info_falls_back_to_sina_klc_for_list_date(monkeypatch):
@@ -142,7 +142,7 @@ def test_list_info_falls_back_to_sina_klc_for_list_date(monkeypatch):
 
     rows = conn.execute("SELECT symbol, area, list_date FROM stocks").fetchall()
     row_map = {r[0]: (r[1], r[2]) for r in rows}
-    assert row_map["600519"] == ("贵州", "19930607")
+    assert row_map["600519"] == (None, "19930607")
     assert get_last_sync_date(DATASET_STOCK_METADATA, "600519") == date.today()
 
 
@@ -207,7 +207,7 @@ def test_list_info_isolates_sina_klc_failure_per_stock(monkeypatch):
     row = conn.execute(
         "SELECT area, list_date FROM stocks WHERE symbol = '600421'"
     ).fetchone()
-    assert row == ("贵州", "19930607")
+    assert row == (None, "19930607")
 
 
 def test_list_info_retries_missing_metadata_even_if_synced(monkeypatch):
@@ -220,6 +220,9 @@ def test_list_info_retries_missing_metadata_even_if_synced(monkeypatch):
     conn.execute(
         "UPDATE stocks SET area = '上海', list_date = '19910403'"
         " WHERE symbol = '000001'"
+    )
+    conn.execute(
+        "UPDATE stocks SET area = '上海', list_date = NULL WHERE symbol = '600519'"
     )
     conn.commit()
     for sym in ("600519", "000001", "600421"):
@@ -246,7 +249,7 @@ def test_list_info_retries_missing_metadata_even_if_synced(monkeypatch):
     assert set(called) == {"sh600519", "sh600421"}
     rows = conn.execute("SELECT symbol, area, list_date FROM stocks").fetchall()
     row_map = {r[0]: (r[1], r[2]) for r in rows}
-    assert row_map["600519"] == ("贵州", "20200101")
+    assert row_map["600519"] == ("上海", "20200101")
     assert row_map["000001"] == ("上海", "19910403")
 
 

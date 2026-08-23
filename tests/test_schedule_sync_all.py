@@ -14,6 +14,7 @@ from storage.database.sync_status import DATASET_SYNC_ALL, SYMBOL_SYNC_ALL
 def _isolate(monkeypatch):
     """默认环境: 固定重试参数、禁用真实 sleep、卷已挂载、前一天是交易日、未记录成功"""
     monkeypatch.setattr(sched, "SYNC_ALL_MAX_RETRIES", 2)
+    monkeypatch.setattr(sched, "SYNC_STATUS_MAX_RETRIES", 2)
     monkeypatch.setattr(sched, "SYNC_ALL_RETRY_INTERVAL_SECONDS", 0)
     # 仅替换 sched 命名空间内的 time 引用, 不影响全局 time 模块
     monkeypatch.setattr(sched, "time", types.SimpleNamespace(sleep=lambda _: None))
@@ -63,6 +64,31 @@ def test_sync_status_read_and_write_retry_after_transient_failure(monkeypatch):
     assert sched.run_sync_all_with_retry() == 0
     assert len(read_calls) == 2
     assert len(write_calls) == 2
+
+
+def test_pipeline_and_sync_status_use_independent_retry_limits(monkeypatch):
+    """生产配置下流水线只跑一次，但瞬时 SQLite 锁仍可独立重试。"""
+    monkeypatch.setattr(sched, "SYNC_ALL_MAX_RETRIES", 0)
+    monkeypatch.setattr(sched, "SYNC_STATUS_MAX_RETRIES", 1)
+    read_calls = []
+
+    def fake_get_last_sync_date(*args):
+        read_calls.append(args)
+        if len(read_calls) == 1:
+            raise RuntimeError("database is locked")
+        return None
+
+    flow_calls = []
+    monkeypatch.setattr(sched, "get_last_sync_date", fake_get_last_sync_date)
+    monkeypatch.setattr(
+        sched.sync_main,
+        "sync_all_data_flow",
+        lambda: flow_calls.append(1) or SYNC_ALL_RETRYABLE,
+    )
+
+    assert sched.run_sync_all_with_retry() == 1
+    assert len(read_calls) == 2
+    assert flow_calls == [1]
 
 
 def test_prev_day_not_trade_day_exits(monkeypatch):

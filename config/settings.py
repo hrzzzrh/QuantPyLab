@@ -28,8 +28,10 @@ MAX_RETRIES = 3
 # 日线行情只从该日期开始新增/重建；已有更早 canonical 数据不主动清理
 MIN_KLINE_START_DATE = "20100101"
 
-# 定时调度配置 (sync-all 重试策略)
-# 未全部成功时整体重试的最大次数 (总执行次数 = 1 + SYNC_ALL_MAX_RETRIES)
-SYNC_ALL_MAX_RETRIES = 3
+# 定时调度配置 (sync-all 流水线与同步状态分别控制重试)
+# 流水线未全部成功时整体重试的最大次数 (总执行次数 = 1 + 此配置)
+SYNC_ALL_MAX_RETRIES = 0
+# sync_status SQLite 读写失败时的最大重试次数，避免瞬时锁冲突丢失状态
+SYNC_STATUS_MAX_RETRIES = 3
 # 重试间隔秒数
 SYNC_ALL_RETRY_INTERVAL_SECONDS = 60

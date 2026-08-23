@@ -1,9 +1,65 @@
+import multiprocessing
 from datetime import datetime
 
 import akshare as stock
 import pandas as pd
 
 from utils.logger import logger
+
+
+def _fetch_cninfo_profile_in_process(code: str, sender) -> None:
+    """在隔离进程内调用巨潮接口，避免超时任务继续占用 MiniRacer。"""
+    try:
+        sender.send((True, stock.stock_profile_cninfo(symbol=code)))
+    except Exception as exc:  # noqa: BLE001
+        sender.send((False, f"{type(exc).__name__}: {exc}"))
+    finally:
+        sender.close()
+
+
+def _stop_process(process) -> None:
+    """终止并回收超时的子进程。"""
+    process.terminate()
+    process.join(timeout=1)
+    if process.is_alive():
+        process.kill()
+        process.join()
+
+
+def _fetch_cninfo_profile_with_timeout(code: str, timeout: float = 10):
+    """通过可终止的子进程调用巨潮接口，确保超时后没有遗留任务。"""
+    context = multiprocessing.get_context("spawn")
+    receiver, sender = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_fetch_cninfo_profile_in_process,
+        args=(code, sender),
+        name=f"cninfo-profile-{code}",
+    )
+    started = False
+    try:
+        process.start()
+        started = True
+        sender.close()
+        if not receiver.poll(timeout):
+            _stop_process(process)
+            started = False
+            raise TimeoutError(f"巨潮接口调用超时 {timeout}s")
+        try:
+            succeeded, payload = receiver.recv()
+        except EOFError as exc:
+            raise RuntimeError("巨潮接口子进程异常退出") from exc
+        process.join(timeout=1)
+        if process.is_alive():
+            _stop_process(process)
+            started = False
+        if not succeeded:
+            raise RuntimeError(str(payload))
+        return payload
+    finally:
+        sender.close()
+        receiver.close()
+        if started and process.is_alive():
+            _stop_process(process)
 
 
 class StockListCollector:
@@ -71,8 +127,7 @@ class StockDetailCollector:
     def fetch_from_xueqiu(self, symbol: str) -> dict:
         """从雪球获取详情 (侧重地域和上市日期)"""
         try:
-            # symbol 需为大写，如 SH600000
-            df = stock.stock_individual_basic_info_xq(symbol=symbol.upper())
+            df = stock.stock_individual_basic_info_xq(symbol=symbol.upper(), timeout=10)
             if df.empty:
                 return {}
 
@@ -99,12 +154,15 @@ class StockDetailCollector:
     def fetch_from_eastmoney(self, code: str) -> dict:
         """从东财获取详情 (侧重行业)"""
         try:
-            df = stock.stock_individual_info_em(symbol=code)
+            df = stock.stock_individual_info_em(symbol=code, timeout=10)
             if df.empty:
                 return {}
 
             info = dict(zip(df["item"], df["value"]))
             return {"industry": info.get("行业"), "list_date": info.get("上市时间")}
+        except TimeoutError:
+            logger.debug(f"东财接口抓取超时 {code}: 10s")
+            return {}
         except Exception as e:
             logger.debug(f"东财接口抓取失败 {code}: {e}")
             return {}
@@ -114,8 +172,9 @@ class StockDetailCollector:
 
         雪球对部分北交所股票返回空资料, 巨潮 (官方信息披露平台) 覆盖沪深北全市场。
         """
+
         try:
-            df = stock.stock_profile_cninfo(symbol=code)
+            df = _fetch_cninfo_profile_with_timeout(code, timeout=10)
             if df.empty or "上市日期" not in df.columns:
                 return {}
             raw_date = df["上市日期"].iloc[0]
@@ -128,6 +187,9 @@ class StockDetailCollector:
             if raw_addr:
                 area = self._parse_province(str(raw_addr))
             return {"area": area, "list_date": list_date}
+        except TimeoutError:
+            logger.debug(f"巨潮接口抓取超时 {code}: 10s")
+            return {}
         except Exception as e:
             logger.debug(f"巨潮接口抓取失败 {code}: {e}")
             return {}

@@ -40,6 +40,15 @@ def get_all_stocks():
     return cursor.fetchall()
 
 
+def get_financial_sync_stock_metadata():
+    """通过 stocks 统一视图获取财报同步所需的股票元数据。"""
+    db_manager.ensure_views("stocks")
+    conn = db_manager.get_duckdb_conn()
+    return conn.execute(
+        "SELECT code, name, list_date, is_active FROM stocks"
+    ).fetchall()
+
+
 def get_financial_symbols():
     """
     获取数据仓库中实际存在财务报表的全部股票代码。
@@ -294,8 +303,7 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
         cursor = conn.cursor()
         cursor.execute(
             "SELECT s.symbol, s.code FROM stocks s"
-            " WHERE (s.area IS NULL OR TRIM(s.area) = ''"
-            " OR s.list_date IS NULL OR TRIM(s.list_date) = '')"
+            " WHERE (s.list_date IS NULL OR TRIM(s.list_date) = '')"
         )
         pending = cursor.fetchall()
         if not pending:
@@ -355,11 +363,10 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                 if not info:
                     no_data += 1
                     continue
-                if not info.get("list_date") or not info.get("area"):
-                    # 雪球对部分股票 (境外注册/部分北交所) 返回空资料, 巨潮兜底
+                if not info.get("list_date"):
+                    # 雪球/东财返回空时, 巨潮兜底上市日期
                     # (官方披露平台)。此处位于主线程, 避免 V8 引擎并发崩溃。
                     cninfo = detail_collector.fetch_from_cninfo(code)
-                    info["area"] = info.get("area") or cninfo.get("area")
                     info["list_date"] = info.get("list_date") or cninfo.get("list_date")
                 if not info.get("list_date"):
                     # 老退市股兜底: 雪球/东财/巨潮均无元数据, 用新浪 klc_kl.js
@@ -374,18 +381,16 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                         continue
                     if list_date:
                         info["list_date"] = list_date
-                area = normalize_metadata_value(info.get("area"))
                 list_date = normalize_metadata_value(info.get("list_date"))
                 industry = normalize_metadata_value(info.get("industry_xq"))
-                metadata_complete = bool(area and list_date)
+                metadata_complete = bool(list_date)
                 if not metadata_complete:
                     no_data += 1
                 cursor.execute(
-                    "UPDATE stocks SET area = ?, list_date = ?,"
+                    "UPDATE stocks SET list_date = ?,"
                     " industry = COALESCE(industry, ?), updated_at = CURRENT_TIMESTAMP"
                     " WHERE symbol = ?",
                     (
-                        area,
                         list_date,
                         industry,
                         symbol,
@@ -396,9 +401,7 @@ def sync_stock_metadata(run_industry=True, run_list_info=True):
                         DATASET_STOCK_METADATA, symbol, datetime.now().date()
                     )
                 else:
-                    logger.warning(
-                        f"{symbol} 个股详情仍缺少地域或上市日期, 下次同步继续补全"
-                    )
+                    logger.warning(f"{symbol} 个股详情仍缺少上市日期, 下次同步继续补全")
                 updated += 1
                 if updated % commit_every == 0:
                     conn.commit()
@@ -479,8 +482,8 @@ def sync_financial_statements(symbol=None, force_all=False):
 
     store = FinancialStore()
     collector = FinancialCollector()
-    all_stocks = get_all_stocks()
-    all_codes = [s[0] for s in all_stocks]
+    stock_metadata = get_financial_sync_stock_metadata()
+    all_codes = [row[0] for row in stock_metadata]
     target_codes = set()
 
     if symbol:
@@ -519,15 +522,15 @@ def sync_financial_statements(symbol=None, force_all=False):
         logger.info("财务报表数据已是最新。")
         return 0, 0
 
-    symbol_name_map = {s[0]: s[1] for s in all_stocks}
+    symbol_name_map = {row[0]: row[1] for row in stock_metadata}
     # 上市日期映射：用于官方核验时过滤上市前报告期，避免招股书回溯期误判超期
-    conn = db_manager.get_sqlite_conn()
-    cursor = conn.cursor()
-    list_date_rows = cursor.execute("SELECT symbol, list_date FROM stocks").fetchall()
     list_date_map = {
-        symbol: list_date
-        for symbol, list_date in list_date_rows
+        code: list_date
+        for code, _name, list_date, _is_active in stock_metadata
         if list_date and str(list_date).strip()
+    }
+    is_active_map = {
+        code: is_active for code, _name, _list_date, is_active in stock_metadata
     }
     pbar = tqdm(list(target_codes), desc="报表同步")
     failed = 0
@@ -561,6 +564,7 @@ def sync_financial_statements(symbol=None, force_all=False):
                 code,
                 resolver=official_date_resolver,
                 minimum_report_date=minimum_report_date,
+                is_active=is_active_map.get(code),
             )
             ttm_recalculation_required = ttm_recalculation_required or bool(
                 source_date_changes or verification.changed_rows

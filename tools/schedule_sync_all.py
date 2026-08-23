@@ -27,6 +27,7 @@ import main as sync_main  # noqa: E402
 from config.settings import (  # noqa: E402
     SYNC_ALL_MAX_RETRIES,
     SYNC_ALL_RETRY_INTERVAL_SECONDS,
+    SYNC_STATUS_MAX_RETRIES,
 )
 from storage.database.manager import db_manager  # noqa: E402
 from storage.database.sync_status import (  # noqa: E402
@@ -119,8 +120,8 @@ def run_sync_all_with_retry() -> int:
 def _execute_sync_status_with_retry(
     operation: Callable[[], object], action: str
 ) -> tuple[bool, object]:
-    """对 sync_status 的 SQLite 读写执行与流水线一致的有界重试。"""
-    max_attempts = SYNC_ALL_MAX_RETRIES + 1
+    """对 sync_status 的 SQLite 读写执行独立的有界重试。"""
+    max_attempts = SYNC_STATUS_MAX_RETRIES + 1
     for attempt in range(1, max_attempts + 1):
         try:
             return True, operation()

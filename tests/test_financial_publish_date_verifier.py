@@ -4,8 +4,10 @@ from datetime import date
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from storage.database import financial_publish_date_reconciler as reconciler_mod
+from storage.database import financial_publish_date_verifier as verifier_mod
 from storage.database.financial_publish_date_verifier import (
     OverduePublishDateVerification,
     apply_official_publish_dates,
@@ -116,6 +118,19 @@ def test_verify_overdue_dates_queries_resolver_and_returns_changes(tmp_path):
     assert result.unresolved_report_dates == ()
     assert result.changed_rows == {source_name: 1 for source_name in SOURCE_CATEGORIES}
     assert resolver.calls[0][1] == ("20240930",)
+
+
+def test_verify_skips_inactive_stock_in_production_warehouse(tmp_path, monkeypatch):
+    monkeypatch.setattr(verifier_mod, "WAREHOUSE_DIR", tmp_path)
+    monkeypatch.setattr(
+        verifier_mod,
+        "load_financial_source_frames",
+        lambda *args, **kwargs: pytest.fail("退市股票不应读取财务分区"),
+    )
+
+    result = verify_overdue_financial_publish_dates_for_symbol(SYMBOL, is_active=0)
+
+    assert result == OverduePublishDateVerification()
 
 
 def test_verify_can_limit_official_checks_to_post_listing_periods(tmp_path):

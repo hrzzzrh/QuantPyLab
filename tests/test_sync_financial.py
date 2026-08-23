@@ -38,6 +38,11 @@ def _isolate_db(tmp_path, monkeypatch):
 
 def _mock_env(monkeypatch, orphans, fetch_result=None, save_result=None):
     """mock 披露日历为空、孤儿列表指定、fetch 全空、sleep 无延时"""
+    monkeypatch.setattr(
+        main_mod,
+        "get_financial_sync_stock_metadata",
+        lambda: [("000508", "琼民源A", None, 0)],
+    )
     monkeypatch.setattr(main_mod, "get_target_report_dates", lambda: [])
     monkeypatch.setattr(main_mod, "get_orphan_codes", lambda cat, codes: orphans)
     monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
@@ -63,6 +68,31 @@ def _mock_env(monkeypatch, orphans, fetch_result=None, save_result=None):
 
     monkeypatch.setattr(main_mod, "FinancialStore", FakeStore)
     return calls
+
+
+def test_financial_sync_metadata_comes_from_stocks_view(monkeypatch):
+    rows = [("000508", "琼民源A", "19930430", 0)]
+
+    class FakeConnection:
+        def execute(self, sql):
+            assert sql == "SELECT code, name, list_date, is_active FROM stocks"
+            return self
+
+        def fetchall(self):
+            return rows
+
+    ensured_views = []
+    monkeypatch.setattr(
+        main_mod.db_manager,
+        "ensure_views",
+        lambda *names: ensured_views.extend(names),
+    )
+    monkeypatch.setattr(
+        main_mod.db_manager, "get_duckdb_conn", lambda: FakeConnection()
+    )
+
+    assert main_mod.get_financial_sync_stock_metadata() == rows
+    assert ensured_views == ["stocks"]
 
 
 def test_orphan_backfill_records_incomplete_marker(monkeypatch):
@@ -120,7 +150,7 @@ def test_official_date_correction_recalculates_ttm(monkeypatch):
         main_mod,
         "verify_overdue_financial_publish_dates_for_symbol",
         lambda code, resolver, *args, **kwargs: (
-            verification_calls.append((code, resolver))
+            verification_calls.append((code, resolver, kwargs))
             or type(
                 "Verification",
                 (),
@@ -140,7 +170,8 @@ def test_official_date_correction_recalculates_ttm(monkeypatch):
     monkeypatch.setattr(ttm_mod, "TTMCalculator", FakeTTMCalculator)
 
     assert main_mod.sync_financial_statements(symbol="000508") == (1, 0)
-    assert [code for code, _resolver in verification_calls] == ["000508"]
+    assert [code for code, _resolver, _kwargs in verification_calls] == ["000508"]
+    assert verification_calls[0][2]["is_active"] == 0
     assert ttm_calls == ["000508"]
 
 

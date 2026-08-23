@@ -27,7 +27,7 @@
 
 ### 3.1 全量同步 (`sync-all`)
 一键执行全流程同步流水线。
-- **执行顺序**: `stocks` (名单 diff + 退市清单合并) -> `metadata` (行业/地域/上市日期) -> `indicators` -> `financial` (含超期公告日期官方二次核验) -> `ttm` -> `share` -> `kline`
+- **执行顺序**: `stocks` (名单 diff + 退市清单合并) -> `metadata` (行业/上市日期) -> `indicators` -> `financial` (含超期公告日期官方二次核验) -> `ttm` -> `share` -> `kline`
 - **行业历史**: `sync-industry-history` 是独立的全量快照同步命令，目前不纳入 `sync-all`；它使用申万计入日期保存历史分类，默认当天成功后跳过。
 - **示例**: `uv run main.py sync-all`
 - **单股示例**: `uv run main.py sync-all --symbol 600519` (强制刷新该股所有财务数据并增量补全行情; 名单与元数据为全市场操作, 单股模式跳过)
@@ -36,7 +36,7 @@
 | 子命令 | 说明 | 增量逻辑 | 特有参数 |
 | :--- | :--- | :--- | :--- |
 | `sync-stocks` | 同步 A 股全量代码与名称 | **差量 diff**: 新增插入、存量更新名称、消失标记退市 (is_active=0)；随后**合并沪深退市股清单** (补齐历史退市股, 重建场景必需)；last_trade_date 由退市股 K 线重建流程写入 | 无 |
-| `sync-metadata` | 同步行业、上市日期等元数据 | 自动识别缺失字段补全；行业由雪球个股资料补全 (东财 push2 接口已风控弃用)，地域/上市日期由雪球→东财→巨潮三级兜底 | `--industry`, `--list-info` |
+| `sync-metadata` | 同步行业、上市日期等元数据 | 自动识别缺失字段补全；行业由雪球个股资料补全，上市日期由雪球→东财→巨潮→新浪 KLC 兜底；`area` 保留现有值，不再主动补全或覆盖 | `--industry`, `--list-info` |
 | `sync-industry-history` | 同步申万个股行业分类历史 | 全量快照校验后按股票分区覆盖 | `[--force-refresh]` |
 | `sync-financial` | 同步财务三报表原始数据 | 披露日历驱动 + 孤儿股补全；保存后统一四源最早公告日期，并对超期日期查询巨潮/北交所官方公告，修正后立即重算该股票 TTM；官方核验失败会记录待重试状态 | 无 |
 | `sync-indicators`| 同步东财计算指标 | 披露日历驱动 + 孤儿股补全；入库后统一四源日期并触发 TTM 重算；日期协调或 TTM 失败会记录待重试状态 | 无 |
@@ -265,12 +265,12 @@ uv run main.py diagnose-factor-liquidity-capacity \
 2. 安装新浪源请求保护层（幂等，覆盖交易日历请求）
 3. 前一天 (today-1) 非交易日 → 退出（零同步请求）
 4. 前一天是交易日 且 已记录 sync-all 成功（`last_sync_date >= 前一天`）→ 退出
-5. 执行 sync-all 流水线；**未全部成功时整体重试**（增量机制自愈：重跑只补失败部分）
-6. 全部成功 → 记录状态 `sync_status` 表 (`dataset='sync_all', symbol='ALL'`, **日期=前一天数据日**)，保证每个交易日数据在次日凌晨入库、无延迟；失败/中止 → 不记录，次日自动补跑
+5. 执行 sync-all 流水线；整体重试次数由 `SYNC_ALL_MAX_RETRIES` 控制，当前配置为 `0`，因此本次调度只执行一次
+6. 全部成功 → 记录状态 `sync_status` 表 (`dataset='sync_all', symbol='ALL'`, **日期=前一天数据日**)，保证每个交易日数据在次日凌晨入库、无延迟；SQLite 状态读写由独立的 `SYNC_STATUS_MAX_RETRIES` 控制，当前配置为 `3`；流水线失败/中止 → 不记录，次日自动补跑
 
 **成功判定（三态）**：`sync_all_data_flow` 汇总 7 个环节（stocks/metadata/indicators/financial/ttm/share/kline）的失败计数：
 - `success`：全部环节失败数为 0
-- `retryable`：任一环节存在失败 → 整体重试（次数 `SYNC_ALL_MAX_RETRIES`，间隔 `SYNC_ALL_RETRY_INTERVAL_SECONDS`，见 `config/settings.py`）
+- `retryable`：任一环节存在失败；仅当 `SYNC_ALL_MAX_RETRIES > 0` 时按配置次数与 `SYNC_ALL_RETRY_INTERVAL_SECONDS` 间隔整体重试，当前配置为 `0`，失败留待下次调度或人工重跑
 - `blocked`：新浪 IP 风控（含 kline/share 环节传播）→ 不重试（等待解封），次日补跑
 
 **CLI 退出码**：手动执行 `uv run main.py sync-all` 时，`blocked` 和 `retryable` 状态均退出码为 1；全部成功才退出码为 0。`retryable` 可重跑，增量逻辑会自动补缺。

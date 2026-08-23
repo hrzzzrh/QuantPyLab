@@ -220,8 +220,19 @@ def verify_overdue_financial_publish_dates_for_symbol(
     warehouse_dir: str | Path | None = None,
     today: date | None = None,
     minimum_report_date: str | date | None = None,
+    is_active: bool | int | None = None,
 ) -> OverduePublishDateVerification:
     """仅对指定范围内的超期报告查询官方公告，并回填首发日期。"""
+    # 退市股巨潮索引不再返回公告，核验无意义且接口空转，直接跳过
+    # 显式指定临时 warehouse 的存量修复仍需走核验分支。
+    effective_warehouse = (
+        Path(warehouse_dir) if warehouse_dir is not None else Path(WAREHOUSE_DIR)
+    )
+    if (
+        effective_warehouse.resolve() == Path(WAREHOUSE_DIR).resolve()
+        and is_active == 0
+    ):
+        return OverduePublishDateVerification()
     current_date = today or date.today()
     source_frames = load_financial_source_frames(symbol, warehouse_dir)
     overdue_dates = find_overdue_publish_dates(source_frames, current_date)

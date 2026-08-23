@@ -34,7 +34,7 @@ SQLite 在本项目中充当 **元数据注册表 (Registry)**，物理文件存
     - 库中有、新列表无 → 标记退市 (is_active=0) 并回填 `last_trade_date`
     - 接口返回空列表时跳过本次更新，防止数据源异常导致全库误标退市。
 - **退市股清单合并**: diff 后从沪深交易所退市股列表 (`stock_info_sh_delist`/`stock_info_sz_delist`) 补齐历史退市股 (插入 is_active=0)，保证重建场景退市股清单完整；不修改已有行。北交所退市股无接口，暂不覆盖。
-- **属性补全**: 执行 `sync-metadata` 时，系统会针对 `area`, `industry`, `list_date` 等空字段进行异步并发补全；行业由雪球个股资料补全 (东财 push2 接口已风控弃用)，地域/上市日期由雪球→东财→巨潮三级兜底。
+- **属性补全**: 执行 `sync-metadata` 时，系统补全 `industry` 和 `list_date`；行业由雪球个股资料补全，上市日期按雪球→东财→巨潮→新浪 KLC 顺序兜底。`area` 作为兼容字段保留现有值，当前同步流程不再主动补全或覆盖。
 
 ## 3. DuckDB 统一视图层 (Unified View Architecture)
 

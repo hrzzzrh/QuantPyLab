@@ -4,7 +4,11 @@ import pandas as pd
 import pytest
 
 import main as main_mod
-from data_ingestion.collectors.stock_list import StockListCollector
+from data_ingestion.collectors import stock_list as stock_list_mod
+from data_ingestion.collectors.stock_list import (
+    StockDetailCollector,
+    StockListCollector,
+)
 from storage.database import manager as manager_mod
 
 
@@ -54,6 +58,92 @@ def test_fetch_all_stocks_propagates_api_failure(monkeypatch):
     )
     with pytest.raises(RuntimeError, match="接口异常"):
         StockListCollector().fetch_all_stocks()
+
+
+def test_cninfo_timeout_terminates_and_reaps_worker(monkeypatch):
+    class FakeConnection:
+        def __init__(self):
+            self.closed = False
+
+        def poll(self, timeout):
+            assert timeout == 0.01
+            return False
+
+        def close(self):
+            self.closed = True
+
+    class FakeProcess:
+        def __init__(self):
+            self.started = False
+            self.terminated = False
+            self.alive = False
+
+        def start(self):
+            self.started = True
+            self.alive = True
+
+        def terminate(self):
+            self.terminated = True
+            self.alive = False
+
+        def join(self, timeout=None):
+            pass
+
+        def is_alive(self):
+            return self.alive
+
+    receiver = FakeConnection()
+    sender = FakeConnection()
+    process = FakeProcess()
+
+    class FakeContext:
+        def Pipe(self, duplex):
+            assert duplex is False
+            return receiver, sender
+
+        def Process(self, *, target, args, name):
+            assert target is stock_list_mod._fetch_cninfo_profile_in_process
+            assert args == ("600519", sender)
+            assert name == "cninfo-profile-600519"
+            return process
+
+    monkeypatch.setattr(
+        stock_list_mod.multiprocessing,
+        "get_context",
+        lambda method: FakeContext() if method == "spawn" else None,
+    )
+
+    with pytest.raises(TimeoutError, match="巨潮接口调用超时 0.01s"):
+        stock_list_mod._fetch_cninfo_profile_with_timeout("600519", timeout=0.01)
+
+    assert process.started
+    assert process.terminated
+    assert not process.is_alive()
+    assert receiver.closed
+    assert sender.closed
+
+
+def test_eastmoney_uses_native_timeout(monkeypatch):
+    calls = []
+
+    def fake_fetch(*, symbol, timeout):
+        calls.append((symbol, timeout))
+        raise TimeoutError("request timed out")
+
+    monkeypatch.setattr(stock_list_mod.stock, "stock_individual_info_em", fake_fetch)
+
+    assert StockDetailCollector().fetch_from_eastmoney("600519") == {}
+    assert calls == [("600519", 10)]
+
+
+def test_cninfo_returns_empty_after_terminated_timeout(monkeypatch):
+    monkeypatch.setattr(
+        stock_list_mod,
+        "_fetch_cninfo_profile_with_timeout",
+        lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutError("超时")),
+    )
+
+    assert StockDetailCollector().fetch_from_cninfo("600519") == {}
 
 
 def test_merge_inserts_missing_delisted(monkeypatch):
