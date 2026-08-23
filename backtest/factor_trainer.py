@@ -32,6 +32,10 @@ class FactorTrainingResult:
     ridge_alpha: float
     signal_date_start: str | None = None
     signal_date_end: str | None = None
+    target_transform: str = "cross_sectional_percentile_rank_demeaned"
+    sample_weighting: str = "equal_signal_date"
+    weight_constraint: str = "nonnegative_sum_to_one"
+    prior_factor_weights: dict[str, float] | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -44,6 +48,14 @@ class FactorTrainingResult:
             "ridge_alpha": self.ridge_alpha,
             "signal_date_start": self.signal_date_start,
             "signal_date_end": self.signal_date_end,
+            "target_transform": self.target_transform,
+            "sample_weighting": self.sample_weighting,
+            "weight_constraint": self.weight_constraint,
+            "prior_factor_weights": (
+                dict(self.prior_factor_weights)
+                if self.prior_factor_weights is not None
+                else None
+            ),
         }
 
 
@@ -186,16 +198,16 @@ def fit_factor_weights(
     minimum_training_observations: int = 200,
     minimum_training_dates: int = 24,
     prepared_data: pd.DataFrame | None = None,
+    prior_factor_weights: Mapping[str, float] | None = None,
 ) -> FactorTrainingResult:
-    """Fit nonnegative Ridge weights from monthly point-in-time factor rows.
+    """Fit prior-shrunk simplex weights from monthly point-in-time factor rows.
 
     Factors are transformed exactly as the factor-composite strategy transforms
     them: cross-sectional winsorization followed by a direction-aware
-    percentile rank. The target is the return from the next trading-day open
-    to the close ``label_horizon_days`` observations later. Both features and
-    targets are demeaned within each signal date before the constrained Ridge
-    fit, so the model learns cross-sectional factor efficacy rather than the
-    market's common return.
+    percentile rank. The future-return target is independently ranked within
+    each signal date and demeaned. Every signal date receives equal total
+    objective weight. Fitted weights are constrained to the probability
+    simplex and shrink toward the strategy's declared prior weights.
     """
 
     names = _validate_factor_names(factor_names)
@@ -214,6 +226,7 @@ def fit_factor_weights(
         minimum_training_observations=minimum_training_observations,
         minimum_training_dates=minimum_training_dates,
     )
+    normalized_prior = _normalize_prior_factor_weights(prior_factor_weights, names)
 
     label_column = f"forward_return_{label_horizon_days}d"
     if prepared_data is None:
@@ -269,7 +282,10 @@ def fit_factor_weights(
     feature_frame = feature_frame - feature_frame.groupby(
         training_frame["date"], sort=False
     ).transform("mean")
-    target = training_frame[label_column]
+    target = training_frame.groupby("date", sort=False)[label_column].rank(
+        method="average",
+        pct=True,
+    )
     target = target - target.groupby(training_frame["date"], sort=False).transform(
         "mean"
     )
@@ -291,22 +307,25 @@ def fit_factor_weights(
             f"minimum_training_dates={minimum_training_dates}"
         )
 
-    weights, iterations, converged = _fit_nonnegative_ridge(
+    observations_per_signal_date = training_frame.groupby("date", sort=False)[
+        "date"
+    ].transform("size")
+    sample_weights = observations_per_signal_date.rdiv(1.0)
+    weights, iterations, converged = _fit_prior_shrunk_simplex_ridge(
         training_frame.loc[:, list(names)],
         training_frame["target"],
+        sample_weights,
         names,
         ridge_alpha,
         max_iterations,
+        normalized_prior,
     )
     if not converged:
         raise ValueError(
-            "非负 Ridge 训练未在 max_iterations 内收敛: "
+            "单纯形 Ridge 训练未在 max_iterations 内收敛: "
             f"max_iterations={max_iterations}"
         )
-    total_weight = float(weights.sum())
-    if not math.isfinite(total_weight) or total_weight <= 1e-12:
-        raise ValueError("训练得到的因子权重全部退化为零")
-    normalized_weights = (weights / total_weight).to_dict()
+    normalized_weights = weights.to_dict()
     signal_dates = training_frame["date"].drop_duplicates().sort_values()
     return FactorTrainingResult(
         factor_weights={name: float(normalized_weights[name]) for name in names},
@@ -318,28 +337,46 @@ def fit_factor_weights(
         ridge_alpha=float(ridge_alpha),
         signal_date_start=signal_dates.iloc[0].date().isoformat(),
         signal_date_end=signal_dates.iloc[-1].date().isoformat(),
+        prior_factor_weights=normalized_prior.to_dict(),
     )
 
 
-def _fit_nonnegative_ridge(
+def _fit_prior_shrunk_simplex_ridge(
     features: pd.DataFrame,
     target: pd.Series,
+    sample_weights: pd.Series,
     factor_names: tuple[str, ...],
     ridge_alpha: float,
     max_iterations: int,
+    prior_factor_weights: pd.Series,
 ) -> tuple[pd.Series, int, bool]:
-    sample_count = len(features)
-    gram = features.T.dot(features).astype(float) / sample_count
-    covariance = features.T.dot(target.astype(float)) / sample_count
+    normalized_sample_weights = sample_weights.astype(float)
+    total_sample_weight = float(normalized_sample_weights.sum())
+    weighted_features = features.mul(normalized_sample_weights, axis=0)
+    gram = features.T.dot(weighted_features).astype(float) / total_sample_weight
+    covariance = (
+        features.T.dot(target.astype(float) * normalized_sample_weights)
+        / total_sample_weight
+    )
     lipschitz_bound = float(gram.abs().sum(axis=1).max()) + ridge_alpha
     step_size = 1 / max(lipschitz_bound, 1e-12)
-    weights = pd.Series(0.0, index=factor_names, dtype="float64")
+    weights = prior_factor_weights.astype("float64").copy()
     converged = False
     iterations = max_iterations
 
     for iteration in range(1, max_iterations + 1):
-        gradient = gram.dot(weights) - covariance + ridge_alpha * weights
-        next_weights = (weights - step_size * gradient).clip(lower=0.0)
+        gradient = (
+            gram.dot(weights)
+            - covariance
+            + ridge_alpha * (weights - prior_factor_weights)
+        )
+        next_weights = pd.Series(
+            _project_onto_probability_simplex(
+                (weights - step_size * gradient).tolist()
+            ),
+            index=factor_names,
+            dtype="float64",
+        )
         if float((next_weights - weights).abs().max()) <= 1e-10:
             weights = next_weights
             iterations = iteration
@@ -348,6 +385,56 @@ def _fit_nonnegative_ridge(
         weights = next_weights
 
     return weights, iterations, converged
+
+
+def _project_onto_probability_simplex(values: Sequence[float]) -> list[float]:
+    """Project finite values onto nonnegative weights that sum to one."""
+
+    vector = [float(value) for value in values]
+    if not vector or not all(math.isfinite(value) for value in vector):
+        raise ValueError("单纯形投影输入必须是非空有限数字序列")
+    sorted_values = sorted(vector, reverse=True)
+    cumulative = 0.0
+    threshold_index = 0
+    for index, value in enumerate(sorted_values, start=1):
+        cumulative += value
+        threshold = (cumulative - 1.0) / index
+        if value > threshold:
+            threshold_index = index
+    threshold = (sum(sorted_values[:threshold_index]) - 1.0) / threshold_index
+    projected = [max(value - threshold, 0.0) for value in vector]
+    total = sum(projected)
+    return [value / total for value in projected]
+
+
+def _normalize_prior_factor_weights(
+    prior_factor_weights: Mapping[str, float] | None,
+    factor_names: tuple[str, ...],
+) -> pd.Series:
+    if prior_factor_weights is None:
+        return pd.Series(1.0 / len(factor_names), index=factor_names, dtype="float64")
+    unknown = set(prior_factor_weights) - set(factor_names)
+    missing = set(factor_names) - set(prior_factor_weights)
+    if unknown or missing:
+        details = []
+        if missing:
+            details.append("缺少 " + ", ".join(sorted(missing)))
+        if unknown:
+            details.append("未知 " + ", ".join(sorted(unknown)))
+        raise ValueError(
+            "prior_factor_weights 必须完整覆盖训练因子: " + "; ".join(details)
+        )
+    normalized = pd.Series(
+        {name: prior_factor_weights[name] for name in factor_names}, dtype="float64"
+    )
+    if not normalized.map(lambda value: math.isfinite(float(value))).all():
+        raise ValueError("prior_factor_weights 必须是有限数字")
+    if normalized.lt(0).any():
+        raise ValueError("prior_factor_weights 不能为负")
+    total = float(normalized.sum())
+    if total <= 1e-12:
+        raise ValueError("prior_factor_weights 权重和必须为正")
+    return normalized / total
 
 
 def _validate_factor_names(factor_names: Sequence[str]) -> tuple[str, ...]:

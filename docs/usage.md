@@ -165,7 +165,7 @@ uv run main.py diagnose-factors \
 
 ### 3.3.2 因子实验评估 (`evaluate-factor-experiments`)
 
-研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期；`[training]` 默认示例会在训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重，当前支持实验策略和正式七因子策略。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；启用 `[hyperparameter_search]` 后，还会在有限网格中搜索因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合重新训练权重。可选的 `[walk_forward]` 区段会按自然年生成固定长度滚动窗口并在每个窗口重新展开和训练。训练权重在验证和测试阶段冻结，训练失败的组合会记录原因并排除，评估器只对验证集入选方案运行测试。训练数据缓存由 `[training].max_training_cache_entries` 限制在当前窗口内，并在窗口结束时释放。
+研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期。启用 `[training]` 后，系统使用点时月末因子，把未来收益按信号日转为截面百分位排名并去均值，使每个信号日总权重相同，再拟合向候选先验收缩的非负、和为 1 的因子权重。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；有限网格的每组组合独立训练。验证分数、权重结构或样本覆盖不合格时方案会被拒绝，测试段不被读取。训练缓存只在当前窗口内有效并有明确上限。
 
 ```bash
 uv run main.py evaluate-factor-experiments \
@@ -174,7 +174,7 @@ uv run main.py evaluate-factor-experiments \
 
 正式样本外研究推荐使用 `config/backtest/factor_experiment_evaluation_robust.toml`。它采用 3 年训练、2 年验证、2 年测试的完整自然年 Walk-forward，验证和测试各要求至少 20 个可执行信号日，并移除基线中已确认没有区分度的 `ridge_alpha=1.0`。原配置保留为短窗口基线，不应与稳健配置的测试结果混合。
 
-结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`research_validity.csv`、`selection_diagnostics.csv`、`factor_weight_diagnostics.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；`parameters.json` 还记录代码提交、候选配置哈希、因子版本和轻量数据快照标识；CSV 文件提供完整审计明细。`selection_diagnostics.csv` 记录每个窗口比较的组合数、验证信号日、第一/二名差距、并列数量和选择负担风险；`factor_weight_diagnostics.csv` 记录每个训练组合的最大权重、有效因子数、权重熵、塌缩级别和入选标记；验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变测试集隔离。默认研究门槛是训练至少 24 个信号日，验证和测试各至少 11 个实际可执行信号及 100 个目标观测，实际门槛可在 `[validity]` 中显式调整。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
+结果写入 `workspace/backtest/evaluations/`。除原有 `parameters.json`、`summary.md`、训练、指标、选择和权重诊断文件外，`research_validity.csv` 保存逐组合的样本、模型结构和验证分数门禁，`research_protocol.csv` 保存训练失败比例、选择负担、测试窗口独立性和完成窗口数门禁。报告单独展示执行状态、`protocol_status` 和 `strategy_evidence_status`；协议通过不代表策略收益有效。`retrospective_method_development=true` 表示相关历史测试期已经被查看，此时策略证据固定标记为 `retrospective_descriptive_only`。数据快照当前为弱溯源：报告必须显示 `best_effort`、`content_addressed=false` 和限制原因，并确认运行首尾可观察快照一致。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
 
 完整参数搜索会在每个 split 内以最多 2 组因子输入和 1 个市场区间的有界 LRU 缓存，复用因子实验的原始点时输入、基础候选表以及行情索引结构，减少重复查询、因子计算和行情准备；训练缓存由 `[training].max_training_cache_entries` 单独限制，缓存不跨 split，且每组参数仍重新计算缩尾、排名、组合权重和持仓状态。
 

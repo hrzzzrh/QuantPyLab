@@ -59,6 +59,10 @@ DEFAULT_MINIMUM_TEST_SIGNAL_DATES = 11
 DEFAULT_MINIMUM_VALIDATION_OBSERVATIONS = 100
 DEFAULT_MINIMUM_TEST_OBSERVATIONS = 100
 DEFAULT_MAX_TRAINING_CACHE_ENTRIES = 4
+DEFAULT_MINIMUM_EFFECTIVE_FACTOR_COUNT = 1.0
+DEFAULT_MAXIMUM_FACTOR_WEIGHT = 1.0
+DEFAULT_MAXIMUM_TRAINING_FAILURE_RATIO = 1.0
+DEFAULT_MINIMUM_COMPLETED_TEST_WINDOWS = 1
 # The data-loading stage is kept near 1.5 GiB; a complete evaluator process
 # also retains two interval-level execution inputs and the active backtest
 # structures. Use a separate 2 GiB process budget instead of conflating the
@@ -85,6 +89,10 @@ TRAINING_MODEL_COLUMNS = (
     "iterations",
     "converged",
     "label_horizon_days",
+    "target_transform",
+    "sample_weighting",
+    "weight_constraint",
+    "prior_factor_weights",
 )
 HYPERPARAMETER_TRIAL_COLUMNS = (
     "split_id",
@@ -128,6 +136,12 @@ VALIDITY_COLUMNS = (
     "signal_date_end",
     "minimum_observations",
     "minimum_signal_dates",
+    "effective_factor_count",
+    "minimum_effective_factor_count",
+    "maximum_factor_weight_actual",
+    "maximum_factor_weight_allowed",
+    "selection_score",
+    "minimum_selection_score",
 )
 SELECTION_DIAGNOSTIC_COLUMNS = (
     "split_id",
@@ -172,6 +186,14 @@ EVALUATION_FAILURE_COLUMNS = (
     "trial_id",
     "phase",
     "error",
+)
+PROTOCOL_COLUMNS = (
+    "split_id",
+    "gate",
+    "status",
+    "error",
+    "actual_value",
+    "required_value",
 )
 
 
@@ -342,7 +364,7 @@ class TrainingSpec:
 
 @dataclass(frozen=True)
 class ResearchValiditySpec:
-    """Hard sample-coverage gates for research evaluation phases."""
+    """Predeclared sample, model, selection, and protocol gates."""
 
     enabled: bool = True
     minimum_training_signal_dates: int = DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
@@ -350,6 +372,13 @@ class ResearchValiditySpec:
     minimum_test_signal_dates: int = DEFAULT_MINIMUM_TEST_SIGNAL_DATES
     minimum_validation_observations: int = DEFAULT_MINIMUM_VALIDATION_OBSERVATIONS
     minimum_test_observations: int = DEFAULT_MINIMUM_TEST_OBSERVATIONS
+    minimum_effective_factor_count: float = DEFAULT_MINIMUM_EFFECTIVE_FACTOR_COUNT
+    maximum_factor_weight: float = DEFAULT_MAXIMUM_FACTOR_WEIGHT
+    minimum_validation_selection_score: float | None = None
+    maximum_training_failure_ratio: float = DEFAULT_MAXIMUM_TRAINING_FAILURE_RATIO
+    maximum_trials_per_validation_signal_date: float | None = None
+    minimum_completed_test_windows: int = DEFAULT_MINIMUM_COMPLETED_TEST_WINDOWS
+    require_non_overlapping_test_windows: bool = False
 
     def __post_init__(self):
         if not isinstance(self.enabled, bool):
@@ -364,6 +393,54 @@ class ResearchValiditySpec:
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise ValueError(f"[validity].{name} 必须是正整数")
+        for name in (
+            "minimum_effective_factor_count",
+            "maximum_factor_weight",
+            "maximum_training_failure_ratio",
+        ):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"[validity].{name} 必须是有限数字")
+        if self.minimum_effective_factor_count < 1:
+            raise ValueError("[validity].minimum_effective_factor_count 必须不小于 1")
+        if not 0 < self.maximum_factor_weight <= 1:
+            raise ValueError("[validity].maximum_factor_weight 必须在 (0, 1] 内")
+        if not 0 <= self.maximum_training_failure_ratio <= 1:
+            raise ValueError(
+                "[validity].maximum_training_failure_ratio 必须在 [0, 1] 内"
+            )
+        for name in (
+            "minimum_validation_selection_score",
+            "maximum_trials_per_validation_signal_date",
+        ):
+            value = getattr(self, name)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"[validity].{name} 必须是有限数字或省略")
+        if (
+            self.maximum_trials_per_validation_signal_date is not None
+            and self.maximum_trials_per_validation_signal_date <= 0
+        ):
+            raise ValueError(
+                "[validity].maximum_trials_per_validation_signal_date 必须为正数"
+            )
+        if (
+            isinstance(self.minimum_completed_test_windows, bool)
+            or not isinstance(self.minimum_completed_test_windows, int)
+            or self.minimum_completed_test_windows <= 0
+        ):
+            raise ValueError("[validity].minimum_completed_test_windows 必须是正整数")
+        if not isinstance(self.require_non_overlapping_test_windows, bool):
+            raise ValueError(
+                "[validity].require_non_overlapping_test_windows 必须是布尔值"
+            )
 
     def to_dict(self) -> dict:
         return {
@@ -373,6 +450,19 @@ class ResearchValiditySpec:
             "minimum_test_signal_dates": self.minimum_test_signal_dates,
             "minimum_validation_observations": self.minimum_validation_observations,
             "minimum_test_observations": self.minimum_test_observations,
+            "minimum_effective_factor_count": self.minimum_effective_factor_count,
+            "maximum_factor_weight": self.maximum_factor_weight,
+            "minimum_validation_selection_score": (
+                self.minimum_validation_selection_score
+            ),
+            "maximum_training_failure_ratio": self.maximum_training_failure_ratio,
+            "maximum_trials_per_validation_signal_date": (
+                self.maximum_trials_per_validation_signal_date
+            ),
+            "minimum_completed_test_windows": self.minimum_completed_test_windows,
+            "require_non_overlapping_test_windows": (
+                self.require_non_overlapping_test_windows
+            ),
         }
 
 
@@ -391,6 +481,7 @@ class FactorExperimentEvaluationConfig:
     training: TrainingSpec | None = None
     hyperparameter_search: HyperparameterSearchSpec | None = None
     validity: ResearchValiditySpec | None = None
+    retrospective_method_development: bool = False
 
     def __post_init__(self):
         if not self.name:
@@ -404,6 +495,14 @@ class FactorExperimentEvaluationConfig:
             )
         if self.selection_direction not in SELECTION_DIRECTIONS:
             raise ValueError("selection_direction 必须是 max 或 min")
+        if not isinstance(self.retrospective_method_development, bool):
+            raise ValueError("retrospective_method_development 必须是布尔值")
+        if (
+            self.validity is not None
+            and self.validity.enabled
+            and self.validity.require_non_overlapping_test_windows
+        ):
+            _validate_non_overlapping_walk_forward_test_periods(self)
 
     def get_splits(self) -> tuple[EvaluationSplit, ...]:
         splits = [self.fixed_split]
@@ -432,6 +531,7 @@ class FactorExperimentEvaluationConfig:
             "validity": (
                 self.validity.to_dict() if self.validity else {"enabled": False}
             ),
+            "retrospective_method_development": (self.retrospective_method_development),
         }
 
 
@@ -445,6 +545,9 @@ class FactorExperimentEvaluationResult:
     evaluation_failure_rows: tuple[dict, ...] = ()
     validity_rows: tuple[dict, ...] = ()
     selection_diagnostic_rows: tuple[dict, ...] = ()
+    protocol_rows: tuple[dict, ...] = ()
+    protocol_status: str = "protocol_not_evaluated"
+    strategy_evidence_status: str = "strategy_evidence_not_evaluated"
     data_snapshot: dict[str, object] | None = None
 
 
@@ -487,6 +590,11 @@ def load_factor_experiment_evaluation_config(
     selection_direction = experiment.get("selection_direction", "max")
     if not isinstance(selection_direction, str):
         raise ValueError("selection_direction 必须是字符串")
+    retrospective_method_development = experiment.get(
+        "retrospective_method_development", False
+    )
+    if not isinstance(retrospective_method_development, bool):
+        raise ValueError("[experiment].retrospective_method_development 必须是布尔值")
 
     fixed_split = EvaluationSplit(
         split_id="fixed_split",
@@ -512,6 +620,7 @@ def load_factor_experiment_evaluation_config(
         training=training,
         hyperparameter_search=hyperparameter_search,
         validity=validity,
+        retrospective_method_development=retrospective_method_development,
     )
 
 
@@ -543,6 +652,23 @@ def build_walk_forward_splits(spec: WalkForwardSpec) -> tuple[EvaluationSplit, .
     if not splits:
         raise ValueError("Walk-forward 日期范围内没有完整的训练/验证/测试窗口")
     return tuple(splits)
+
+
+def _validate_non_overlapping_walk_forward_test_periods(
+    config: FactorExperimentEvaluationConfig,
+) -> None:
+    if config.walk_forward is None:
+        return
+    walk_forward_splits = build_walk_forward_splits(config.walk_forward)
+    for previous, current in zip(
+        walk_forward_splits, walk_forward_splits[1:], strict=False
+    ):
+        if previous.test.end_date >= current.test.start_date:
+            raise ResearchValidityError(
+                "研究协议门禁失败 [walk_forward_test_overlap]: "
+                f"{previous.split_id} 测试结束 {previous.test.end_date} >= "
+                f"{current.split_id} 测试开始 {current.test.start_date}"
+            )
 
 
 def evaluate_factor_experiments(
@@ -590,11 +716,30 @@ def evaluate_factor_experiments(
     evaluation_failure_rows = []
     validity_rows = []
     selection_diagnostic_rows = []
+    protocol_rows = []
+    if (
+        config.validity is not None
+        and config.validity.enabled
+        and config.validity.require_non_overlapping_test_windows
+    ):
+        protocol_rows.append(
+            _build_protocol_row(
+                split_id="all_walk_forward",
+                gate="non_overlapping_test_windows",
+                status="passed",
+                actual_value=True,
+                required_value=True,
+            )
+        )
     data_snapshot = build_research_data_snapshot(database_manager)
     for split in config.get_splits():
+        observed_validation_scores = {}
         validation_scores = {}
         validation_coverage = {}
         effective_configs = {}
+        validation_rejection_count = 0
+        model_rejection_count = 0
+        training_fit_failure_count = 0
         trial_map = {trial.trial_id: trial for trial in trials}
         training_data_cache = (
             BoundedTrainingDataCache(config.training.max_training_cache_entries)
@@ -641,6 +786,10 @@ def evaluate_factor_experiments(
                         config.training,
                     )
                 except Exception as error:
+                    if not training_fit_completed:
+                        training_fit_failure_count += 1
+                    elif isinstance(error, ResearchValidityError):
+                        model_rejection_count += 1
                     if (
                         config.validity is not None
                         and config.validity.enabled
@@ -657,27 +806,36 @@ def evaluate_factor_experiments(
                                 validity=config.validity,
                             )
                         )
-                    training_rows.append(
-                        _build_failed_training_row(
-                            split,
-                            trial,
-                            error,
-                            training_result=training_result,
-                        )
+                    failed_training_row = _build_failed_training_row(
+                        split,
+                        trial,
+                        error,
+                        training_result=training_result,
                     )
+                    if training_fit_completed:
+                        failed_training_row["status"] = "rejected"
+                    training_rows.append(failed_training_row)
                     if search_enabled:
                         hyperparameter_rows.append(
                             _build_hyperparameter_trial_row(
                                 split,
                                 trial,
-                                status="failed",
+                                status=(
+                                    "rejected" if training_fit_completed else "failed"
+                                ),
                                 error=str(error),
+                                factor_weights=(
+                                    training_result.factor_weights
+                                    if training_result is not None
+                                    else None
+                                ),
                             )
                         )
                     continue
             effective_configs[trial.trial_id] = effective_config
             train_metrics = None
             validation_metrics = None
+            rejection_error = ""
             phase_name = "train"
             try:
                 for phase_name, period in (
@@ -724,8 +882,21 @@ def evaluate_factor_experiments(
                     )
                     if phase_name == "validation":
                         validation_metrics = {**metrics, **coverage}
-                        validation_scores[trial.trial_id] = selection_metric_value
                         validation_coverage[trial.trial_id] = coverage
+                        observed_validation_scores[trial.trial_id] = (
+                            selection_metric_value
+                        )
+                        rejection_error = _append_validation_selection_score_check(
+                            validity_rows,
+                            split,
+                            trial,
+                            selection_metric_value,
+                            config.validity,
+                        )
+                        if rejection_error:
+                            validation_rejection_count += 1
+                        else:
+                            validation_scores[trial.trial_id] = selection_metric_value
                     else:
                         train_metrics = {**metrics, **coverage}
             except Exception as error:
@@ -738,14 +909,13 @@ def evaluate_factor_experiments(
                     )
                 )
                 if training_enabled:
-                    failed_training_row = _build_training_row(
-                        split,
-                        trial,
-                        training_result,
+                    training_rows.append(
+                        _build_training_row(
+                            split,
+                            trial,
+                            training_result,
+                        )
                     )
-                    failed_training_row["status"] = "failed"
-                    failed_training_row["error"] = str(error)
-                    training_rows.append(failed_training_row)
                 if search_enabled:
                     hyperparameter_rows.append(
                         _build_hyperparameter_trial_row(
@@ -774,7 +944,12 @@ def evaluate_factor_experiments(
                     _build_hyperparameter_trial_row(
                         split,
                         trial,
-                        status="fitted",
+                        status=(
+                            "rejected"
+                            if trial.trial_id not in validation_scores
+                            else "fitted"
+                        ),
+                        error=rejection_error or "",
                         train_metrics=train_metrics,
                         validation_metrics=validation_metrics,
                         factor_weights=training_result.factor_weights,
@@ -785,6 +960,41 @@ def evaluate_factor_experiments(
             # All trial fits are complete before validation selection starts;
             # no training-wide frame is needed by the backtest phases.
             training_data_cache.clear()
+        diagnostic_validation_coverage = next(iter(validation_coverage.values()), None)
+        protocol_error = _append_split_protocol_checks(
+            protocol_rows,
+            split,
+            trial_count=len(trials),
+            training_fit_failure_count=training_fit_failure_count,
+            validation_coverage=validation_coverage,
+            validity=config.validity,
+        )
+        if protocol_error:
+            selection_diagnostic_rows.append(
+                _build_selection_diagnostic_row(
+                    split,
+                    observed_validation_scores,
+                    trial_map,
+                    selected_trial_id=None,
+                    selected_score=None,
+                    validation_coverage=diagnostic_validation_coverage,
+                    status="rejected",
+                    error=protocol_error,
+                    selection_direction=config.selection_direction,
+                )
+            )
+            selection_rows.append(
+                {
+                    "split_id": split.split_id,
+                    "status": "rejected",
+                    "error": protocol_error,
+                    "selected_candidate": "",
+                    "selected_trial_id": "",
+                    "validation_score": None,
+                }
+            )
+            execution_cache.clear()
+            continue
         try:
             selected_trial_id, selected_score = _select_candidate(
                 validation_scores,
@@ -792,24 +1002,35 @@ def evaluate_factor_experiments(
                 split.split_id,
             )
         except ValueError as error:
+            rejection_status = (
+                "rejected"
+                if validation_rejection_count or model_rejection_count
+                else "failed"
+            )
+            selection_error = str(error)
+            if rejection_status == "rejected":
+                selection_error = (
+                    f"{split.split_id} 的所有候选均被预设模型或验证门禁拒绝，"
+                    "未运行测试段"
+                )
             selection_diagnostic_rows.append(
                 _build_selection_diagnostic_row(
                     split,
-                    validation_scores,
+                    observed_validation_scores,
                     trial_map,
                     selected_trial_id=None,
                     selected_score=None,
-                    validation_coverage=None,
-                    status="failed",
-                    error=str(error),
+                    validation_coverage=diagnostic_validation_coverage,
+                    status=rejection_status,
+                    error=selection_error,
                     selection_direction=config.selection_direction,
                 )
             )
             selection_rows.append(
                 {
                     "split_id": split.split_id,
-                    "status": "failed",
-                    "error": str(error),
+                    "status": rejection_status,
+                    "error": selection_error,
                     "selected_candidate": "",
                     "selected_trial_id": "",
                     "validation_score": None,
@@ -824,7 +1045,7 @@ def evaluate_factor_experiments(
         selection_diagnostic_rows.append(
             _build_selection_diagnostic_row(
                 split,
-                validation_scores,
+                observed_validation_scores,
                 trial_map,
                 selected_trial_id=selected_trial_id,
                 selected_score=selected_score,
@@ -913,6 +1134,51 @@ def evaluate_factor_experiments(
             training_data_cache.clear()
         execution_cache.clear()
 
+    completed_test_selections = [
+        row
+        for row in selection_rows
+        if row.get("status") == "completed"
+        and (
+            config.walk_forward is None
+            or str(row.get("split_id", "")).startswith("walk_forward_")
+        )
+    ]
+    if config.validity is not None and config.validity.enabled:
+        minimum_completed_test_windows = config.validity.minimum_completed_test_windows
+        completed_window_count = len(completed_test_selections)
+        completed_status = (
+            "passed"
+            if completed_window_count >= minimum_completed_test_windows
+            else "failed"
+        )
+        completed_error = ""
+        if completed_status == "failed":
+            completed_error = (
+                "研究协议门禁失败 [minimum_completed_test_windows]: "
+                f"{completed_window_count} < {minimum_completed_test_windows}"
+            )
+        protocol_rows.append(
+            _build_protocol_row(
+                split_id="all_walk_forward" if config.walk_forward else "all_splits",
+                gate="minimum_completed_test_windows",
+                status=completed_status,
+                error=completed_error,
+                actual_value=completed_window_count,
+                required_value=minimum_completed_test_windows,
+            )
+        )
+    protocol_status = (
+        "protocol_failed"
+        if any(row.get("status") != "passed" for row in protocol_rows)
+        else "protocol_passed"
+        if config.validity is not None and config.validity.enabled
+        else "protocol_not_evaluated"
+    )
+    strategy_evidence_status = _determine_strategy_evidence_status(
+        config,
+        protocol_status,
+        completed_test_selections,
+    )
     data_snapshot = verify_research_data_snapshot_unchanged(
         data_snapshot,
         build_research_data_snapshot(database_manager),
@@ -926,6 +1192,9 @@ def evaluate_factor_experiments(
         evaluation_failure_rows=tuple(evaluation_failure_rows),
         validity_rows=tuple(validity_rows),
         selection_diagnostic_rows=tuple(selection_diagnostic_rows),
+        protocol_rows=tuple(protocol_rows),
+        protocol_status=protocol_status,
+        strategy_evidence_status=strategy_evidence_status,
         data_snapshot=data_snapshot,
     )
 
@@ -939,7 +1208,12 @@ def write_factor_experiment_evaluation_report(
     audit = _build_reproducibility_audit(result.config, result.data_snapshot)
     (output_path / "parameters.json").write_text(
         json.dumps(
-            {**result.config.to_dict(), "audit": audit},
+            {
+                **result.config.to_dict(),
+                "protocol_status": result.protocol_status,
+                "strategy_evidence_status": result.strategy_evidence_status,
+                "audit": audit,
+            },
             ensure_ascii=False,
             indent=2,
         ),
@@ -964,6 +1238,9 @@ def write_factor_experiment_evaluation_report(
     ).to_csv(output_path / "evaluation_failures.csv", index=False)
     pd.DataFrame(result.validity_rows, columns=VALIDITY_COLUMNS).to_csv(
         output_path / "research_validity.csv", index=False
+    )
+    pd.DataFrame(result.protocol_rows, columns=PROTOCOL_COLUMNS).to_csv(
+        output_path / "research_protocol.csv", index=False
     )
     pd.DataFrame(
         result.selection_diagnostic_rows,
@@ -1071,6 +1348,30 @@ def _parse_validity(section: object) -> ResearchValiditySpec:
         ),
         minimum_test_observations=section.get(
             "minimum_test_observations", DEFAULT_MINIMUM_TEST_OBSERVATIONS
+        ),
+        minimum_effective_factor_count=section.get(
+            "minimum_effective_factor_count",
+            DEFAULT_MINIMUM_EFFECTIVE_FACTOR_COUNT,
+        ),
+        maximum_factor_weight=section.get(
+            "maximum_factor_weight", DEFAULT_MAXIMUM_FACTOR_WEIGHT
+        ),
+        minimum_validation_selection_score=section.get(
+            "minimum_validation_selection_score"
+        ),
+        maximum_training_failure_ratio=section.get(
+            "maximum_training_failure_ratio",
+            DEFAULT_MAXIMUM_TRAINING_FAILURE_RATIO,
+        ),
+        maximum_trials_per_validation_signal_date=section.get(
+            "maximum_trials_per_validation_signal_date"
+        ),
+        minimum_completed_test_windows=section.get(
+            "minimum_completed_test_windows",
+            DEFAULT_MINIMUM_COMPLETED_TEST_WINDOWS,
+        ),
+        require_non_overlapping_test_windows=section.get(
+            "require_non_overlapping_test_windows", False
         ),
     )
 
@@ -1439,6 +1740,7 @@ def _fit_candidate_config(
         minimum_training_observations=training.minimum_training_observations,
         minimum_training_dates=training.minimum_training_dates,
         prepared_data=training_data,
+        prior_factor_weights=resolved_parameters["factor_weights"],
     )
     trained_parameters = dict(candidate_config.strategy_parameters)
     trained_weights = strategy.apply_trained_factor_weights(
@@ -1540,6 +1842,11 @@ def _build_training_validity_row(
     training: TrainingSpec | None,
     validity: ResearchValiditySpec,
 ) -> dict:
+    weights = training_result.factor_weights if training_result is not None else {}
+    squared_weight_sum = sum(float(weight) ** 2 for weight in weights.values())
+    effective_factor_count = (
+        1 / squared_weight_sum if squared_weight_sum > 1e-12 else None
+    )
     return {
         "split_id": split.split_id,
         "candidate_id": trial.candidate_id,
@@ -1563,6 +1870,12 @@ def _build_training_validity_row(
             training.minimum_training_observations if training is not None else None
         ),
         "minimum_signal_dates": validity.minimum_training_signal_dates,
+        "effective_factor_count": effective_factor_count,
+        "minimum_effective_factor_count": validity.minimum_effective_factor_count,
+        "maximum_factor_weight_actual": max(weights.values()) if weights else None,
+        "maximum_factor_weight_allowed": validity.maximum_factor_weight,
+        "selection_score": None,
+        "minimum_selection_score": None,
     }
 
 
@@ -1592,6 +1905,12 @@ def _build_backtest_validity_row(
         "signal_date_end": coverage.get("signal_date_end"),
         "minimum_observations": minimum_observations,
         "minimum_signal_dates": minimum_signal_dates,
+        "effective_factor_count": None,
+        "minimum_effective_factor_count": None,
+        "maximum_factor_weight_actual": None,
+        "maximum_factor_weight_allowed": None,
+        "selection_score": None,
+        "minimum_selection_score": None,
     }
 
 
@@ -1625,6 +1944,7 @@ def _append_training_validity_check(
             ),
             minimum_signal_dates=validity.minimum_training_signal_dates,
         )
+        _enforce_training_model_validity(training_result, validity)
     except Exception as error:
         row["status"] = "failed"
         row["error"] = str(error)
@@ -1668,6 +1988,153 @@ def _append_backtest_validity_check(
         raise
 
 
+def _append_validation_selection_score_check(
+    validity_rows: list[dict],
+    split: EvaluationSplit,
+    trial: HyperparameterTrial,
+    selection_score: float,
+    validity: ResearchValiditySpec | None,
+) -> str:
+    if (
+        validity is None
+        or not validity.enabled
+        or validity.minimum_validation_selection_score is None
+    ):
+        return ""
+    minimum_score = validity.minimum_validation_selection_score
+    status = "passed"
+    error = ""
+    if selection_score + SELECTION_SCORE_TOLERANCE < minimum_score:
+        status = "rejected"
+        error = (
+            "研究有效性门禁拒绝 [validation_selection_score]: "
+            f"{selection_score:.6f} < minimum_validation_selection_score="
+            f"{minimum_score}"
+        )
+    validity_rows.append(
+        {
+            "split_id": split.split_id,
+            "candidate_id": trial.candidate_id,
+            "trial_id": trial.trial_id,
+            "phase": "validation_selection",
+            "status": status,
+            "error": error,
+            "observation_count": None,
+            "signal_date_count": None,
+            "signal_date_start": None,
+            "signal_date_end": None,
+            "minimum_observations": None,
+            "minimum_signal_dates": None,
+            "effective_factor_count": None,
+            "minimum_effective_factor_count": None,
+            "maximum_factor_weight_actual": None,
+            "maximum_factor_weight_allowed": None,
+            "selection_score": selection_score,
+            "minimum_selection_score": minimum_score,
+        }
+    )
+    return error
+
+
+def _build_protocol_row(
+    *,
+    split_id: str,
+    gate: str,
+    status: str,
+    actual_value: object,
+    required_value: object,
+    error: str = "",
+) -> dict:
+    return {
+        "split_id": split_id,
+        "gate": gate,
+        "status": status,
+        "error": error,
+        "actual_value": actual_value,
+        "required_value": required_value,
+    }
+
+
+def _append_split_protocol_checks(
+    protocol_rows: list[dict],
+    split: EvaluationSplit,
+    *,
+    trial_count: int,
+    training_fit_failure_count: int,
+    validation_coverage: dict[str, dict[str, object]],
+    validity: ResearchValiditySpec | None,
+) -> str:
+    if validity is None or not validity.enabled:
+        return ""
+    errors = []
+    failure_ratio = training_fit_failure_count / trial_count if trial_count else 1.0
+    failure_status = (
+        "passed"
+        if failure_ratio
+        <= validity.maximum_training_failure_ratio + SELECTION_SCORE_TOLERANCE
+        else "failed"
+    )
+    failure_error = ""
+    if failure_status == "failed":
+        failure_error = (
+            "研究协议门禁失败 [training_failure_ratio]: "
+            f"{failure_ratio:.6f} > maximum_training_failure_ratio="
+            f"{validity.maximum_training_failure_ratio}"
+        )
+        errors.append(failure_error)
+    protocol_rows.append(
+        _build_protocol_row(
+            split_id=split.split_id,
+            gate="training_failure_ratio",
+            status=failure_status,
+            error=failure_error,
+            actual_value=failure_ratio,
+            required_value=validity.maximum_training_failure_ratio,
+        )
+    )
+
+    maximum_trial_ratio = validity.maximum_trials_per_validation_signal_date
+    if maximum_trial_ratio is not None:
+        signal_date_counts = [
+            int(coverage.get("signal_date_count") or 0)
+            for coverage in validation_coverage.values()
+        ]
+        validation_signal_date_count = (
+            min(signal_date_counts) if signal_date_counts else 0
+        )
+        evaluated_trial_count = len(validation_coverage)
+        trial_ratio = (
+            evaluated_trial_count / validation_signal_date_count
+            if validation_signal_date_count
+            else math.inf
+        )
+        ratio_status = (
+            "passed"
+            if trial_ratio <= maximum_trial_ratio + SELECTION_SCORE_TOLERANCE
+            else "failed"
+        )
+        ratio_error = ""
+        if ratio_status == "failed":
+            ratio_error = (
+                "研究协议门禁失败 [trials_per_validation_signal_date]: "
+                f"{trial_ratio:.6f} > "
+                "maximum_trials_per_validation_signal_date="
+                f"{maximum_trial_ratio}"
+            )
+            errors.append(ratio_error)
+        protocol_rows.append(
+            _build_protocol_row(
+                split_id=split.split_id,
+                gate="trials_per_validation_signal_date",
+                status=ratio_status,
+                error=ratio_error,
+                actual_value=trial_ratio,
+                required_value=maximum_trial_ratio,
+            )
+        )
+    return "; ".join(errors)
+
+
 def _get_validity_thresholds(
     validity: ResearchValiditySpec, phase: str
 ) -> tuple[int, int]:
@@ -1682,6 +2149,38 @@ def _get_validity_thresholds(
             validity.minimum_test_signal_dates,
         )
     raise ValueError(f"不支持的研究有效性阶段: {phase}")
+
+
+def _enforce_training_model_validity(
+    training_result: FactorTrainingResult,
+    validity: ResearchValiditySpec,
+) -> None:
+    weights = [float(weight) for weight in training_result.factor_weights.values()]
+    squared_weight_sum = sum(weight**2 for weight in weights)
+    effective_factor_count = (
+        1 / squared_weight_sum if squared_weight_sum > 1e-12 else 0.0
+    )
+    maximum_factor_weight = max(weights, default=0.0)
+    failures = []
+    if effective_factor_count + SELECTION_SCORE_TOLERANCE < (
+        validity.minimum_effective_factor_count
+    ):
+        failures.append(
+            f"有效因子数 {effective_factor_count:.6f} < "
+            "minimum_effective_factor_count="
+            f"{validity.minimum_effective_factor_count}"
+        )
+    if maximum_factor_weight - SELECTION_SCORE_TOLERANCE > (
+        validity.maximum_factor_weight
+    ):
+        failures.append(
+            f"最大因子权重 {maximum_factor_weight:.6f} > "
+            f"maximum_factor_weight={validity.maximum_factor_weight}"
+        )
+    if failures:
+        raise ResearchValidityError(
+            "研究有效性门禁失败 [training_model]: " + "; ".join(failures)
+        )
 
 
 def _enforce_validity_thresholds(
@@ -1726,6 +2225,11 @@ def _build_training_row(
         "factor_weights": json.dumps(
             details.pop("factor_weights"), ensure_ascii=False, sort_keys=True
         ),
+        "prior_factor_weights": json.dumps(
+            details.pop("prior_factor_weights"),
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
         **details,
     }
 
@@ -1762,6 +2266,16 @@ def _build_failed_training_row(
         "iterations": details.get("iterations"),
         "converged": details.get("converged"),
         "label_horizon_days": details.get("label_horizon_days"),
+        "target_transform": details.get("target_transform"),
+        "sample_weighting": details.get("sample_weighting"),
+        "weight_constraint": details.get("weight_constraint"),
+        "prior_factor_weights": json.dumps(
+            details.get("prior_factor_weights"),
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        if training_result is not None
+        else "",
     }
 
 
@@ -2019,7 +2533,10 @@ def _build_evaluation_summary(
     training_rows = list(result.training_rows)
     trial_rows = list(result.hyperparameter_rows if search_enabled else training_rows)
     failed_training_rows = [
-        row for row in training_rows if row.get("status") != "fitted"
+        row for row in training_rows if row.get("status") == "failed"
+    ]
+    rejected_training_rows = [
+        row for row in training_rows if row.get("status") == "rejected"
     ]
     report_status = _get_report_status(result, len(failed_training_rows))
     generated_at = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -2039,6 +2556,12 @@ def _build_evaluation_summary(
             ("研究名称", config.name),
             ("生成时间", generated_at),
             ("执行状态", report_status),
+            ("研究协议状态", result.protocol_status),
+            ("策略证据状态", result.strategy_evidence_status),
+            (
+                "回溯性方法开发",
+                str(config.retrospective_method_development).lower(),
+            ),
             (
                 "选择指标",
                 f"`{config.selection_metric}`（{config.selection_direction}）",
@@ -2105,9 +2628,15 @@ def _build_evaluation_summary(
             ("信号频率", "月末信号；信号日收盘后生成，下一交易日开盘成交"),
             (
                 "标签定义",
-                f"信号日后下一交易日开盘至 {config.training.label_horizon_days if training_enabled else '固定'} 个交易观察后的收盘收益"
+                f"信号日后下一交易日开盘至 {config.training.label_horizon_days if training_enabled else '固定'} 个交易观察后的收盘收益；训练时按信号日转为截面百分位排名并去均值"
                 if training_enabled
                 else "未启用训练标签",
+            ),
+            (
+                "训练目标权重",
+                "每个信号日总权重相等；非负权重和为 1，并向候选策略先验权重收缩"
+                if training_enabled
+                else "未启用训练",
             ),
             (
                 "固定切分",
@@ -2226,12 +2755,17 @@ def _build_evaluation_summary(
         lines.append("研究有效性门禁已配置，但本次没有产生可检查的阶段记录。")
     else:
         lines.append(
-            "门禁只判断样本覆盖和时序可用性，不代表策略收益有效；完整逐组合记录见 `research_validity.csv`。"
+            "门禁检查样本覆盖、权重结构和最低验证证据；通过不等于策略收益有效。完整逐组合记录见 `research_validity.csv`。"
         )
         lines.append("")
         validity_summary_rows = []
         for split_id in _ordered_split_ids(config):
-            for phase in ("training", "validation", "test"):
+            for phase in (
+                "training",
+                "validation",
+                "validation_selection",
+                "test",
+            ):
                 phase_rows = [
                     row
                     for row in result.validity_rows
@@ -2321,13 +2855,40 @@ def _build_evaluation_summary(
             if len(failed_validity_rows) > 20:
                 lines.append("仅展示前 20 条，完整失败记录见 `research_validity.csv`。")
 
+    lines.extend(["", "### 研究协议门禁", ""])
+    if not result.protocol_rows:
+        lines.append("本次没有启用研究协议门禁。")
+    else:
+        lines.append(
+            "协议状态只表示预先声明的搜索与窗口规则是否被遵守；策略收益证据在测试段单独陈述。"
+        )
+        lines.append("")
+        _append_markdown_table(
+            lines,
+            ["窗口", "门禁", "状态", "实际值", "要求值", "原因"],
+            [
+                (
+                    row.get("split_id"),
+                    row.get("gate"),
+                    row.get("status"),
+                    _format_report_value(row.get("actual_value")),
+                    _format_report_value(row.get("required_value")),
+                    row.get("error") or "—",
+                )
+                for row in result.protocol_rows
+            ],
+        )
+
     lines.extend(["", "## 4. 搜索与训练状态", ""])
     if not training_enabled:
         lines.append("本次未启用训练，不产生拟合组合或训练失败记录。")
     else:
-        fitted_count = sum(row.get("status") == "fitted" for row in trial_rows)
-        failed_count = len(trial_rows) - fitted_count
-        success_rate = fitted_count / len(trial_rows) if trial_rows else None
+        fitted_count = sum(row.get("status") == "fitted" for row in training_rows)
+        failed_count = len(failed_training_rows)
+        success_rate = fitted_count / len(training_rows) if training_rows else None
+        validation_rejected_count = sum(
+            row.get("status") == "rejected" for row in result.hyperparameter_rows
+        )
         _append_markdown_table(
             lines,
             ["指标", "数值"],
@@ -2338,8 +2899,10 @@ def _build_evaluation_summary(
                     len(trial_rows) if search_enabled else "未启用外层搜索",
                 ),
                 ("成功拟合数量", fitted_count),
-                ("失败数量", failed_count),
-                ("成功率", _format_percent(success_rate)),
+                ("模型门禁拒绝数量", len(rejected_training_rows)),
+                ("训练失败数量", failed_count),
+                ("训练成功率", _format_percent(success_rate)),
+                ("验证门禁拒绝数量", validation_rejected_count),
                 (
                     "失败原因种类数",
                     len(
@@ -2354,18 +2917,21 @@ def _build_evaluation_summary(
         lines.extend(["", "### 按窗口的训练状态", ""])
         status_rows = []
         for split_id in _ordered_split_ids(config):
-            split_rows = [row for row in trial_rows if row.get("split_id") == split_id]
+            split_rows = [
+                row for row in training_rows if row.get("split_id") == split_id
+            ]
             status_rows.append(
                 (
                     split_id,
                     len(split_rows),
                     sum(row.get("status") == "fitted" for row in split_rows),
-                    sum(row.get("status") != "fitted" for row in split_rows),
+                    sum(row.get("status") == "rejected" for row in split_rows),
+                    sum(row.get("status") == "failed" for row in split_rows),
                 )
             )
         _append_markdown_table(
             lines,
-            ["窗口", "组合总数", "成功", "失败"],
+            ["窗口", "组合总数", "成功拟合", "模型拒绝", "训练失败"],
             status_rows,
         )
         lines.extend(["", "### 失败原因", ""])
@@ -2454,6 +3020,8 @@ def _build_evaluation_summary(
     selected_training_rows = []
     selected_model_rows = []
     for selection in result.selection_rows:
+        if selection.get("status", "completed") != "completed":
+            continue
         trial_id = selection.get("selected_trial_id") or selection.get(
             "selected_candidate"
         )
@@ -2633,6 +3201,8 @@ def _build_evaluation_summary(
     lines.extend(["", "## 6. 训练、验证和测试表现", ""])
     metric_rows = []
     for selection in result.selection_rows:
+        if selection.get("status", "completed") != "completed":
+            continue
         for phase in ("train", "validation", "test"):
             metrics = _find_selected_metric_row(result.metric_rows, selection, phase)
             metric_rows.append(
@@ -2685,6 +3255,7 @@ def _build_evaluation_summary(
         row
         for row in result.selection_rows
         if str(row.get("split_id", "")).startswith("walk_forward_")
+        and row.get("status", "completed") == "completed"
     ]
     if walk_forward_selections:
         lines.extend(["", "### Walk-forward 测试段汇总", ""])
@@ -2764,7 +3335,16 @@ def _build_evaluation_summary(
         lines.append("本次没有触发预设的样本、权重集中或窗口数量提示。")
 
     lines.extend(["", "## 8. 研究结论与下一步", ""])
-    if report_status == "completed_with_exclusions":
+    if report_status == "protocol_failed":
+        lines.append("研究协议门禁未通过；本次测试结果不能作为有效的策略证据。")
+    elif report_status == "completed_with_rejections":
+        rejected_count = sum(
+            row.get("status") == "rejected" for row in result.selection_rows
+        )
+        lines.append(
+            f"研究协议已按预设规则执行，有 {rejected_count} 个窗口因模型或验证证据不足而未读取测试段。"
+        )
+    elif report_status == "completed_with_exclusions":
         lines.append(
             f"本次评估完成，但有 {len(failed_training_rows)} 个训练组合被排除；入选结果只能在剩余成功组合范围内解释。"
         )
@@ -2775,6 +3355,10 @@ def _build_evaluation_summary(
     lines.append(
         "报告只描述本次时间切分和参数空间内的研究事实，不自动证明因子具有长期有效性，也不构成买入或实盘启用建议。"
     )
+    if config.retrospective_method_development:
+        lines.append(
+            "本报告标记为回溯性方法开发：相关历史测试区间已在方法修复前被查看，因此不能作为新的盲测确认。"
+        )
     lines.extend(
         [
             "",
@@ -2805,7 +3389,11 @@ def _build_evaluation_summary(
             ),
             (
                 "`research_validity.csv`",
-                "各窗口、候选和阶段的样本覆盖门禁实际值、阈值及失败原因",
+                "各窗口、候选和阶段的样本、模型与验证门禁实际值及拒绝原因",
+            ),
+            (
+                "`research_protocol.csv`",
+                "训练失败比例、选择负担、测试窗口独立性和完成窗口数门禁",
             ),
             (
                 "`selection_diagnostics.csv`",
@@ -2931,7 +3519,18 @@ def _format_validity_parameters(validity: ResearchValiditySpec | None) -> str:
         f"validation_signal_dates>={validity.minimum_validation_signal_dates}, "
         f"test_signal_dates>={validity.minimum_test_signal_dates}, "
         f"validation_observations>={validity.minimum_validation_observations}, "
-        f"test_observations>={validity.minimum_test_observations}"
+        f"test_observations>={validity.minimum_test_observations}, "
+        f"effective_factors>={validity.minimum_effective_factor_count}, "
+        f"max_factor_weight<={validity.maximum_factor_weight}, "
+        "validation_score>="
+        f"{validity.minimum_validation_selection_score}, "
+        "training_failure_ratio<="
+        f"{validity.maximum_training_failure_ratio}, "
+        "trials_per_validation_signal_date<="
+        f"{validity.maximum_trials_per_validation_signal_date}, "
+        f"completed_test_windows>={validity.minimum_completed_test_windows}, "
+        "non_overlapping_tests="
+        f"{validity.require_non_overlapping_test_windows}"
     )
 
 
@@ -3061,13 +3660,35 @@ def _get_report_status(
     actual = {row.get("split_id") for row in result.selection_rows}
     if not result.selection_rows or actual != expected:
         return "failed"
-    if any(
-        row.get("status", "completed") != "completed" for row in result.selection_rows
-    ):
+    if result.protocol_status == "protocol_failed":
+        return "protocol_failed"
+    statuses = {row.get("status", "completed") for row in result.selection_rows}
+    if "failed" in statuses:
         return "failed"
+    if "rejected" in statuses:
+        return "completed_with_rejections"
     if failed_count or result.evaluation_failure_rows:
         return "completed_with_exclusions"
     return "completed"
+
+
+def _determine_strategy_evidence_status(
+    config: FactorExperimentEvaluationConfig,
+    protocol_status: str,
+    completed_test_selections: list[dict],
+) -> str:
+    if protocol_status == "protocol_failed":
+        return "invalid_protocol"
+    if config.retrospective_method_development:
+        return "retrospective_descriptive_only"
+    minimum_windows = (
+        config.validity.minimum_completed_test_windows
+        if config.validity is not None and config.validity.enabled
+        else 1
+    )
+    if len(completed_test_selections) < minimum_windows:
+        return "insufficient_test_windows"
+    return "descriptive_test_evidence"
 
 
 def _append_top_trials(
@@ -3086,7 +3707,8 @@ def _append_top_trials(
         rows = [
             row
             for row in result.hyperparameter_rows
-            if row.get("split_id") == split_id and row.get("status") == "fitted"
+            if row.get("split_id") == split_id
+            and row.get("status") in {"fitted", "rejected"}
         ]
         rows.sort(
             key=lambda row: (
@@ -3101,7 +3723,7 @@ def _append_top_trials(
             reverse=result.config.selection_direction == "max",
         )
         if not rows:
-            lines.append(f"{split_id}：没有成功拟合的组合。")
+            lines.append(f"{split_id}：没有完成训练和验证的组合。")
             continue
         lines.append(f"**{split_id}**")
         lines.append("")
@@ -3116,7 +3738,7 @@ def _append_top_trials(
                 "Ridge",
                 "训练指标",
                 "验证指标",
-                "入选",
+                "验证决策",
             ],
             [
                 (
@@ -3128,9 +3750,11 @@ def _append_top_trials(
                     row.get("ridge_alpha"),
                     _format_metric(row.get(f"train_{result.config.selection_metric}")),
                     _format_metric(row.get(metric_field)),
-                    "是"
+                    "入选"
                     if (split_id, row.get("trial_id")) in selected_trial_ids
-                    else "否",
+                    else "验证拒绝"
+                    if row.get("status") == "rejected"
+                    else "未入选",
                 )
                 for row in rows[:10]
             ],
