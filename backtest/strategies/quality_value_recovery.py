@@ -5,6 +5,7 @@ from backtest.strategy_base import (
     BacktestStrategy,
     StrategyMetadata,
     get_month_end_dates,
+    rank_candidates_deterministically,
     select_equal_weight_targets,
 )
 
@@ -44,30 +45,36 @@ class QualityValueRecoveryStrategy(BacktestStrategy):
             minimum_history_days=max(
                 parameters["trend_window"], parameters["min_listing_days"]
             ),
+            financial_signal_dates_only=True,
         )
 
     def build_targets(self, signal_data, config, parameters) -> pd.DataFrame:
-        factor_data = FactorEngine().calculate(
+        factor_data = FactorEngine().calculate_factors_on_dates(
             signal_data,
             self.factor_names,
             self._factor_parameters(parameters),
+            get_month_end_dates(signal_data["date"]),
+            symbol_batch_size=125,
         )
-        ordered_input = signal_data.copy()
+        ordered_input = signal_data.loc[:, ["date", "symbol"]].copy()
         ordered_input["date"] = pd.to_datetime(ordered_input["date"])
         ordered_input = ordered_input.sort_values(["symbol", "date"])
-        listing_days = ordered_input[["date", "symbol"]].copy()
-        listing_days["listing_days"] = (
+        ordered_input["listing_days"] = (
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
-        ).to_numpy()
+        )
+        signal_dates = get_month_end_dates(signal_data["date"])
+        listing_days = ordered_input.loc[
+            ordered_input["date"].isin(signal_dates)
+            & (ordered_input["date"].dt.date >= config.start_date),
+            ["date", "symbol", "listing_days"],
+        ]
         data = factor_data.merge(
             listing_days,
             on=["date", "symbol"],
             how="left",
             validate="one_to_one",
         )
-        rebalance_data = data[
-            data["date"].isin(get_month_end_dates(data["date"]))
-        ].copy()
+        rebalance_data = data[data["date"].isin(signal_dates)].copy()
         rebalance_data = rebalance_data[
             rebalance_data["date"].dt.date >= config.start_date
         ]
@@ -93,7 +100,11 @@ class QualityValueRecoveryStrategy(BacktestStrategy):
             & (rebalance_data["pb_percentile"] <= parameters["pe_pb_percentile"])
         ].copy()
         candidates["score"] = candidates["pe_percentile"] + candidates["pb_percentile"]
-        candidates["rank"] = candidates.groupby("date")["score"].rank(method="first")
+        candidates = rank_candidates_deterministically(
+            candidates,
+            score_column="score",
+            ascending=True,
+        )
         return select_equal_weight_targets(candidates, parameters["holding_count"])
 
     @staticmethod

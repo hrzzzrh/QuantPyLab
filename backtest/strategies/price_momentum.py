@@ -7,6 +7,7 @@ from backtest.strategy_base import (
     BacktestStrategy,
     StrategyMetadata,
     get_month_end_dates,
+    rank_candidates_deterministically,
     select_equal_weight_targets,
 )
 
@@ -56,28 +57,36 @@ class PriceMomentumStrategy(BacktestStrategy):
                 parameters["trend_window"],
                 parameters["min_listing_days"],
             ),
+            financial_signal_dates_only=True,
         )
 
     def build_targets(self, signal_data, config, parameters) -> pd.DataFrame:
-        factor_data = FactorEngine().calculate(
+        factor_data = FactorEngine().calculate_factors_on_dates(
             signal_data,
             self.factor_names,
             self._factor_parameters(parameters),
+            get_month_end_dates(signal_data["date"]),
+            symbol_batch_size=125,
         )
-        ordered_input = signal_data.copy()
+        ordered_input = signal_data.loc[:, ["date", "symbol"]].copy()
         ordered_input["date"] = pd.to_datetime(ordered_input["date"])
         ordered_input = ordered_input.sort_values(["symbol", "date"])
-        listing_days = ordered_input[["date", "symbol"]].copy()
-        listing_days["listing_days"] = (
+        ordered_input["listing_days"] = (
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
-        ).to_numpy()
+        )
+        signal_dates = get_month_end_dates(signal_data["date"])
+        listing_days = ordered_input.loc[
+            ordered_input["date"].isin(signal_dates)
+            & (ordered_input["date"].dt.date >= config.start_date),
+            ["date", "symbol", "listing_days"],
+        ]
         data = factor_data.merge(
             listing_days,
             on=["date", "symbol"],
             how="left",
             validate="one_to_one",
         )
-        candidates = data[data["date"].isin(get_month_end_dates(data["date"]))].copy()
+        candidates = data[data["date"].isin(signal_dates)].copy()
         candidates = candidates[candidates["date"].dt.date >= config.start_date]
         candidates = candidates[
             (candidates["listing_days"] >= parameters["min_listing_days"])
@@ -85,8 +94,10 @@ class PriceMomentumStrategy(BacktestStrategy):
             & candidates["price_trend_above_ma_120d"].gt(0)
         ].copy()
         candidates["score"] = candidates["price_momentum_120d"]
-        candidates["rank"] = candidates.groupby("date")["score"].rank(
-            method="first", ascending=False
+        candidates = rank_candidates_deterministically(
+            candidates,
+            score_column="score",
+            ascending=False,
         )
         return select_equal_weight_targets(candidates, parameters["holding_count"])
 

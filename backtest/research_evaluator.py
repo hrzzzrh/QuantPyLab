@@ -2,13 +2,20 @@ import hashlib
 import json
 import math
 import subprocess
+import sys
 import tomllib
-from collections import Counter
+from collections import Counter, OrderedDict
+from collections.abc import MutableMapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
+
+try:
+    import resource
+except ImportError:  # pragma: no cover - Windows does not provide resource
+    resource = None
 
 from backtest.config import BacktestConfig, load_backtest_config
 from backtest.data_access import BacktestDataAccess
@@ -23,6 +30,10 @@ from backtest.hyperparameter_search import (
     expand_hyperparameter_trials,
 )
 from backtest.metrics import calculate_performance_metrics
+from backtest.research_provenance import (
+    build_research_data_snapshot,
+    verify_research_data_snapshot_unchanged,
+)
 from backtest.runner import BacktestExecutionCache, execute_backtest
 from backtest.strategy_registry import get_backtest_strategy
 from storage.database.manager import DBManager
@@ -47,6 +58,12 @@ DEFAULT_MINIMUM_VALIDATION_SIGNAL_DATES = 11
 DEFAULT_MINIMUM_TEST_SIGNAL_DATES = 11
 DEFAULT_MINIMUM_VALIDATION_OBSERVATIONS = 100
 DEFAULT_MINIMUM_TEST_OBSERVATIONS = 100
+DEFAULT_MAX_TRAINING_CACHE_ENTRIES = 4
+# The data-loading stage is kept near 1.5 GiB; a complete evaluator process
+# also retains two interval-level execution inputs and the active backtest
+# structures. Use a separate 2 GiB process budget instead of conflating the
+# two measurements.
+RESEARCH_PEAK_RSS_LIMIT_BYTES = 2 * 1024**3
 TRAINING_MODEL_COLUMNS = (
     "split_id",
     "candidate_id",
@@ -158,6 +175,55 @@ EVALUATION_FAILURE_COLUMNS = (
 )
 
 
+class BoundedTrainingDataCache:
+    """Bound prepared training frames to one evaluation split."""
+
+    def __init__(self, max_entries: int = DEFAULT_MAX_TRAINING_CACHE_ENTRIES):
+        if isinstance(max_entries, bool) or not isinstance(max_entries, int):
+            raise ValueError("max_training_cache_entries 必须是正整数")
+        if max_entries <= 0:
+            raise ValueError("max_training_cache_entries 必须是正整数")
+        self.max_entries = max_entries
+        self._entries: OrderedDict[tuple, pd.DataFrame] = OrderedDict()
+        self._evictions = 0
+
+    def __contains__(self, key: tuple) -> bool:
+        return key in self._entries
+
+    def __getitem__(self, key: tuple) -> pd.DataFrame:
+        value = self._entries[key]
+        self._entries.move_to_end(key)
+        return value
+
+    def __setitem__(self, key: tuple, value: pd.DataFrame) -> None:
+        self.reserve_entry(key)
+        self._entries[key] = value
+        self._entries.move_to_end(key)
+
+    def reserve_entry(self, key: tuple) -> None:
+        """Evict before a cache miss allocates its replacement frame."""
+
+        if key in self._entries:
+            return
+        while len(self._entries) >= self.max_entries:
+            self._entries.popitem(last=False)
+            self._evictions += 1
+
+    def clear(self) -> None:
+        self._entries.clear()
+
+    def __len__(self) -> int:
+        return len(self._entries)
+
+    @property
+    def stats(self) -> dict[str, int]:
+        return {
+            "entries": len(self._entries),
+            "max_entries": self.max_entries,
+            "evictions": self._evictions,
+        }
+
+
 @dataclass(frozen=True)
 class EvaluationPeriod:
     start_date: date
@@ -234,6 +300,7 @@ class TrainingSpec:
     max_iterations: int = 5000
     minimum_training_observations: int = 200
     minimum_training_dates: int = DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
+    max_training_cache_entries: int = DEFAULT_MAX_TRAINING_CACHE_ENTRIES
 
     def __post_init__(self):
         if not isinstance(self.enabled, bool):
@@ -255,6 +322,7 @@ class TrainingSpec:
             "max_iterations",
             "minimum_training_observations",
             "minimum_training_dates",
+            "max_training_cache_entries",
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
@@ -268,6 +336,7 @@ class TrainingSpec:
             "max_iterations": self.max_iterations,
             "minimum_training_observations": self.minimum_training_observations,
             "minimum_training_dates": self.minimum_training_dates,
+            "max_training_cache_entries": self.max_training_cache_entries,
         }
 
 
@@ -376,6 +445,7 @@ class FactorExperimentEvaluationResult:
     evaluation_failure_rows: tuple[dict, ...] = ()
     validity_rows: tuple[dict, ...] = ()
     selection_diagnostic_rows: tuple[dict, ...] = ()
+    data_snapshot: dict[str, object] | None = None
 
 
 def load_factor_experiment_evaluation_config(
@@ -520,13 +590,25 @@ def evaluate_factor_experiments(
     evaluation_failure_rows = []
     validity_rows = []
     selection_diagnostic_rows = []
+    data_snapshot = build_research_data_snapshot(database_manager)
     for split in config.get_splits():
         validation_scores = {}
         validation_coverage = {}
         effective_configs = {}
         trial_map = {trial.trial_id: trial for trial in trials}
-        training_data_cache = {}
-        execution_cache = BacktestExecutionCache()
+        training_data_cache = (
+            BoundedTrainingDataCache(config.training.max_training_cache_entries)
+            if search_enabled and config.training is not None
+            else None
+        )
+        # Research runs may contain many trial-specific weight maps, but a
+        # split only needs the train and validation factor inputs. Keeping
+        # those two periods avoids reloading the same candidates for every
+        # trial without retaining test data across the split.
+        execution_cache = BacktestExecutionCache(
+            max_entries=2,
+            market_data_max_entries=1,
+        )
         for trial in trials:
             effective_config = trial.config
             training_result = None
@@ -699,6 +781,10 @@ def evaluate_factor_experiments(
                     )
                 )
 
+        if training_data_cache is not None:
+            # All trial fits are complete before validation selection starts;
+            # no training-wide frame is needed by the backtest phases.
+            training_data_cache.clear()
         try:
             selected_trial_id, selected_score = _select_candidate(
                 validation_scores,
@@ -729,6 +815,9 @@ def evaluate_factor_experiments(
                     "validation_score": None,
                 }
             )
+            if training_data_cache is not None:
+                training_data_cache.clear()
+            execution_cache.clear()
             continue
         selected_trial = trial_map[selected_trial_id]
         selected_config = effective_configs[selected_trial_id]
@@ -789,6 +878,9 @@ def evaluate_factor_experiments(
                     validation_coverage=validation_coverage.get(selected_trial_id),
                 )
             )
+            if training_data_cache is not None:
+                training_data_cache.clear()
+            execution_cache.clear()
             continue
         metric_rows.append(
             _build_metric_row(
@@ -817,7 +909,14 @@ def evaluate_factor_experiments(
                 test_coverage=test_coverage,
             )
         )
+        if training_data_cache is not None:
+            training_data_cache.clear()
+        execution_cache.clear()
 
+    data_snapshot = verify_research_data_snapshot_unchanged(
+        data_snapshot,
+        build_research_data_snapshot(database_manager),
+    )
     return FactorExperimentEvaluationResult(
         config=config,
         metric_rows=tuple(metric_rows),
@@ -827,6 +926,7 @@ def evaluate_factor_experiments(
         evaluation_failure_rows=tuple(evaluation_failure_rows),
         validity_rows=tuple(validity_rows),
         selection_diagnostic_rows=tuple(selection_diagnostic_rows),
+        data_snapshot=data_snapshot,
     )
 
 
@@ -836,7 +936,7 @@ def write_factor_experiment_evaluation_report(
 ) -> Path:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=False)
-    audit = _build_reproducibility_audit(result.config)
+    audit = _build_reproducibility_audit(result.config, result.data_snapshot)
     (output_path / "parameters.json").write_text(
         json.dumps(
             {**result.config.to_dict(), "audit": audit},
@@ -938,6 +1038,9 @@ def _parse_training(section: object) -> TrainingSpec | None:
         minimum_training_observations=section.get("minimum_training_observations", 200),
         minimum_training_dates=section.get(
             "minimum_training_dates", DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
+        ),
+        max_training_cache_entries=section.get(
+            "max_training_cache_entries", DEFAULT_MAX_TRAINING_CACHE_ENTRIES
         ),
     )
 
@@ -1264,19 +1367,19 @@ def _fit_candidate_config(
     database_manager: DBManager,
     *,
     ridge_alpha: float | None = None,
-    training_data_cache: dict | None = None,
+    training_data_cache: MutableMapping | None = None,
 ) -> tuple[BacktestConfig, FactorTrainingResult]:
-    if candidate_config.strategy_name != "factor-composite-experiment":
+    strategy = get_backtest_strategy(candidate_config.strategy_name)
+    if not getattr(strategy, "supports_factor_training", False):
         raise ValueError(
-            "真实因子权重训练目前只支持 factor-composite-experiment，"
-            f"不支持 {candidate_config.strategy_name}"
+            f"策略未声明正式因子权重训练能力: {candidate_config.strategy_name}"
         )
 
-    strategy = get_backtest_strategy(candidate_config.strategy_name)
     resolved_parameters = strategy.validate_parameters(
         candidate_config.strategy_parameters
     )
     factor_names = tuple(resolved_parameters["factor_weights"])
+    factor_parameters = resolved_parameters.get("factor_parameters", {})
     training_config = _replace_backtest_period(candidate_config, train_period)
     label_data_end_date = train_period.end_date + timedelta(
         days=training.label_horizon_days * 3 + 30
@@ -1285,7 +1388,7 @@ def _fit_candidate_config(
         candidate_config.strategy_name,
         factor_names,
         json.dumps(
-            resolved_parameters["factor_parameters"],
+            factor_parameters,
             ensure_ascii=False,
             sort_keys=True,
             default=str,
@@ -1298,28 +1401,33 @@ def _fit_candidate_config(
     if training_data_cache is not None and cache_key in training_data_cache:
         training_data = training_data_cache[cache_key]
     else:
+        reserve_entry = getattr(training_data_cache, "reserve_entry", None)
+        if callable(reserve_entry):
+            reserve_entry(cache_key)
         raw_training_data = BacktestDataAccess(database_manager).load_factor_data(
             training_config,
             factor_names,
-            factor_parameters=resolved_parameters["factor_parameters"],
+            factor_parameters=factor_parameters,
             minimum_history_days=resolved_parameters["min_listing_days"],
             data_end_date=label_data_end_date,
+            financial_signal_dates_only=True,
         )
         training_data = prepare_factor_training_data(
             raw_training_data,
             factor_names,
-            resolved_parameters["factor_parameters"],
+            factor_parameters,
             train_period.start_date,
             train_period.end_date,
             minimum_history_days=resolved_parameters["min_listing_days"],
             label_horizon_days=training.label_horizon_days,
         )
+        del raw_training_data
         if training_data_cache is not None:
             training_data_cache[cache_key] = training_data
     training_result = fit_factor_weights(
         training_data,
         factor_names,
-        resolved_parameters["factor_parameters"],
+        factor_parameters,
         train_period.start_date,
         train_period.end_date,
         minimum_history_days=resolved_parameters["min_listing_days"],
@@ -1333,17 +1441,15 @@ def _fit_candidate_config(
         prepared_data=training_data,
     )
     trained_parameters = dict(candidate_config.strategy_parameters)
-    trained_weights = {
-        name: weight
-        for name, weight in training_result.factor_weights.items()
-        if weight > 1e-12
-    }
+    trained_weights = strategy.apply_trained_factor_weights(
+        resolved_parameters,
+        training_result.factor_weights,
+    )
     if not trained_weights:
         raise ValueError("训练得到的因子权重全部退化为零")
     trained_parameters["factor_weights"] = trained_weights
     trained_parameters["factor_parameters"] = {
-        name: dict(resolved_parameters["factor_parameters"].get(name, {}))
-        for name in trained_weights
+        name: dict(factor_parameters.get(name, {})) for name in trained_weights
     }
     trained_config = replace(
         candidate_config,
@@ -1771,6 +1877,7 @@ def _select_candidate(
 
 def _build_reproducibility_audit(
     config: FactorExperimentEvaluationConfig,
+    data_snapshot: dict[str, object] | None = None,
 ) -> dict[str, object]:
     candidate_hashes = {}
     factor_versions = {}
@@ -1808,6 +1915,7 @@ def _build_reproducibility_audit(
             search_parameter_coverage[path.stem] = {"_error": str(error)}
 
     git_commit = "未取得"
+    git_worktree_dirty = None
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -1819,15 +1927,61 @@ def _build_reproducibility_audit(
         )
         if completed.returncode == 0 and completed.stdout.strip():
             git_commit = completed.stdout.strip()
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=Path.cwd(),
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=5,
+        )
+        if status.returncode == 0:
+            git_worktree_dirty = bool(status.stdout.strip())
     except (OSError, subprocess.SubprocessError):
         pass
+    resolved_data_snapshot = data_snapshot or {
+        "snapshot_id": "unavailable",
+        "status": "unavailable",
+        "reason": "本次结果未采集数据快照",
+    }
+    peak_rss_bytes = _get_process_peak_rss_bytes()
     return {
         "candidate_config_sha256": candidate_hashes,
         "factor_versions": factor_versions,
         "search_parameter_coverage": search_parameter_coverage,
         "git_commit": git_commit,
-        "data_version": "未在评估器内采集",
+        "git_worktree_dirty": git_worktree_dirty,
+        "data_version": resolved_data_snapshot.get("snapshot_id", "unavailable"),
+        "data_snapshot": resolved_data_snapshot,
+        "resource": {
+            "peak_rss_bytes": peak_rss_bytes,
+            "peak_rss_limit_bytes": RESEARCH_PEAK_RSS_LIMIT_BYTES,
+            "peak_rss_exceeded": (
+                peak_rss_bytes > RESEARCH_PEAK_RSS_LIMIT_BYTES
+                if peak_rss_bytes is not None
+                else None
+            ),
+            "training_cache_max_entries": (
+                config.training.max_training_cache_entries
+                if config.training is not None and config.training.enabled
+                else None
+            ),
+        },
     }
+
+
+def _get_process_peak_rss_bytes() -> int | None:
+    """Return this evaluation process' peak RSS in bytes when supported."""
+
+    if resource is None:
+        return None
+    try:
+        peak_rss = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    except (AttributeError, OSError, ValueError):
+        return None
+    if sys.platform == "darwin":
+        return peak_rss
+    return peak_rss * 1024
 
 
 def _sha256_file(path: Path) -> str:
@@ -1898,7 +2052,23 @@ def _build_evaluation_summary(
                 else "未启用权重训练",
             ),
             ("代码版本", audit.get("git_commit", "未取得")),
+            (
+                "代码工作区",
+                "dirty"
+                if audit.get("git_worktree_dirty") is True
+                else "clean"
+                if audit.get("git_worktree_dirty") is False
+                else "未取得",
+            ),
             ("数据版本", audit.get("data_version", "未取得")),
+            (
+                "数据快照详情",
+                _format_json_value(audit.get("data_snapshot", {})),
+            ),
+            (
+                "资源审计",
+                _format_json_value(audit.get("resource", {})),
+            ),
         ],
     )
 

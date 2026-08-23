@@ -165,7 +165,7 @@ uv run main.py diagnose-factors \
 
 ### 3.3.2 因子实验评估 (`evaluate-factor-experiments`)
 
-研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期；`[training]` 默认示例会在训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重；启用 `[hyperparameter_search]` 后，还会在有限网格中搜索因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合重新训练权重。可选的 `[walk_forward]` 区段会按自然年生成固定长度滚动窗口并在每个窗口重新展开和训练。训练权重在验证和测试阶段冻结，训练失败的组合会记录原因并排除，评估器只对验证集入选方案运行测试。
+研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期；`[training]` 默认示例会在训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重，当前支持实验策略和正式七因子策略。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；启用 `[hyperparameter_search]` 后，还会在有限网格中搜索因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合重新训练权重。可选的 `[walk_forward]` 区段会按自然年生成固定长度滚动窗口并在每个窗口重新展开和训练。训练权重在验证和测试阶段冻结，训练失败的组合会记录原因并排除，评估器只对验证集入选方案运行测试。训练数据缓存由 `[training].max_training_cache_entries` 限制在当前窗口内，并在窗口结束时释放。
 
 ```bash
 uv run main.py evaluate-factor-experiments \
@@ -174,9 +174,11 @@ uv run main.py evaluate-factor-experiments \
 
 正式样本外研究推荐使用 `config/backtest/factor_experiment_evaluation_robust.toml`。它采用 3 年训练、2 年验证、2 年测试的完整自然年 Walk-forward，验证和测试各要求至少 20 个可执行信号日，并移除基线中已确认没有区分度的 `ridge_alpha=1.0`。原配置保留为短窗口基线，不应与稳健配置的测试结果混合。
 
-结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`research_validity.csv`、`selection_diagnostics.csv`、`factor_weight_diagnostics.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 文件提供完整审计明细。`selection_diagnostics.csv` 记录每个窗口比较的组合数、验证信号日、第一/二名差距、并列数量和选择负担风险；`factor_weight_diagnostics.csv` 记录每个训练组合的最大权重、有效因子数、权重熵、塌缩级别和入选标记；验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变测试集隔离。默认研究门槛是训练至少 24 个信号日，验证和测试各至少 11 个实际可执行信号及 100 个目标观测，实际门槛可在 `[validity]` 中显式调整。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
+结果写入 `workspace/backtest/evaluations/`，包含 `parameters.json`、标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`、`evaluation_failures.csv`、`research_validity.csv`、`selection_diagnostics.csv`、`factor_weight_diagnostics.csv`、`candidate_metrics.csv` 和 `selections.csv`。报告固定覆盖执行状态、月末信号日和样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、搜索/失败组合、拟合权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；`parameters.json` 还记录代码提交、候选配置哈希、因子版本和轻量数据快照标识；CSV 文件提供完整审计明细。`selection_diagnostics.csv` 记录每个窗口比较的组合数、验证信号日、第一/二名差距、并列数量和选择负担风险；`factor_weight_diagnostics.csv` 记录每个训练组合的最大权重、有效因子数、权重熵、塌缩级别和入选标记；验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变测试集隔离。默认研究门槛是训练至少 24 个信号日，验证和测试各至少 11 个实际可执行信号及 100 个目标观测，实际门槛可在 `[validity]` 中显式调整。测试集不用于调参；需要查看入选方案的完整目标、交易和每日净值时，再对对应候选单独运行 `run-backtest`。
 
-完整参数搜索会在每个 split 内以最多 4 组因子输入和 2 个市场区间的有界 LRU 缓存，复用因子实验的原始点时输入、基础候选表以及行情索引结构，减少重复查询、因子计算和行情准备；缓存不跨 split，且每组参数仍重新计算缩尾、排名、组合权重和持仓状态。
+完整参数搜索会在每个 split 内以最多 2 组因子输入和 1 个市场区间的有界 LRU 缓存，复用因子实验的原始点时输入、基础候选表以及行情索引结构，减少重复查询、因子计算和行情准备；训练缓存由 `[training].max_training_cache_entries` 单独限制，缓存不跨 split，且每组参数仍重新计算缩尾、排名、组合权重和持仓状态。
+
+研究评估报告的 `parameters.json` 和 `summary.md` 还记录评估进程峰值 RSS、2 GiB 进程资源预算、单次数据加载目标以及训练和回测缓存上限；若全量评估实际超过预算，报告会明确标记而不会伪装成通过。
 
 ### 3.3.3 因子实验暴露诊断 (`diagnose-factor-exposures`)
 
@@ -368,7 +370,7 @@ if __name__ == "__main__":
 3. 执行导出的 SQL 脚本即可直接在可视化界面查询逻辑视图。
 
 ### 4.4 视图加载机制：按需注册 + schema 预声明
-视图系统采用两层机制，保证内存占用可控（初始化峰值 < 0.2GB，全量查询峰值 < 1.5GB）：
+视图系统采用两层机制，保证内存占用可控（初始化峰值 < 0.2GB，单次数据加载目标 < 1.5GB；完整研究评估进程预算为 2GB）：
 
 1. **按需注册 (Lazy Loading)**：`get_duckdb_conn()` 不自动注册任何视图；通过 `db_manager.ensure_views('view_name', ...)` 声明所需视图，系统按 DAG 拓扑序注册（含全部依赖），已注册视图自动跳过。
 2. **schema 预声明 (Schema Predeclaration)**：视图 SQL 通过 `read_parquet(..., schema=MAP(...))` 预声明列集与类型，替代 `union_by_name=1` 的运行时全分片 schema 推断（后者需扫描全部 5500+ 分片 footer，导致 6-7GB 峰值内存）。schema 缓存位于 `storage/database/views/schemas/<dataset>.json`，由 `rebuild-schemas` 命令生成。

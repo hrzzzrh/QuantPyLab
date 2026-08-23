@@ -34,6 +34,7 @@ class FactorMetadata:
     inputs: tuple[FactorInput, ...]
     lookback_days: int
     higher_is_better: bool
+    symbol_local: bool = True
 
     def __post_init__(self):
         if not self.name:
@@ -42,6 +43,8 @@ class FactorMetadata:
             raise ValueError(f"因子 {self.name} 的版本不能为空")
         if self.lookback_days < 0:
             raise ValueError(f"因子 {self.name} 的 lookback_days 不能为负数")
+        if not isinstance(self.symbol_local, bool):
+            raise ValueError(f"因子 {self.name} 的 symbol_local 必须是布尔值")
         aliases = [field.alias for field in self.inputs]
         if len(aliases) != len(set(aliases)):
             raise ValueError(f"因子 {self.name} 的输入别名不能重复")

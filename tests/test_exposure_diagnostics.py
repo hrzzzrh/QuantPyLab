@@ -170,6 +170,7 @@ def test_load_factor_data_can_include_point_in_time_market_cap(monkeypatch):
         kline_fields=(),
         data_end_date=None,
         valuation_fields=(),
+        financial_signal_dates_only=False,
     ):
         captured["valuation_fields"] = valuation_fields
         return pd.DataFrame()

@@ -8,7 +8,6 @@ from datetime import date
 import pandas as pd
 
 from analysis.factors import FactorEngine
-from analysis.factors.diagnostics import calculate_forward_returns
 from analysis.factors.registry import get_factor_definition
 from analysis.factors.transforms import (
     filter_valid_factor_rows,
@@ -16,6 +15,8 @@ from analysis.factors.transforms import (
     winsorize_factor_cross_sectionally,
 )
 from backtest.strategy_base import get_month_end_dates
+
+TRAINING_SYMBOL_BATCH_SIZE = 125
 
 
 @dataclass(frozen=True)
@@ -82,56 +83,91 @@ def prepare_factor_training_data(
     ):
         raise ValueError("label_horizon_days 必须是正整数")
 
-    normalized = _normalize_training_input(data)
-    factor_frame = FactorEngine().calculate(normalized, names, parameters)
-    forward_returns = calculate_forward_returns(
-        normalized, horizons=(label_horizon_days,)
+    normalized = _normalize_training_input(
+        data,
+        FactorEngine.get_required_columns(names),
     )
     label_column = f"forward_return_{label_horizon_days}d"
-    label_exit_dates = normalized.loc[:, ["date", "symbol"]].copy()
-    label_exit_dates = label_exit_dates.sort_values(["symbol", "date"])
-    label_exit_dates["label_exit_date"] = label_exit_dates.groupby(
-        "symbol", sort=False
-    )["date"].shift(-label_horizon_days)
-    candidates = factor_frame.merge(
-        forward_returns.loc[:, ["date", "symbol", label_column]],
-        on=["date", "symbol"],
-        how="left",
-        validate="one_to_one",
-    )
-    candidates = candidates.merge(
-        label_exit_dates,
-        on=["date", "symbol"],
-        how="left",
-        validate="one_to_one",
+    signal_dates = get_month_end_dates(normalized["date"])
+    signal_dates = signal_dates[
+        (signal_dates >= start_date) & (signal_dates <= end_date)
+    ]
+    factor_frame = FactorEngine().calculate_factors_on_dates(
+        normalized,
+        names,
+        parameters,
+        signal_dates,
+        symbol_batch_size=TRAINING_SYMBOL_BATCH_SIZE,
     )
 
-    listing_days = normalized.loc[:, ["date", "symbol"]].copy()
-    listing_days = listing_days.sort_values(["symbol", "date"])
-    listing_days["listing_days"] = (
-        listing_days.groupby("symbol", sort=False).cumcount() + 1
+    # Build labels and listing-day counts one symbol batch at a time. The old
+    # path retained a full-market factor frame and a second full-market label
+    # frame simultaneously, which caused avoidable multi-gigabyte RSS spikes.
+    symbols = normalized["symbol"].drop_duplicates().tolist()
+    candidate_frames = []
+    for offset in range(0, len(symbols), TRAINING_SYMBOL_BATCH_SIZE):
+        batch_symbols = symbols[offset : offset + TRAINING_SYMBOL_BATCH_SIZE]
+        batch_mask = normalized["symbol"].isin(batch_symbols)
+        label_data = normalized.loc[
+            batch_mask,
+            ["date", "symbol", "open_hfq", "close_hfq"],
+        ].copy()
+        label_data = label_data.sort_values(
+            ["symbol", "date"], kind="mergesort"
+        ).reset_index(drop=True)
+        grouped_prices = label_data.groupby("symbol", sort=False)
+        next_open = grouped_prices["open_hfq"].shift(-1)
+        exit_close = grouped_prices["close_hfq"].shift(-label_horizon_days)
+        label_data["label_exit_date"] = grouped_prices["date"].shift(
+            -label_horizon_days
+        )
+        label_data["listing_days"] = grouped_prices.cumcount() + 1
+        valid_prices = next_open.gt(0) & exit_close.gt(0)
+        label_data[label_column] = (
+            (exit_close / next_open - 1)
+            .where(valid_prices)
+            .replace([float("inf"), float("-inf")], pd.NA)
+            .astype("Float64")
+        )
+        label_data = label_data.loc[
+            label_data["date"].isin(signal_dates),
+            [
+                "date",
+                "symbol",
+                "label_exit_date",
+                "listing_days",
+                label_column,
+            ],
+        ]
+        factor_batch = factor_frame.loc[factor_frame["symbol"].isin(batch_symbols)]
+        batch_candidates = factor_batch.merge(
+            label_data,
+            on=["date", "symbol"],
+            how="left",
+            validate="one_to_one",
+        )
+        batch_candidates = batch_candidates[
+            batch_candidates["label_exit_date"].notna()
+            & (batch_candidates["label_exit_date"] <= end_date)
+            & (batch_candidates["listing_days"] >= minimum_history_days)
+        ]
+        batch_candidates = filter_valid_factor_rows(batch_candidates, names)
+        if not batch_candidates.empty:
+            candidate_frames.append(
+                batch_candidates.loc[
+                    :, ["date", "symbol", *names, "label_exit_date", label_column]
+                ].copy()
+            )
+
+    if not candidate_frames:
+        return pd.DataFrame(
+            columns=["date", "symbol", *names, "label_exit_date", label_column]
+        )
+    return (
+        pd.concat(candidate_frames, ignore_index=True)
+        .sort_values(["date", "symbol"])
+        .reset_index(drop=True)
     )
-    candidates = candidates.merge(
-        listing_days,
-        on=["date", "symbol"],
-        how="left",
-        validate="one_to_one",
-    )
-    candidates = candidates[
-        candidates["date"].isin(get_month_end_dates(candidates["date"]))
-    ].copy()
-    candidates = candidates[
-        candidates["date"].between(start_date, end_date, inclusive="both")
-    ]
-    candidates = candidates[
-        candidates["label_exit_date"].notna()
-        & (candidates["label_exit_date"] <= end_date)
-    ]
-    candidates = candidates[candidates["listing_days"] >= minimum_history_days].copy()
-    candidates = filter_valid_factor_rows(candidates, names)
-    return candidates.loc[
-        :, ["date", "symbol", *names, "label_exit_date", label_column]
-    ].copy()
 
 
 def fit_factor_weights(
@@ -347,19 +383,29 @@ def _validate_factor_parameters(
     return normalized
 
 
-def _normalize_training_input(data: pd.DataFrame) -> pd.DataFrame:
+def _normalize_training_input(
+    data: pd.DataFrame,
+    required_factor_columns: Sequence[str] = (),
+) -> pd.DataFrame:
     required = {"date", "symbol", "open_hfq", "close_hfq"}
+    required.update(required_factor_columns)
     missing = required - set(data.columns)
     if missing:
         raise ValueError(f"因子训练输入缺少字段: {', '.join(sorted(missing))}")
-    normalized = data.copy()
-    normalized["date"] = pd.to_datetime(normalized["date"], errors="coerce")
-    if normalized["date"].isna().any():
+    normalized_dates = pd.to_datetime(data["date"], errors="coerce")
+    if normalized_dates.isna().any():
         raise ValueError("因子训练输入包含无效日期")
-    if normalized[["date", "symbol"]].isna().any().any():
+    if data[["date", "symbol"]].isna().any().any():
         raise ValueError("因子训练输入的 date 和 symbol 不能为空")
-    if normalized.duplicated(["date", "symbol"]).any():
+    if data.duplicated(["date", "symbol"]).any():
         raise ValueError("因子训练输入不能包含重复的 date/symbol")
+    if pd.api.types.is_datetime64_any_dtype(data["date"]):
+        # DataAccess already returns an owned, canonical datetime column. Do
+        # not make a second multi-million-row copy merely to normalize it;
+        # all downstream operations select their own working columns.
+        return data
+    normalized = data.copy()
+    normalized["date"] = normalized_dates
     return normalized
 
 

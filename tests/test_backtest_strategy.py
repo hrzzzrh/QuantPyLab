@@ -136,13 +136,56 @@ def test_multi_factor_strategy_builds_equal_weight_targets_from_registered_facto
     config = _config(dates[-1].date(), "multi-factor-quality-value-momentum")
     strategy = MultiFactorQualityValueMomentumStrategy()
     parameters = strategy.validate_parameters({"holding_count": 2})
+    assert set(parameters["factor_parameters"]) == set(parameters["factor_weights"])
+    assert strategy.supports_factor_training is True
 
-    targets = strategy.build_targets(pd.DataFrame(rows), config, parameters)
+    signal_data = pd.DataFrame(rows)
+    targets = strategy.build_targets(signal_data, config, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    candidates = strategy.prepare_target_candidates(
+        signal_data,
+        factor_frame,
+        config,
+        parameters,
+    )
+    cached_targets = strategy.build_targets_from_candidates(candidates, parameters)
+    scored_candidates = strategy.build_candidates(signal_data, config, parameters)
 
     latest_targets = targets[targets["date"] == targets["date"].max()]
     assert len(latest_targets) == 2
     assert latest_targets["target_weight"].tolist() == [0.5, 0.5]
     assert latest_targets["score"].notna().all()
+    pd.testing.assert_frame_equal(
+        targets.reset_index(drop=True), cached_targets.reset_index(drop=True)
+    )
+    assert {"score", "rank"}.issubset(scored_candidates.columns)
+
+
+def test_multi_factor_strategy_breaks_equal_scores_by_symbol_deterministically():
+    strategy = MultiFactorQualityValueMomentumStrategy()
+    parameters = strategy.validate_parameters({"holding_count": 2})
+    candidates = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-31"),
+                "symbol": symbol,
+                **{factor_name: 1.0 for factor_name in parameters["factor_weights"]},
+            }
+            for symbol in ("000003", "000001", "000002")
+        ]
+    )
+
+    original_targets = strategy.build_targets_from_candidates(candidates, parameters)
+    shuffled_targets = strategy.build_targets_from_candidates(
+        candidates.sample(frac=1.0, random_state=7),
+        parameters,
+    )
+
+    assert original_targets["symbol"].tolist() == ["000001", "000002"]
+    pd.testing.assert_frame_equal(
+        original_targets.reset_index(drop=True),
+        shuffled_targets.reset_index(drop=True),
+    )
 
 
 def test_factor_composite_experiment_supports_single_factor_and_normalizes_weight():

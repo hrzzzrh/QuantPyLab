@@ -80,6 +80,29 @@ def test_factor_engine_calculates_wide_point_in_time_frame():
     assert latest["valuation_pe_ttm"].tolist() == [10.0, 20.0]
 
 
+def test_factor_engine_batched_date_calculation_matches_full_frame():
+    data = _factor_data()
+    factor_names = (
+        "price_momentum_120d",
+        "price_trend_gap_120d",
+        "valuation_pb",
+    )
+    engine = FactorEngine()
+    full = engine.calculate(data, factor_names, {})
+    output_dates = pd.DatetimeIndex([data["date"].min(), data["date"].iloc[-1]])
+
+    batched = engine.calculate_factors_on_dates(
+        data,
+        factor_names,
+        {},
+        output_dates,
+        symbol_batch_size=1,
+    )
+    expected = full[full["date"].isin(output_dates)].reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(batched, expected)
+
+
 def test_factor_engine_rejects_duplicate_input_rows():
     data = _factor_data().iloc[[0, 0]]
 

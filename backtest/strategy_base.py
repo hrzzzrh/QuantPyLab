@@ -19,6 +19,7 @@ class StrategyMetadata:
 
 class BacktestStrategy(ABC):
     metadata: StrategyMetadata
+    supports_factor_training = False
 
     @abstractmethod
     def validate_parameters(self, parameters: dict) -> dict:
@@ -41,6 +42,13 @@ class BacktestStrategy(ABC):
         parameters: dict,
     ) -> pd.DataFrame:
         """Return standard target weights dated at the close of each signal day."""
+
+    def apply_trained_factor_weights(
+        self, parameters: dict, factor_weights: dict[str, float]
+    ) -> dict[str, float]:
+        """Apply fitted weights using the strategy's explicit zero-weight semantics."""
+
+        raise ValueError(f"策略 {self.metadata.name} 不支持因子权重训练")
 
 
 def validate_target_weights(targets: pd.DataFrame) -> pd.DataFrame:
@@ -67,6 +75,27 @@ def get_month_end_dates(dates: pd.Series) -> pd.DatetimeIndex:
         pd.to_datetime(dates.drop_duplicates()).sort_values()
     )
     return unique_dates.to_series().groupby(unique_dates.to_period("M")).max().values
+
+
+def rank_candidates_deterministically(
+    candidates: pd.DataFrame,
+    *,
+    score_column: str = "score",
+    ascending: bool = False,
+) -> pd.DataFrame:
+    """Rank equal scores by symbol instead of relying on input row order."""
+
+    required_columns = {"date", "symbol", score_column}
+    missing_columns = required_columns - set(candidates.columns)
+    if missing_columns:
+        raise ValueError("候选排名缺少字段: " + ", ".join(sorted(missing_columns)))
+    ranked = candidates.sort_values(
+        ["date", score_column, "symbol"],
+        ascending=[True, ascending, True],
+        kind="mergesort",
+    ).copy()
+    ranked["rank"] = ranked.groupby("date", sort=False).cumcount().add(1).astype(float)
+    return ranked
 
 
 def select_equal_weight_targets(

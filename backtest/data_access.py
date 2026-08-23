@@ -22,8 +22,13 @@ class IndicatorField:
 class BacktestDataAccess:
     """通过统一视图加载回测数据，并统一处理点时财务指标。"""
 
-    _DUCKDB_MEMORY_LIMIT = "2GB"
+    # Keep the query allocator below the process-level research budget. Large
+    # result frames are materialized in bounded batches and detached before
+    # the next query, so a smaller DuckDB limit avoids stacking allocator
+    # blocks with Pandas' copies.
+    _DUCKDB_MEMORY_LIMIT = "256MB"
     _DUCKDB_THREADS = 2
+    _KLINE_SYMBOL_BATCH_SIZE = 250
     _KLINE_SIGNAL_COLUMNS = frozenset({"high", "low", "volume", "amount"})
     _VALUATION_SIGNAL_COLUMNS = frozenset({"ps_ttm", "pcf_ttm", "market_cap"})
 
@@ -38,18 +43,29 @@ class BacktestDataAccess:
         kline_fields: tuple[str, ...] = (),
         data_end_date: date | None = None,
         valuation_fields: tuple[str, ...] = (),
+        financial_signal_dates_only: bool = False,
     ) -> pd.DataFrame:
         """在连接级锁内加载一份自洽的行情与点时财务数据。"""
 
-        with self._duckdb_guard():
-            return self._load_market_data(
-                config,
-                lookback_days,
-                indicator_fields,
-                kline_fields,
-                data_end_date,
-                valuation_fields,
-            )
+        try:
+            with self._duckdb_guard():
+                return self._load_market_data(
+                    config,
+                    lookback_days,
+                    indicator_fields,
+                    kline_fields,
+                    data_end_date,
+                    valuation_fields,
+                    financial_signal_dates_only,
+                )
+        finally:
+            # A market-data frame is fully detached before this method returns.
+            # Closing the transient in-memory DuckDB connection releases its
+            # allocator blocks between large factor loads; the next call
+            # recreates only the views it needs.
+            close_duckdb = getattr(self.db_manager, "close_duckdb", None)
+            if callable(close_duckdb):
+                close_duckdb()
 
     @contextmanager
     def _duckdb_guard(self):
@@ -68,6 +84,7 @@ class BacktestDataAccess:
         kline_fields: tuple[str, ...] = (),
         data_end_date: date | None = None,
         valuation_fields: tuple[str, ...] = (),
+        financial_signal_dates_only: bool = False,
     ) -> pd.DataFrame:
         effective_end_date = data_end_date or config.end_date
         if effective_end_date < config.end_date:
@@ -94,6 +111,8 @@ class BacktestDataAccess:
         self._configure_query_connection(conn)
         symbol_relation = "_backtest_requested_symbols"
         relation_registered = False
+        batch_symbol_relation = "_backtest_kline_symbols"
+        batch_relation_registered = False
         try:
             lookback_start = self._get_lookback_start(
                 conn, config.start_date, lookback_days, "daily_kline_calendar"
@@ -128,81 +147,268 @@ class BacktestDataAccess:
                     symbol_relation,
                 )
             kline_projection = self._build_kline_projection(kline_fields)
-            kline_frame = self._fetch_dataframe(
-                conn,
+            requested_symbol_values = requested_symbols["symbol"].tolist()
+            kline_columns = [
+                "date",
+                "symbol",
+                "raw_close",
+                "adj_factor",
+                "open",
+                *kline_fields,
+            ]
+            numeric_kline_columns = [
+                column for column in kline_columns if column not in {"date", "symbol"}
+            ]
+            count_row = conn.execute(
                 f"""
-                SELECT
-                    CAST(kline.date AS DATE) AS date,
-                    kline.symbol,
-                    kline.close AS raw_close,
-                    kline.adj_factor,
-                    kline.open
-                    {kline_projection}
+                SELECT COUNT(*)
                 FROM daily_kline_raw AS kline
                 WHERE CAST(kline.date AS DATE) BETWEEN ? AND ?
+                  AND kline.symbol IN (SELECT symbol FROM {symbol_relation})
                 """,
                 [lookback_start, effective_end_date],
-            )
-            if kline_frame.duplicated(["date", "symbol"]).any():
-                del kline_frame
-                gc.collect()
-                kline_frame = self._fetch_dataframe(
-                    conn,
-                    f"""
-                    SELECT
-                        CAST(kline.date AS DATE) AS date,
-                        kline.symbol,
-                        kline.close AS raw_close,
-                        kline.adj_factor,
-                        kline.open
-                        {kline_projection},
-                        kline.open AS _kline_open,
-                        kline.high AS _kline_high,
-                        kline.low AS _kline_low,
-                        kline.close AS _kline_close,
-                        kline.volume AS _kline_volume,
-                        kline.amount AS _kline_amount,
-                        kline.adj_factor AS _kline_adj_factor,
-                        kline.filename AS _kline_filename
-                    FROM daily_kline_raw AS kline
-                    WHERE CAST(kline.date AS DATE) BETWEEN ? AND ?
-                    """,
-                    [lookback_start, effective_end_date],
+            ).fetchone()
+            expected_kline_rows = int(count_row[0] or 0)
+            column_arrays = {
+                "date": np.empty(expected_kline_rows, dtype="datetime64[ns]"),
+                "symbol": np.empty(expected_kline_rows, dtype="int32"),
+                **{
+                    column: np.empty(expected_kline_rows, dtype="float64")
+                    for column in numeric_kline_columns
+                },
+            }
+            write_offset = 0
+            for offset in range(
+                0,
+                len(requested_symbol_values),
+                self._KLINE_SYMBOL_BATCH_SIZE,
+            ):
+                batch_symbols = pd.DataFrame(
+                    {
+                        "symbol": requested_symbol_values[
+                            offset : offset + self._KLINE_SYMBOL_BATCH_SIZE
+                        ]
+                    }
                 )
-                kline_frame = self._canonicalize_kline_rows(kline_frame)
+                conn.register(batch_symbol_relation, batch_symbols)
+                batch_relation_registered = True
+                try:
+                    batch_frame = self._fetch_dataframe(
+                        conn,
+                        f"""
+                        SELECT
+                            CAST(kline.date AS DATE) AS date,
+                            kline.symbol,
+                            kline.close AS raw_close,
+                            kline.adj_factor,
+                            kline.open
+                            {kline_projection}
+                        FROM daily_kline_raw AS kline
+                        WHERE CAST(kline.date AS DATE) BETWEEN ? AND ?
+                          AND kline.symbol IN (
+                              SELECT symbol FROM {batch_symbol_relation}
+                          )
+                        """,
+                        [lookback_start, effective_end_date],
+                    )
+                    if batch_frame.duplicated(["date", "symbol"]).any():
+                        del batch_frame
+                        gc.collect()
+                        batch_frame = self._fetch_dataframe(
+                            conn,
+                            f"""
+                            SELECT
+                                CAST(kline.date AS DATE) AS date,
+                                kline.symbol,
+                                kline.close AS raw_close,
+                                kline.adj_factor,
+                                kline.open
+                                {kline_projection},
+                                kline.open AS _kline_open,
+                                kline.high AS _kline_high,
+                                kline.low AS _kline_low,
+                                kline.close AS _kline_close,
+                                kline.volume AS _kline_volume,
+                                kline.amount AS _kline_amount,
+                                kline.adj_factor AS _kline_adj_factor,
+                                kline.filename AS _kline_filename
+                            FROM daily_kline_raw AS kline
+                            WHERE CAST(kline.date AS DATE) BETWEEN ? AND ?
+                              AND kline.symbol IN (
+                                  SELECT symbol FROM {batch_symbol_relation}
+                              )
+                            """,
+                            [lookback_start, effective_end_date],
+                        )
+                        batch_frame = self._canonicalize_kline_rows(batch_frame)
+                    batch_frame["date"] = pd.to_datetime(batch_frame["date"])
+                    row_count = len(batch_frame)
+                    end_offset = write_offset + row_count
+                    column_arrays["date"][write_offset:end_offset] = batch_frame[
+                        "date"
+                    ].to_numpy(dtype="datetime64[ns]")
+                    column_arrays["symbol"][write_offset:end_offset] = pd.Categorical(
+                        batch_frame["symbol"], categories=requested_symbol_values
+                    ).codes
+                    for column in numeric_kline_columns:
+                        column_arrays[column][write_offset:end_offset] = pd.to_numeric(
+                            batch_frame[column], errors="coerce"
+                        ).to_numpy(dtype="float64")
+                    write_offset = end_offset
+                    del batch_frame
+                finally:
+                    conn.unregister(batch_symbol_relation)
+                    batch_relation_registered = False
+            kline_frame = pd.DataFrame(
+                {
+                    "date": column_arrays["date"][:write_offset],
+                    "symbol": pd.Categorical.from_codes(
+                        column_arrays["symbol"][:write_offset],
+                        categories=requested_symbol_values,
+                    ),
+                    **{
+                        column: column_arrays[column][:write_offset]
+                        for column in numeric_kline_columns
+                    },
+                },
+                copy=False,
+            )
+            del column_arrays
+            # The preallocated arrays avoid retaining all batch frames while
+            # pandas creates a second full-size object during concat.
             # 估值和行情分开物化；不把财务历史区间连接放进大型日行情查询计划。
             # 这样避免 DuckDB 在不同视图加载顺序下错误复用区间连接结果。
-            frame = self._build_valuation_frame(
-                conn,
-                kline_frame,
-                effective_end_date,
-                valuation_fields,
-                symbol_relation,
-                valuation_histories=valuation_histories,
-            )
-            del kline_frame, valuation_histories
-            frame["date"] = pd.to_datetime(frame["date"])
-            if indicator_history is not None:
-                frame = self._merge_indicator_point_in_time(
-                    frame,
-                    indicator_history,
-                    indicator_fields,
-                    copy_market_data=False,
-                    history_is_canonical=True,
-                    market_data_is_sorted=True,
+            if financial_signal_dates_only:
+                # 滚动行情因子需要完整日频 close_hfq，但估值和财务指标只会在
+                # 月末信号日参与选股。若把历史财务值复制到每个交易日，会在
+                # 数百万行行情上重复构造宽表并显著抬高峰值内存。
+                kline_frame["date"] = pd.to_datetime(kline_frame["date"])
+                kline_frame["raw_close"] = pd.to_numeric(
+                    kline_frame["raw_close"], errors="coerce"
                 )
-                frame.drop(columns=["_指标_effective_date"], inplace=True)
+                kline_frame["adj_factor"] = pd.to_numeric(
+                    kline_frame["adj_factor"], errors="coerce"
+                )
+                kline_frame["close_hfq"] = (
+                    kline_frame["raw_close"] * kline_frame["adj_factor"]
+                )
+                periods = kline_frame["date"].dt.to_period("M")
+                month_end_dates = kline_frame.groupby(periods, sort=False)[
+                    "date"
+                ].transform("max")
+                financial_signal_mask = kline_frame["date"].eq(month_end_dates) & (
+                    kline_frame["date"].dt.date >= config.start_date
+                )
+                financial_input = kline_frame.loc[financial_signal_mask].copy()
+                financial_input["_financial_row_id"] = financial_input.index.to_numpy()
+                financial_frame = self._build_valuation_frame(
+                    conn,
+                    financial_input,
+                    effective_end_date,
+                    valuation_fields,
+                    symbol_relation,
+                    valuation_histories=valuation_histories,
+                    drop_missing_rows=False,
+                )
+                financial_frame["date"] = pd.to_datetime(financial_frame["date"])
+                if indicator_history is not None:
+                    financial_frame = self._merge_indicator_point_in_time(
+                        financial_frame,
+                        indicator_history,
+                        indicator_fields,
+                        copy_market_data=False,
+                        history_is_canonical=True,
+                        market_data_is_sorted=True,
+                    )
+                    financial_frame.drop(columns=["_指标_effective_date"], inplace=True)
+                financial_columns = [
+                    "pe_ttm",
+                    "pb",
+                    *valuation_fields,
+                    *(field.alias for field in indicator_fields),
+                ]
+                financial_row_ids = financial_frame["_financial_row_id"].to_numpy(
+                    dtype="intp"
+                )
+                for column in financial_columns:
+                    values = pd.to_numeric(
+                        financial_frame[column], errors="coerce"
+                    ).to_numpy(dtype="float64")
+                    kline_frame[column] = np.nan
+                    kline_frame.loc[financial_row_ids, column] = values
+                frame = kline_frame
+                del financial_frame
+            else:
+                frame = self._build_valuation_frame(
+                    conn,
+                    kline_frame,
+                    effective_end_date,
+                    valuation_fields,
+                    symbol_relation,
+                    valuation_histories=valuation_histories,
+                )
+                del kline_frame
+                frame["date"] = pd.to_datetime(frame["date"])
+                if indicator_history is not None:
+                    frame = self._merge_indicator_point_in_time(
+                        frame,
+                        indicator_history,
+                        indicator_fields,
+                        copy_market_data=False,
+                        history_is_canonical=True,
+                        market_data_is_sorted=True,
+                    )
+                    frame.drop(columns=["_指标_effective_date"], inplace=True)
+            del valuation_histories, indicator_history
         finally:
             try:
-                if relation_registered:
-                    conn.unregister(symbol_relation)
+                if batch_relation_registered:
+                    conn.unregister(batch_symbol_relation)
             finally:
-                self._restore_query_connection(conn, previous_query_settings)
+                try:
+                    if relation_registered:
+                        conn.unregister(symbol_relation)
+                finally:
+                    self._restore_query_connection(conn, previous_query_settings)
         # 后复权开盘价让开盘成交与收盘收益使用同一经济口径。
         frame["open_hfq"] = frame["open"] * frame["close_hfq"] / frame["raw_close"]
-        frame = frame.sort_values(["date", "symbol"], kind="mergesort").reset_index(
-            drop=True
-        )
+        if financial_signal_dates_only:
+            # Monthly factor consumers sort their per-symbol history before
+            # rolling calculations and the execution engine builds its own
+            # date calendar. Avoid a second full-frame date/symbol sort here;
+            # it otherwise duplicates millions of rows at the peak.
+            frame.reset_index(drop=True, inplace=True)
+        else:
+            frame = frame.sort_values(["date", "symbol"], kind="mergesort").reset_index(
+                drop=True
+            )
+        frame["symbol"] = frame["symbol"].astype("category")
+        if financial_signal_dates_only:
+            output_columns = [
+                "date",
+                "symbol",
+                "raw_close",
+                "close_hfq",
+                "pe_ttm",
+                "pb",
+                *valuation_fields,
+                *(field.alias for field in indicator_fields),
+                "open",
+                *kline_fields,
+                "open_hfq",
+            ]
+            output_columns = list(dict.fromkeys(output_columns))
+            missing_output_columns = set(output_columns) - set(frame.columns)
+            if missing_output_columns:
+                raise ValueError(
+                    "行情结果缺少字段: " + ", ".join(sorted(missing_output_columns))
+                )
+            frame.drop(
+                columns=[
+                    column for column in frame.columns if column not in output_columns
+                ],
+                inplace=True,
+            )
         return frame
 
     @classmethod
@@ -240,6 +446,7 @@ class BacktestDataAccess:
         data_end_date: date | None = None,
         include_market_cap: bool = False,
         additional_kline_fields: tuple[str, ...] = (),
+        financial_signal_dates_only: bool = False,
     ) -> pd.DataFrame:
         """按注册因子需求加载点时行情和财务输入，不计算因子值。"""
         names = tuple(dict.fromkeys(factor_names))
@@ -295,12 +502,15 @@ class BacktestDataAccess:
         )
         if data_end_date is None:
             return self.load_market_data(
-                *load_arguments, valuation_fields=tuple(sorted(valuation_fields))
+                *load_arguments,
+                valuation_fields=tuple(sorted(valuation_fields)),
+                financial_signal_dates_only=financial_signal_dates_only,
             )
         return self.load_market_data(
             *load_arguments,
             data_end_date=data_end_date,
             valuation_fields=tuple(sorted(valuation_fields)),
+            financial_signal_dates_only=financial_signal_dates_only,
         )
 
     def load_point_in_time_industry(self, points: pd.DataFrame) -> pd.DataFrame:
@@ -919,6 +1129,7 @@ class BacktestDataAccess:
         symbol_relation: str,
         valuation_histories: tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
         | None = None,
+        drop_missing_rows: bool = True,
     ) -> pd.DataFrame:
         """从独立历史快照按点时回溯构造估值字段。"""
 
@@ -940,8 +1151,9 @@ class BacktestDataAccess:
             history_is_canonical=True,
             market_data_is_sorted=False,
         )
-        frame = frame.loc[frame["_capital_effective_date"].notna()].copy()
-        frame.reset_index(drop=True, inplace=True)
+        if drop_missing_rows:
+            frame = frame.loc[frame["_capital_effective_date"].notna()].copy()
+            frame.reset_index(drop=True, inplace=True)
         frame.drop(columns=["_capital_effective_date"], inplace=True)
         frame = self._merge_history_point_in_time(
             frame,
@@ -958,8 +1170,9 @@ class BacktestDataAccess:
             history_is_canonical=True,
             market_data_is_sorted=True,
         )
-        frame = frame.loc[frame["_ttm_effective_date"].notna()].copy()
-        frame.reset_index(drop=True, inplace=True)
+        if drop_missing_rows:
+            frame = frame.loc[frame["_ttm_effective_date"].notna()].copy()
+            frame.reset_index(drop=True, inplace=True)
         frame.drop(columns=["_ttm_effective_date"], inplace=True)
         frame = self._merge_history_point_in_time(
             frame,
@@ -971,8 +1184,9 @@ class BacktestDataAccess:
             history_is_canonical=True,
             market_data_is_sorted=True,
         )
-        frame = frame.loc[frame["_assets_effective_date"].notna()].copy()
-        frame.reset_index(drop=True, inplace=True)
+        if drop_missing_rows:
+            frame = frame.loc[frame["_assets_effective_date"].notna()].copy()
+            frame.reset_index(drop=True, inplace=True)
         frame.drop(columns=["_assets_effective_date"], inplace=True)
 
         frame["raw_close"] = pd.to_numeric(frame["raw_close"], errors="coerce")

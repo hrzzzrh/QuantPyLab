@@ -138,13 +138,15 @@ lookback_days = 20
 
 缺少任一选中因子的股票不会进入该信号日组合；实验策略最多使用六个因子，并将归一化权重、因子版本和专属参数写入回测结果。该入口用于单因子与小组合比较，不会改变现有正式策略。
 
-候选实验的时间切分由 `evaluate-factor-experiments` 自动执行。启用研究配置的 `[training]` 后，训练集会对每个显式候选的因子集合拟合非负 Ridge 权重（使用点时月末因子排名和未来收益）；进一步启用 `[hyperparameter_search]` 时，会在有限网格中搜索因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合重新拟合权重。验证集选择完整组合，测试集只运行入选方案；无法拟合或样本覆盖低于 `[validity]` 门槛的组合会记录原因并排除，不会回退到默认权重；Walk-forward 会在每个窗口重新展开和拟合。研究配置的默认门槛是训练至少 24 个信号日、验证和测试各至少 11 个实际可执行信号及 100 个目标观测，门槛不足时不能把结果解释为有效研究结论。该流程不进行无上限搜索，测试结果不会参与候选选择。每次运行的 `summary.md` 是标准人读结果报告，固定展示信号日数量、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、训练状态、失败原因、入选权重、阶段表现和稳定性提示；CSV 文件保留完整审计明细，其中 `research_validity.csv` 保存逐阶段门禁明细，`selection_diagnostics.csv` 记录验证比较规模与多重比较风险，`factor_weight_diagnostics.csv` 记录逐训练组合的权重集中度和入选标记。验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变选择规则。完整配置协议见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md) 和 [`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md)。
+候选实验和正式七因子策略的时间切分由 `evaluate-factor-experiments` 自动执行。启用研究配置的 `[training]` 后，训练集会对每个显式候选的因子集合拟合非负 Ridge 权重（使用点时月末因子排名和未来收益）；`factor-composite-experiment` 仍按候选配置选择 1 至 6 个因子，`multi-factor-quality-value-momentum` 则完整覆盖正式七因子，训练得到的零权重不会被正式策略默认权重恢复。进一步启用 `[hyperparameter_search]` 时，会在有限网格中搜索因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合重新拟合权重。验证集选择完整组合，测试集只运行入选方案；无法拟合或样本覆盖低于 `[validity]` 门槛的组合会记录原因并排除，不会回退到默认权重；Walk-forward 会在每个窗口重新展开和拟合。训练缓存由 `[training].max_training_cache_entries` 限制在单个窗口内，窗口结束后释放。研究配置的默认门槛是训练至少 24 个信号日、验证和测试各至少 11 个实际可执行信号及 100 个目标观测，门槛不足时不能把结果解释为有效研究结论。该流程不进行无上限搜索，测试结果不会参与候选选择。每次运行的 `summary.md` 是标准人读结果报告，固定展示信号日数量、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、训练状态、失败原因、入选权重、阶段表现和稳定性提示；CSV 文件保留完整审计明细，其中 `research_validity.csv` 保存逐阶段门禁明细，`selection_diagnostics.csv` 记录验证比较规模与多重比较风险，`factor_weight_diagnostics.csv` 记录逐训练组合的权重集中度和入选标记。`parameters.json` 同时记录代码提交、候选配置哈希、因子版本和轻量数据快照标识。验证信号日偏少或比较组合数多于验证信号日时只产生风险提示，不改变选择规则。完整配置协议见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md)、[`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md) 和 [`workspace/design_formal_factor_strategy_training.md`](../workspace/design_formal_factor_strategy_training.md)。
 
-有限参数搜索时，评估器在单个 split 内通过有界 LRU 缓存已经加载并计算完成的因子候选基础表；默认最多保留 4 组输入，每组参数仍独立执行缩尾、方向排名、权重合成和持仓选择。缓存只服务研究评估调用，不写入因子数据表，也不跨 Walk-forward 窗口复用。
+有限参数搜索时，评估器在单个 split 内通过有界 LRU 缓存已经加载并计算完成的因子候选基础表；当前最多保留 2 组输入，每组参数仍独立执行缩尾、方向排名、权重合成和持仓选择。缓存只服务研究评估调用，不写入因子数据表，也不跨 Walk-forward 窗口复用。
 
 `price-momentum` 与 `quality-value-recovery` 也已经使用独立因子库：前者使用动量因子和 `price_trend_above_ma_120d`，后者使用趋势确认因子、估值因子和质量因子。`price_trend_above_ma_120d` 保留旧策略严格的 `close_hfq > rolling_mean` 判断；比例型 `price_trend_gap_120d` 继续作为多因子策略的连续评分因子。两个旧策略的 PE/PB 排名、阈值过滤、排名方向和等权建仓逻辑仍由策略层负责。
 
 动量与趋势因子支持调用方传入正整数窗口参数；因子名称中的 `120d` 表示默认口径，不限制策略使用自定义窗口。
+
+研究评估报告的 `parameters.json` 和 `summary.md` 还记录评估进程峰值 RSS、2 GiB 进程资源预算、单次数据加载目标和训练缓存上限，便于核对长窗口训练的资源边界；若真实全量运行超过预算，报告会明确标记。滚动因子按股票批次计算，训练器只保留月末因子和标签样本；默认因子批次为 125 只股票。
 
 ## 7. 迁移验证
 

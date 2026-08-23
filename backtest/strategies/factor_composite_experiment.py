@@ -17,6 +17,7 @@ from backtest.strategy_base import (
     BacktestStrategy,
     StrategyMetadata,
     get_month_end_dates,
+    rank_candidates_deterministically,
     select_equal_weight_targets,
 )
 
@@ -25,6 +26,8 @@ MAX_EXPERIMENT_FACTOR_COUNT = 6
 
 class FactorCompositeExperimentStrategy(BacktestStrategy):
     """用于单因子和小组合研究的通用月度等权策略。"""
+
+    supports_factor_training = True
 
     metadata = StrategyMetadata(
         name="factor-composite-experiment",
@@ -121,6 +124,18 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         }
         return resolved
 
+    @staticmethod
+    def apply_trained_factor_weights(
+        parameters: dict, factor_weights: dict[str, float]
+    ) -> dict[str, float]:
+        """Keep only positive factors because this strategy rejects zero weights."""
+
+        return {
+            name: float(weight)
+            for name, weight in factor_weights.items()
+            if float(weight) > 1e-12
+        }
+
     def load_signal_data(
         self,
         data_access: BacktestDataAccess,
@@ -133,6 +148,7 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
             factor_names,
             factor_parameters=parameters["factor_parameters"],
             minimum_history_days=parameters["min_listing_days"],
+            financial_signal_dates_only=True,
         )
 
     def build_targets(
@@ -155,10 +171,12 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         signal_data: pd.DataFrame, parameters: dict
     ) -> pd.DataFrame:
         factor_names = tuple(parameters["factor_weights"])
-        return FactorEngine().calculate(
+        return FactorEngine().calculate_factors_on_dates(
             signal_data,
             factor_names,
             parameters["factor_parameters"],
+            get_month_end_dates(signal_data["date"]),
+            symbol_batch_size=125,
         )
 
     @staticmethod
@@ -169,13 +187,17 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         parameters: dict,
     ) -> pd.DataFrame:
         factor_names = tuple(parameters["factor_weights"])
-        ordered_input = signal_data.copy()
+        ordered_input = signal_data.loc[:, ["date", "symbol"]].copy()
         ordered_input["date"] = pd.to_datetime(ordered_input["date"])
         ordered_input = ordered_input.sort_values(["symbol", "date"])
-        listing_days = ordered_input[["date", "symbol"]].copy()
-        listing_days["listing_days"] = (
+        ordered_input["listing_days"] = (
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
-        ).to_numpy()
+        )
+        listing_days = ordered_input.loc[
+            ordered_input["date"].isin(get_month_end_dates(signal_data["date"]))
+            & (ordered_input["date"].dt.date >= config.start_date),
+            ["date", "symbol", "listing_days"],
+        ]
         candidates = factor_frame.merge(
             listing_days,
             on=["date", "symbol"],
@@ -227,7 +249,8 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
             score_columns[score_column] = weight
 
         candidates["score"] = combine_factor_scores(candidates, score_columns)
-        candidates["rank"] = candidates.groupby("date")["score"].rank(
-            method="first", ascending=False
+        return rank_candidates_deterministically(
+            candidates,
+            score_column="score",
+            ascending=False,
         )
-        return candidates

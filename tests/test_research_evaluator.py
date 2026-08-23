@@ -17,6 +17,7 @@ from backtest.hyperparameter_search import (
     expand_hyperparameter_trials,
 )
 from backtest.research_evaluator import (
+    BoundedTrainingDataCache,
     EvaluationPeriod,
     EvaluationSplit,
     FactorExperimentEvaluationConfig,
@@ -30,6 +31,9 @@ from backtest.research_evaluator import (
     write_factor_experiment_evaluation_report,
 )
 from backtest.runner import BacktestRun
+from backtest.strategies.multi_factor_quality_value_momentum import (
+    DEFAULT_FACTOR_WEIGHTS,
+)
 
 
 def test_walk_forward_generates_non_overlapping_rolling_windows():
@@ -97,6 +101,7 @@ def test_loads_robust_evaluation_config_with_longer_time_windows():
     assert config.training is not None
     assert config.training.minimum_training_observations == 200
     assert config.training.minimum_training_dates == 24
+    assert config.training.max_training_cache_entries == 4
     assert config.validity is not None
     assert config.validity.minimum_training_signal_dates == 24
     assert config.validity.minimum_validation_signal_dates == 20
@@ -123,6 +128,58 @@ def test_loads_robust_evaluation_config_with_longer_time_windows():
         )
         == 18
     )
+
+
+def test_loads_formal_strategy_training_config():
+    config = load_factor_experiment_evaluation_config(
+        "config/backtest/multi_factor_quality_value_momentum_evaluation.toml"
+    )
+
+    assert (
+        config.candidate_configs[0].name == "multi_factor_quality_value_momentum.toml"
+    )
+    assert config.training is not None
+    assert config.training.max_training_cache_entries == 2
+    assert config.hyperparameter_search is not None
+    assert config.hyperparameter_search.ridge_alphas == (0.1, 1.0)
+    candidate_configs = [
+        (path.stem, load_backtest_config(path)) for path in config.candidate_configs
+    ]
+    assert (
+        len(
+            expand_hyperparameter_trials(
+                candidate_configs, config.hyperparameter_search
+            )
+        )
+        == 12
+    )
+
+
+def test_bounded_training_data_cache_evicts_least_recently_used_entry():
+    cache = BoundedTrainingDataCache(max_entries=2)
+    first = pd.DataFrame({"value": [1]})
+    second = pd.DataFrame({"value": [2]})
+    third = pd.DataFrame({"value": [3]})
+
+    cache["first"] = first
+    cache["second"] = second
+    assert cache["first"] is first
+    cache["third"] = third
+
+    assert "first" in cache
+    assert "second" not in cache
+    assert cache["third"] is third
+    assert cache.stats == {"entries": 2, "max_entries": 2, "evictions": 1}
+
+
+def test_bounded_training_data_cache_can_evict_before_replacement_is_loaded():
+    cache = BoundedTrainingDataCache(max_entries=1)
+    cache["first"] = pd.DataFrame({"value": [1]})
+
+    cache.reserve_entry("second")
+
+    assert len(cache) == 0
+    assert cache.stats == {"entries": 0, "max_entries": 1, "evictions": 1}
 
 
 def test_research_validity_defaults_when_section_is_omitted(tmp_path):
@@ -302,7 +359,7 @@ def test_research_validity_gate_blocks_short_training_fit(monkeypatch, tmp_path)
     assert "minimum_signal_dates=2" in result.validity_rows[0]["error"]
 
 
-def test_research_validity_report_contains_phase_coverage(tmp_path):
+def test_research_validity_report_contains_phase_coverage(tmp_path, monkeypatch):
     candidate = tmp_path / "candidate.toml"
     candidate.write_text("", encoding="utf-8")
     split = EvaluationSplit(
@@ -362,13 +419,20 @@ def test_research_validity_report_contains_phase_coverage(tmp_path):
         ),
     )
 
+    monkeypatch.setattr(evaluator_module, "_get_process_peak_rss_bytes", lambda: 1024)
     output_dir = write_factor_experiment_evaluation_report(
         result, tmp_path / "validity-report-output"
     )
 
     assert output_dir.joinpath("research_validity.csv").exists()
+    parameters = json.loads(
+        output_dir.joinpath("parameters.json").read_text(encoding="utf-8")
+    )
+    assert parameters["audit"]["resource"]["peak_rss_bytes"] == 1024
+    assert parameters["audit"]["resource"]["peak_rss_exceeded"] is False
     report = output_dir.joinpath("summary.md").read_text(encoding="utf-8")
     assert "研究有效性门禁" in report
+    assert "资源审计" in report
     assert "research_validity.csv" in report
 
 
@@ -1385,6 +1449,75 @@ def test_fit_candidate_config_caches_prepared_data_but_refits_weights(
     assert len(fit_calls) == 2
     assert [call[1]["ridge_alpha"] for call in fit_calls] == [0.1, 1.0]
     assert "factor_versions" not in trained_candidate.strategy_parameters
+
+
+def test_fit_candidate_config_supports_formal_strategy_and_preserves_zero_weights(
+    monkeypatch,
+):
+    candidate = BacktestConfig(
+        start_date=date(2018, 1, 1),
+        end_date=date(2026, 1, 1),
+        strategy_name="multi-factor-quality-value-momentum",
+        strategy_parameters={"holding_count": 20},
+        benchmark_symbol=None,
+    )
+    train_period = EvaluationPeriod(date(2020, 1, 1), date(2021, 12, 31))
+    training = TrainingSpec(
+        minimum_training_observations=2,
+        minimum_training_dates=1,
+    )
+    factor_names = tuple(DEFAULT_FACTOR_WEIGHTS)
+    fitted_weights = {name: 0.0 for name in factor_names}
+    fitted_weights["price_momentum_120d"] = 1.0
+
+    class FakeDataAccess:
+        def __init__(self, database_manager):
+            assert database_manager == "database"
+
+        def load_factor_data(self, *args, **kwargs):
+            return pd.DataFrame()
+
+    def fake_prepare(*args, **kwargs):
+        return pd.DataFrame(
+            {
+                "date": [pd.Timestamp("2020-01-31")],
+                "symbol": ["000001"],
+                **{name: [1.0] for name in factor_names},
+                "label_exit_date": [pd.Timestamp("2020-02-28")],
+                "forward_return_20d": [0.01],
+            }
+        )
+
+    def fake_fit(*args, **kwargs):
+        return FactorTrainingResult(
+            factor_weights=fitted_weights,
+            observation_count=20,
+            signal_date_count=5,
+            iterations=2,
+            converged=True,
+            label_horizon_days=20,
+            ridge_alpha=kwargs["ridge_alpha"],
+        )
+
+    monkeypatch.setattr(evaluator_module, "BacktestDataAccess", FakeDataAccess)
+    monkeypatch.setattr(evaluator_module, "prepare_factor_training_data", fake_prepare)
+    monkeypatch.setattr(evaluator_module, "fit_factor_weights", fake_fit)
+
+    trained_candidate, _ = evaluator_module._fit_candidate_config(
+        candidate,
+        train_period,
+        training,
+        "database",
+        ridge_alpha=0.1,
+    )
+
+    trained_parameters = trained_candidate.strategy_parameters
+    assert set(trained_parameters["factor_weights"]) == set(factor_names)
+    assert trained_parameters["factor_weights"]["valuation_pe_ttm"] == 0.0
+    resolved = evaluator_module.get_backtest_strategy(
+        "multi-factor-quality-value-momentum"
+    ).validate_parameters(trained_parameters)
+    assert resolved["factor_weights"]["valuation_pe_ttm"] == 0.0
 
 
 def test_evaluation_config_rejects_overlapping_periods(tmp_path):

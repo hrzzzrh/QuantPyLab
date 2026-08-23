@@ -1,5 +1,6 @@
 from datetime import date
 
+import duckdb
 import pandas as pd
 
 from backtest.config import BacktestConfig
@@ -26,12 +27,14 @@ def test_load_factor_data_collects_registered_input_requirements(monkeypatch):
         kline_fields=(),
         data_end_date=None,
         valuation_fields=(),
+        financial_signal_dates_only=False,
     ):
         captured["config"] = config
         captured["lookback_days"] = lookback_days
         captured["indicator_fields"] = indicator_fields
         captured["kline_fields"] = kline_fields
         captured["valuation_fields"] = valuation_fields
+        captured["financial_signal_dates_only"] = financial_signal_dates_only
         return pd.DataFrame()
 
     monkeypatch.setattr(access, "load_market_data", fake_load_market_data)
@@ -51,10 +54,40 @@ def test_load_factor_data_collects_registered_input_requirements(monkeypatch):
     assert captured["lookback_days"] == 300
     assert captured["kline_fields"] == ()
     assert captured["valuation_fields"] == ()
+    assert captured["financial_signal_dates_only"] is False
     assert captured["indicator_fields"] == (
         IndicatorField("净资产收益率_加权", "roe_weighted"),
         IndicatorField("经营现金流/营业收入", "operating_cashflow_to_revenue"),
     )
+
+
+def test_load_factor_data_forwards_sparse_financial_signal_mode(monkeypatch):
+    access = BacktestDataAccess(object())
+    captured = {}
+
+    def fake_load_market_data(
+        config,
+        lookback_days,
+        indicator_fields=(),
+        kline_fields=(),
+        data_end_date=None,
+        valuation_fields=(),
+        financial_signal_dates_only=False,
+    ):
+        del config, lookback_days, indicator_fields, kline_fields
+        del data_end_date, valuation_fields
+        captured["financial_signal_dates_only"] = financial_signal_dates_only
+        return pd.DataFrame()
+
+    monkeypatch.setattr(access, "load_market_data", fake_load_market_data)
+
+    access.load_factor_data(
+        _config(),
+        ("price_momentum_120d",),
+        financial_signal_dates_only=True,
+    )
+
+    assert captured["financial_signal_dates_only"] is True
 
 
 def test_configure_query_connection_sets_bounded_duckdb_resources():
@@ -70,7 +103,7 @@ def test_configure_query_connection_sets_bounded_duckdb_resources():
     BacktestDataAccess._configure_query_connection(connection)
 
     assert connection.statements == [
-        "SET memory_limit='2GB'",
+        "SET memory_limit='256MB'",
         "SET threads=2",
     ]
 
@@ -141,6 +174,123 @@ def test_load_market_data_restores_resources_when_calendar_query_fails(monkeypat
     ]
 
 
+def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values(
+    monkeypatch,
+):
+    dates = pd.to_datetime(["2024-01-30", "2024-01-31", "2024-02-28", "2024-02-29"])
+    kline_rows = []
+    for symbol_index, symbol in enumerate(("000001", "000002", "000003"), start=1):
+        for day_index, current_date in enumerate(dates, start=1):
+            kline_rows.append(
+                {
+                    "date": current_date,
+                    "symbol": symbol,
+                    "close": float(10 * symbol_index + day_index),
+                    "adj_factor": 1.0,
+                    "open": float(10 * symbol_index + day_index - 0.5),
+                    "high": float(10 * symbol_index + day_index + 1),
+                    "low": float(10 * symbol_index + day_index - 1),
+                    "volume": 100.0,
+                    "amount": 1000.0,
+                    "filename": f"{symbol}-canonical.parquet",
+                }
+            )
+    duplicate = dict(kline_rows[7])
+    duplicate["close"] = 999.0
+    duplicate["filename"] = "zz-duplicate.parquet"
+    kline_rows.append(duplicate)
+    kline = pd.DataFrame(kline_rows)
+
+    capital = pd.DataFrame(
+        {
+            "symbol": ["000001", "000002", "000003"],
+            "change_date": pd.to_datetime(["2024-01-01"] * 3),
+            "total_shares": [100.0, 100.0, 100.0],
+        }
+    )
+    ttm = pd.DataFrame(
+        {
+            "symbol": ["000001", "000002", "000003"],
+            "pub_date": ["2024-01-15", "2024-02-15", "2024-03-01"],
+            "report_date": ["2023-12-31"] * 3,
+            "net_profit_ttm": [100.0, 200.0, 300.0],
+            "deduct_net_profit_ttm": [100.0, 200.0, 300.0],
+            "revenue_ttm": [1000.0, 2000.0, 3000.0],
+            "ocf_ttm": [80.0, 160.0, 240.0],
+            "filename": ["ttm-a", "ttm-b", "ttm-c"],
+        }
+    )
+    assets = pd.DataFrame(
+        {
+            "symbol": ["000001", "000002", "000003"],
+            "数据可用日期": ["2024-01-15", "2024-02-15", "2024-03-01"],
+            "公告日期": ["2024-01-15", "2024-02-15", "2024-03-01"],
+            "report_date": ["2023-12-31"] * 3,
+            "归属于母公司股东权益合计": [500.0, 600.0, 700.0],
+            "filename": ["assets-a", "assets-b", "assets-c"],
+        }
+    )
+
+    connection = duckdb.connect()
+    connection.register("daily_kline_raw", kline)
+    connection.register("daily_kline_calendar", kline.loc[:, ["date", "symbol"]])
+    connection.register("share_capital", capital)
+    connection.register("fin_ttm", ttm)
+    connection.register("fin_balance_sheet", assets)
+
+    class InMemoryManager:
+        def ensure_views(self, *view_names):
+            del view_names
+
+        def get_duckdb_conn(self):
+            return connection
+
+        def close_duckdb(self):
+            return None
+
+    monkeypatch.setattr(BacktestDataAccess, "_KLINE_SYMBOL_BATCH_SIZE", 2)
+    access = BacktestDataAccess(InMemoryManager())
+    try:
+        result = access.load_market_data(
+            _config(),
+            lookback_days=0,
+            data_end_date=date(2024, 2, 29),
+            financial_signal_dates_only=True,
+        )
+    finally:
+        connection.close()
+
+    assert len(result) == 12
+    assert not result.duplicated(["date", "symbol"]).any()
+    assert set(result["symbol"].astype("string")) == {"000001", "000002", "000003"}
+    duplicate_key = (result["date"] == pd.Timestamp("2024-02-29")) & (
+        result["symbol"].astype("string") == "000002"
+    )
+    assert result.loc[duplicate_key, "raw_close"].item() == 24.0
+
+    non_signal_rows = result[
+        ~result["date"].isin(pd.to_datetime(["2024-01-31", "2024-02-29"]))
+    ]
+    assert non_signal_rows[["pe_ttm", "pb"]].isna().all().all()
+    january_symbol_one = result[
+        (result["date"] == pd.Timestamp("2024-01-31"))
+        & (result["symbol"].astype("string") == "000001")
+    ]
+    assert january_symbol_one["pe_ttm"].notna().all()
+    january_symbol_two = result[
+        (result["date"] == pd.Timestamp("2024-01-31"))
+        & (result["symbol"].astype("string") == "000002")
+    ]
+    assert january_symbol_two[["pe_ttm", "pb"]].isna().all().all()
+    february_symbol_two = result[
+        (result["date"] == pd.Timestamp("2024-02-29"))
+        & (result["symbol"].astype("string") == "000002")
+    ]
+    assert february_symbol_two[["pe_ttm", "pb"]].notna().all().all()
+    symbol_three = result[result["symbol"].astype("string") == "000003"]
+    assert symbol_three[["pe_ttm", "pb"]].isna().all().all()
+
+
 def test_load_factor_data_collects_new_factor_input_requirements(monkeypatch):
     access = BacktestDataAccess(object())
     captured = {}
@@ -152,6 +302,7 @@ def test_load_factor_data_collects_new_factor_input_requirements(monkeypatch):
         kline_fields=(),
         data_end_date=None,
         valuation_fields=(),
+        financial_signal_dates_only=False,
     ):
         captured["lookback_days"] = lookback_days
         captured["indicator_fields"] = indicator_fields
@@ -193,6 +344,7 @@ def test_load_factor_data_can_include_forward_price_rows(monkeypatch):
         kline_fields=(),
         data_end_date=None,
         valuation_fields=(),
+        financial_signal_dates_only=False,
     ):
         captured["data_end_date"] = data_end_date
         return pd.DataFrame()
@@ -219,6 +371,7 @@ def test_load_factor_data_can_include_additional_kline_fields(monkeypatch):
         kline_fields=(),
         data_end_date=None,
         valuation_fields=(),
+        financial_signal_dates_only=False,
     ):
         captured["kline_fields"] = kline_fields
         return pd.DataFrame()

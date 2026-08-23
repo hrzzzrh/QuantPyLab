@@ -42,7 +42,7 @@
 | `backtest/metrics.py` | 计算收益、波动率、夏普和最大回撤 |
 | `backtest/reporter.py` | 将输入参数、目标、交易、净值和摘要写入独立结果目录 |
 
-回测引擎只保留成交所需的行情列，并按交易日保存紧凑数值表；不把每条行情转换成嵌套 Python 字典。`BacktestDataAccess` 对大型 DuckDB 查询设置 2GB 内存上限和 2 个工作线程；财务与行情结果在返回前脱离 DuckDB 结果缓冲区，避免下一次查询覆盖仍被 Pandas 使用的数组。`DBManager` 提供连接级可重入锁，回测点时查询、视图注册和连接释放在同一锁协议内串行化，避免资源设置恢复或连接关闭与并发查询交错。研究诊断在完成信号数据物化后关闭 DuckDB 查询连接、完成候选和目标后释放宽因子表，只向引擎传递 `date`、`symbol`、`open`、`open_hfq`、`close_hfq` 五列。正式报告和重复性验证应串行执行，避免同一进程同时保留多份全量信号数据。
+回测引擎只保留成交所需的行情列，并按交易日保存紧凑数值表；不把每条行情转换成嵌套 Python 字典。`BacktestDataAccess` 对大型 DuckDB 查询设置 256MB 内存上限和 2 个工作线程，并按股票批次读取行情；财务与行情结果在返回前脱离 DuckDB 结果缓冲区，避免下一次查询覆盖仍被 Pandas 使用的数组。月末策略仍保留完整日频价格历史供滚动因子使用，但财务和估值字段只在月末信号日物化。`DBManager` 提供连接级可重入锁，回测点时查询、视图注册和连接释放在同一锁协议内串行化，避免资源设置恢复或连接关闭与并发查询交错。研究诊断在完成信号数据物化后关闭 DuckDB 查询连接、完成候选和目标后释放宽因子表，只向引擎传递 `date`、`symbol`、`open`、`open_hfq`、`close_hfq` 五列。正式报告和重复性验证应串行执行，避免同一进程同时保留多份全量信号数据。
 
 ## 3. 无未来函数规则
 
@@ -130,9 +130,9 @@ uv run main.py run-backtest \
 
 ### 4.5 训练/验证/测试与 Walk-forward 评估
 
-研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，所有 `factor-composite-experiment` 候选在各自训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重；如果同时启用 `[hyperparameter_search]`，还会在显式有限网格中展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合分别拟合权重。验证集选择完整参数组合，测试集只运行入选组合。训练失败的组合会记录原因并排除，不会退回默认权重；只有全部组合都失败时窗口才终止。启用 `[validity]` 后，训练默认至少需要 24 个有效信号日，验证和测试默认至少需要 11 个实际可执行信号及 100 个目标观测；低于门槛会阻断对应组合或窗口，而不是仅生成收益报告。开启 Walk-forward 后，每个完整滚动窗口都会重新展开、训练和选择，最终只汇总各窗口测试段。未启用训练时，才是仅比较候选原始配置的兼容模式。
+研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，当前支持 `factor-composite-experiment` 和 `multi-factor-quality-value-momentum` 候选在各自训练窗口内使用点时月末因子和未来收益拟合非负 Ridge 权重；正式七因子策略训练会完整覆盖七个因子，显式的零权重不会回退为默认权重。如果同时启用 `[hyperparameter_search]`，还会在显式有限网格中展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度，每组组合分别拟合权重。验证集选择完整参数组合，测试集只运行入选组合。训练失败的组合会记录原因并排除，不会退回默认权重；只有全部组合都失败时窗口才终止。启用 `[validity]` 后，训练默认至少需要 24 个有效信号日，验证和测试默认至少需要 11 个实际可执行信号及 100 个目标观测；低于门槛会阻断对应组合或窗口，而不是仅生成收益报告。开启 Walk-forward 后，每个完整滚动窗口都会重新展开、训练和选择，最终只汇总各窗口测试段。训练缓存由 `[training].max_training_cache_entries` 限制在单个窗口内，窗口结束后释放；未启用训练时，才是仅比较候选原始配置的兼容模式。
 
-为避免有限参数网格重复加载相同点时数据和行情结构，研究评估器在每个 split 内以有界 LRU 复用因子实验的原始信号数据、基础候选表以及与目标无关的市场日历/价格映射；默认最多保留 4 组因子输入和 2 个市场区间，超出后释放最久未使用项。缩尾边界、因子权重、排名、持仓数量和逐日持仓状态仍按每组试验重新计算。缓存不跨 split，也不改变普通 `run-backtest` 的默认路径。
+为避免有限参数网格重复加载相同点时数据和行情结构，研究评估器在每个 split 内以有界 LRU 复用因子实验的原始信号数据、基础候选表以及与目标无关的市场日历/价格映射；当前评估器最多保留 2 组因子输入和 1 个市场区间，超出后释放最久未使用项。训练输入另外由 `[training].max_training_cache_entries` 限制，正式配置当前为 2。缩尾边界、因子权重、排名、持仓数量和逐日持仓状态仍按每组试验重新计算。行情查询按股票批次读取并预分配紧凑数值数组，缓存不跨 split，也不改变普通 `run-backtest` 的默认路径。
 
 ```bash
 uv run main.py evaluate-factor-experiments \
@@ -141,7 +141,9 @@ uv run main.py evaluate-factor-experiments \
 
 若要进行正式的样本外研究，推荐使用 `config/backtest/factor_experiment_evaluation_robust.toml`：该配置使用 3 年训练、2 年验证、2 年测试的完整自然年 Walk-forward，验证和测试各要求至少 20 个可执行信号日，并移除基线中已确认没有区分度的 `ridge_alpha=1.0`。原配置保留为短窗口基线和选择风险对照，不能与稳健配置的测试结果混合解读。
 
-示例配置见 `config/backtest/factor_experiment_evaluation.toml`，设计与边界见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md) 和 [`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md)。结果写入 `workspace/backtest/evaluations/<name>_<timestamp>/`，包括标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`（每组参数的训练状态、训练/验证指标、拟合权重和失败原因）、`evaluation_failures.csv`、`research_validity.csv`（训练 / 验证 / 测试的实际覆盖、阈值和门禁结果）、`selection_diagnostics.csv`（每个窗口的比较组合数、验证信号日、第一/二名分数差距、并列数量和选择负担风险）、`factor_weight_diagnostics.csv`（全部训练组合的权重集中度、有效因子数和入选标记）、候选指标、入选记录和参数快照。`summary.md` 固定报告执行状态、点时样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、失败组合、入选权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；CSV 是完整审计明细。验证信号日偏少或比较组合数多于验证信号日时只产生研究风险提示，不改变测试集隔离和入选规则。评估器不把测试结果反写到候选配置，也不跨窗口传递持仓或净值。
+示例配置见 `config/backtest/factor_experiment_evaluation.toml`；正式七因子策略训练配置见 `config/backtest/multi_factor_quality_value_momentum_evaluation.toml`。设计与边界见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md)、[`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md) 和 [`workspace/design_formal_factor_strategy_training.md`](../workspace/design_formal_factor_strategy_training.md)。结果写入 `workspace/backtest/evaluations/<name>_<timestamp>/`，包括标准人读结果报告 `summary.md`、`training_models.csv`、`hyperparameter_trials.csv`（每组参数的训练状态、训练/验证指标、拟合权重和失败原因）、`evaluation_failures.csv`、`research_validity.csv`（训练 / 验证 / 测试的实际覆盖、阈值和门禁结果）、`selection_diagnostics.csv`（每个窗口的比较组合数、验证信号日、第一/二名分数差距、并列数量和选择负担风险）、`factor_weight_diagnostics.csv`（全部训练组合的权重集中度、有效因子数和入选标记）、候选指标、入选记录和参数快照。`summary.md` 固定报告执行状态、点时样本覆盖、研究有效性门禁、验证集选择稳健性、全部训练组合与入选组合的权重集中度、失败组合、入选权重、训练/验证/测试表现、Walk-forward 稳定性和研究边界；报告的 `parameters.json` 同时记录代码提交、候选配置哈希、因子版本和轻量数据快照标识；CSV 是完整审计明细。验证信号日偏少或比较组合数多于验证信号日时只产生研究风险提示，不改变测试集隔离和入选规则。评估器不把测试结果反写到候选配置，也不跨窗口传递持仓或净值。
+
+研究评估报告的 `parameters.json` 和 `summary.md` 还记录评估进程峰值 RSS、2 GiB 进程资源预算、单次数据加载目标以及训练和回测缓存上限，便于核对长窗口运行是否触及内存控制目标。资源预算是审计边界而不是静默截断；若真实全量运行超过预算，报告会明确标记，结果不能宣称资源门禁通过。
 
 ### 4.6 因子实验点时规模暴露诊断
 
