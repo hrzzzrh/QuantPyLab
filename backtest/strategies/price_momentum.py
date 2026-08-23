@@ -9,7 +9,7 @@ from backtest.strategy_base import (
     rank_candidates_deterministically,
     select_equal_weight_targets,
 )
-from backtest.trading_calendar import get_confirmed_month_end_trading_dates
+from backtest.trading_calendar import get_configured_rebalance_signal_dates
 
 
 class PriceMomentumStrategy(BacktestStrategy):
@@ -18,7 +18,7 @@ class PriceMomentumStrategy(BacktestStrategy):
     metadata = StrategyMetadata(
         name="price-momentum",
         version="1",
-        description="后复权中期动量与趋势确认的月度等权策略。",
+        description="后复权中期动量与趋势确认的可配置调仓等权策略。",
         parameter_summary="holding_count, lookback_days, trend_window, min_listing_days",
     )
 
@@ -61,11 +61,14 @@ class PriceMomentumStrategy(BacktestStrategy):
         )
 
     def build_targets(self, signal_data, config, parameters) -> pd.DataFrame:
+        signal_dates = get_configured_rebalance_signal_dates(
+            signal_data["date"], config
+        )
         factor_data = FactorEngine().calculate_factors_on_dates(
             signal_data,
             self.factor_names,
             self._factor_parameters(parameters),
-            get_confirmed_month_end_trading_dates(signal_data["date"]),
+            signal_dates,
             symbol_batch_size=125,
         )
         ordered_input = signal_data.loc[:, ["date", "symbol"]].copy()
@@ -74,7 +77,6 @@ class PriceMomentumStrategy(BacktestStrategy):
         ordered_input["listing_days"] = (
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
         )
-        signal_dates = get_confirmed_month_end_trading_dates(signal_data["date"])
         listing_days = ordered_input.loc[
             ordered_input["date"].isin(signal_dates)
             & (ordered_input["date"].dt.date >= config.start_date),

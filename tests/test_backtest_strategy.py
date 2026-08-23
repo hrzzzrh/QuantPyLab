@@ -12,6 +12,7 @@ from backtest.strategies.multi_factor_quality_value_momentum import (
 )
 from backtest.strategies.price_momentum import PriceMomentumStrategy
 from backtest.strategies.quality_value_recovery import QualityValueRecoveryStrategy
+from backtest.trading_calendar import get_configured_rebalance_signal_dates
 
 
 def _config(end_date, strategy_name):
@@ -141,7 +142,7 @@ def test_multi_factor_strategy_builds_equal_weight_targets_from_registered_facto
 
     signal_data = pd.DataFrame(rows)
     targets = strategy.build_targets(signal_data, config, parameters)
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data,
         factor_frame,
@@ -235,7 +236,7 @@ def test_factor_composite_experiment_selects_lowest_value_small_combination():
 
     targets = strategy.build_targets(pd.DataFrame(rows), config, parameters)
     signal_data = pd.DataFrame(rows)
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data,
         factor_frame,
@@ -285,6 +286,76 @@ def test_factor_composite_experiment_rejects_invalid_factor_configuration():
                 "factor_parameters": {"valuation_pb": {"lookback_days": 20}},
             }
         )
+
+
+def test_all_builtin_strategies_follow_weekly_rebalance_schedule():
+    dates = pd.bdate_range("2023-01-02", periods=140)
+    rows = []
+    for symbol_index, symbol in enumerate(("000001", "000002", "000003"), start=1):
+        for day_index, current_date in enumerate(dates):
+            rows.append(
+                {
+                    "date": current_date,
+                    "symbol": symbol,
+                    "close_hfq": 100 + day_index * (0.1 * symbol_index),
+                    "pe_ttm": float(10 * symbol_index),
+                    "pb": float(symbol_index),
+                    "roe_weighted": 10.0,
+                    "operating_cashflow_to_revenue": 0.1,
+                }
+            )
+    signal_data = pd.DataFrame(rows)
+    strategies_and_parameters = [
+        (
+            PriceMomentumStrategy(),
+            {
+                "holding_count": 2,
+                "lookback_days": 2,
+                "trend_window": 2,
+                "min_listing_days": 1,
+            },
+        ),
+        (
+            QualityValueRecoveryStrategy(),
+            {
+                "holding_count": 2,
+                "pe_pb_percentile": 1.0,
+                "trend_window": 2,
+                "min_listing_days": 1,
+            },
+        ),
+        (
+            MultiFactorQualityValueMomentumStrategy(),
+            {"holding_count": 2, "min_listing_days": 1},
+        ),
+        (
+            FactorCompositeExperimentStrategy(),
+            {
+                "factor_weights": {"valuation_pb": 1.0},
+                "holding_count": 2,
+                "min_listing_days": 1,
+            },
+        ),
+    ]
+
+    for strategy, raw_parameters in strategies_and_parameters:
+        config = BacktestConfig(
+            start_date=dates[0].date(),
+            end_date=dates[-1].date(),
+            strategy_name=strategy.metadata.name,
+            benchmark_symbol=None,
+            rebalance_frequency="weekly",
+        )
+        expected_dates = get_configured_rebalance_signal_dates(dates, config)
+        targets = strategy.build_targets(
+            signal_data,
+            config,
+            strategy.validate_parameters(raw_parameters),
+        )
+
+        assert not targets.empty, strategy.metadata.name
+        assert set(targets["date"].unique()).issubset(set(expected_dates))
+        assert targets["date"].max() == expected_dates[-1]
 
 
 def test_quality_value_recovery_preserves_custom_trend_window():

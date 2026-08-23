@@ -65,6 +65,45 @@ def test_signal_executes_at_next_trading_day_open():
     )
 
 
+@pytest.mark.parametrize(
+    ("frequency", "interval", "expected_reason"),
+    [
+        ("monthly", None, "monthly_rebalance"),
+        ("weekly", None, "weekly_rebalance"),
+        ("biweekly", None, "biweekly_rebalance"),
+        (
+            "every_n_trading_days",
+            2,
+            "every_n_trading_days_rebalance",
+        ),
+    ],
+)
+def test_rebalance_trade_reason_matches_configured_frequency(
+    frequency, interval, expected_reason
+):
+    config = BacktestConfig(
+        start_date=date(2024, 1, 2),
+        end_date=date(2024, 1, 5),
+        strategy_name="quality-value-recovery",
+        benchmark_symbol=None,
+        rebalance_frequency=frequency,
+        rebalance_interval_trading_days=interval,
+    )
+    targets = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-02"),
+                "symbol": "000001",
+                "target_weight": 1.0,
+            }
+        ]
+    )
+
+    result = DailyBacktestEngine(config).run(_prices(), targets)
+
+    assert result.trades["reason"].unique().tolist() == [expected_reason]
+
+
 def test_prepared_market_data_preserves_backtest_result():
     targets = pd.DataFrame(
         [

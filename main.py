@@ -1116,7 +1116,7 @@ def run_factor_exposure_diagnostics(
         minimum_history_days=parameters["min_listing_days"],
         include_market_cap=True,
     )
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data, factor_frame, config, parameters
     )
@@ -1184,7 +1184,7 @@ def run_factor_industry_exposure_diagnostics(
         factor_parameters=parameters["factor_parameters"],
         minimum_history_days=parameters["min_listing_days"],
     )
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data, factor_frame, config, parameters
     )
@@ -1263,7 +1263,7 @@ def run_factor_neutralization_diagnostics(
         minimum_history_days=parameters["min_listing_days"],
         include_market_cap=True,
     )
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data, factor_frame, config, parameters
     )
@@ -1359,7 +1359,7 @@ def run_factor_constrained_selection_diagnostics(
         minimum_history_days=parameters["min_listing_days"],
         include_market_cap=True,
     )
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data,
         factor_frame,

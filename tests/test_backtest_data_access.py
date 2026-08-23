@@ -245,7 +245,14 @@ def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values
     monkeypatch,
 ):
     dates = pd.to_datetime(
-        ["2024-01-30", "2024-01-31", "2024-02-28", "2024-02-29", "2024-03-01"]
+        [
+            "2024-01-30",
+            "2024-01-31",
+            "2024-02-01",
+            "2024-02-28",
+            "2024-02-29",
+            "2024-03-01",
+        ]
     )
     kline_rows = []
     for symbol_index, symbol in enumerate(("000001", "000002", "000003"), start=1):
@@ -325,7 +332,12 @@ def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values
     access = BacktestDataAccess(InMemoryManager())
     try:
         result = access.load_market_data(
-            _config(),
+            BacktestConfig(
+                start_date=date(2024, 1, 2),
+                end_date=date(2024, 3, 1),
+                strategy_name="multi-factor-quality-value-momentum",
+                benchmark_symbol=None,
+            ),
             lookback_days=0,
             data_end_date=date(2024, 3, 1),
             financial_signal_dates_only=True,
@@ -333,13 +345,13 @@ def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values
     finally:
         connection.close()
 
-    assert len(result) == 15
+    assert len(result) == 18
     assert not result.duplicated(["date", "symbol"]).any()
     assert set(result["symbol"].astype("string")) == {"000001", "000002", "000003"}
     duplicate_key = (result["date"] == pd.Timestamp("2024-02-29")) & (
         result["symbol"].astype("string") == "000002"
     )
-    assert result.loc[duplicate_key, "raw_close"].item() == 24.0
+    assert result.loc[duplicate_key, "raw_close"].item() == 25.0
 
     non_signal_rows = result[
         ~result["date"].isin(pd.to_datetime(["2024-01-31", "2024-02-29"]))

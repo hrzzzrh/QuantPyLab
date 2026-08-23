@@ -130,7 +130,7 @@ uv run ruff format --check .   # 检查格式是否符合规范（CI 用）
 
 ### 3.3 日频回测 (`run-backtest`)
 
-`run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）、`price-momentum`（中期动量与趋势）、`multi-factor-quality-value-momentum`（七因子合成）和 `factor-composite-experiment`（单因子/小组合实验）四种策略。所有策略均在每月最后一个交易日收盘后产生信号，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
+`run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）、`price-momentum`（中期动量与趋势）、`multi-factor-quality-value-momentum`（七因子合成）和 `factor-composite-experiment`（单因子/小组合实验）四种策略。所有策略均可通过 `[run].rebalance_frequency` 选择 `monthly`（默认）、`weekly`、`biweekly` 或 `every_n_trading_days`；每 N 日模式还必须设置正整数 `rebalance_interval_trading_days`。信号在配置化调仓日收盘后产生，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
 
 ```bash
 uv run main.py list-backtest-strategies
@@ -165,7 +165,7 @@ uv run main.py diagnose-factors \
 
 ### 3.3.2 因子实验评估 (`evaluate-factor-experiments`)
 
-研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期。启用 `[training]` 后，系统使用点时月末因子，把未来收益按信号日转为截面百分位排名并去均值，使每个信号日总权重相同，再拟合向候选先验收缩的非负、和为 1 的因子权重。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；有限网格的每组组合独立训练。验证分数、权重结构或样本覆盖不合格时方案会被拒绝，测试段不被读取。训练缓存只在当前窗口内有效并有明确上限。
+研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期。启用 `[training]` 后，系统使用候选配置调仓日的点时因子，把未来收益按信号日转为截面百分位排名并去均值，使每个信号日总权重相同，再拟合向候选先验收缩的非负、和为 1 的因子权重。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；有限网格的每组组合独立训练。不同频率和 N 值使用独立缓存键；每 N 日模式在各训练、验证、测试切分的起始日重新计数。验证分数、权重结构或样本覆盖不合格时方案会被拒绝，测试段不被读取。训练缓存只在当前窗口内有效并有明确上限。
 
 ```bash
 uv run main.py evaluate-factor-experiments \

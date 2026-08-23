@@ -19,20 +19,20 @@ from backtest.strategy_base import (
     rank_candidates_deterministically,
     select_equal_weight_targets,
 )
-from backtest.trading_calendar import get_confirmed_month_end_trading_dates
+from backtest.trading_calendar import get_configured_rebalance_signal_dates
 
 MAX_EXPERIMENT_FACTOR_COUNT = 6
 
 
 class FactorCompositeExperimentStrategy(BacktestStrategy):
-    """用于单因子和小组合研究的通用月度等权策略。"""
+    """用于单因子和小组合研究的通用可配置调仓等权策略。"""
 
     supports_factor_training = True
 
     metadata = StrategyMetadata(
         name="factor-composite-experiment",
         version="1",
-        description="显式指定单因子或小组合、按方向排名后月度等权持仓的实验策略。",
+        description="显式指定单因子或小组合、按方向排名后可配置调仓的实验策略。",
         parameter_summary="factor_weights, factor_parameters, holding_count, min_listing_days, winsorize_lower, winsorize_upper",
     )
 
@@ -157,7 +157,7 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         config: BacktestConfig,
         parameters: dict,
     ) -> pd.DataFrame:
-        factor_frame = self.calculate_factor_frame(signal_data, parameters)
+        factor_frame = self.calculate_factor_frame(signal_data, config, parameters)
         candidates = self.prepare_target_candidates(
             signal_data,
             factor_frame,
@@ -168,14 +168,16 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
 
     @staticmethod
     def calculate_factor_frame(
-        signal_data: pd.DataFrame, parameters: dict
+        signal_data: pd.DataFrame,
+        config: BacktestConfig,
+        parameters: dict,
     ) -> pd.DataFrame:
         factor_names = tuple(parameters["factor_weights"])
         return FactorEngine().calculate_factors_on_dates(
             signal_data,
             factor_names,
             parameters["factor_parameters"],
-            get_confirmed_month_end_trading_dates(signal_data["date"]),
+            get_configured_rebalance_signal_dates(signal_data["date"], config),
             symbol_batch_size=125,
         )
 
@@ -187,6 +189,9 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
         parameters: dict,
     ) -> pd.DataFrame:
         factor_names = tuple(parameters["factor_weights"])
+        signal_dates = get_configured_rebalance_signal_dates(
+            signal_data["date"], config
+        )
         ordered_input = signal_data.loc[:, ["date", "symbol"]].copy()
         ordered_input["date"] = pd.to_datetime(ordered_input["date"])
         ordered_input = ordered_input.sort_values(["symbol", "date"])
@@ -194,9 +199,7 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
         )
         listing_days = ordered_input.loc[
-            ordered_input["date"].isin(
-                get_confirmed_month_end_trading_dates(signal_data["date"])
-            )
+            ordered_input["date"].isin(signal_dates)
             & (ordered_input["date"].dt.date >= config.start_date),
             ["date", "symbol", "listing_days"],
         ]

@@ -14,7 +14,11 @@ from analysis.factors.transforms import (
     rank_factor_cross_sectionally,
     winsorize_factor_cross_sectionally,
 )
-from backtest.trading_calendar import get_confirmed_month_end_trading_dates
+from backtest.config import (
+    resolve_rebalance_anchor_metadata,
+    validate_rebalance_schedule_parameters,
+)
+from backtest.trading_calendar import get_confirmed_rebalance_signal_dates
 
 TRAINING_SYMBOL_BATCH_SIZE = 125
 
@@ -36,6 +40,9 @@ class FactorTrainingResult:
     sample_weighting: str = "equal_signal_date"
     weight_constraint: str = "nonnegative_sum_to_one"
     prior_factor_weights: dict[str, float] | None = None
+    rebalance_frequency: str = "monthly"
+    rebalance_interval_trading_days: int | None = None
+    rebalance_anchor_date: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -56,6 +63,9 @@ class FactorTrainingResult:
                 if self.prior_factor_weights is not None
                 else None
             ),
+            "rebalance_frequency": self.rebalance_frequency,
+            "rebalance_interval_trading_days": self.rebalance_interval_trading_days,
+            "rebalance_anchor_date": self.rebalance_anchor_date,
         }
 
 
@@ -68,8 +78,10 @@ def prepare_factor_training_data(
     *,
     minimum_history_days: int = 0,
     label_horizon_days: int = 20,
+    rebalance_frequency: str = "monthly",
+    rebalance_interval_trading_days: int | None = None,
 ) -> pd.DataFrame:
-    """Build reusable monthly factor rows and future-return labels.
+    """Build reusable scheduled factor rows and future-return labels.
 
     The returned frame intentionally does not apply winsorization or ranking.
     Those operations depend on the outer hyperparameter trial and are applied
@@ -82,6 +94,10 @@ def prepare_factor_training_data(
     end_date = _normalize_date(train_end_date, "train_end_date")
     if start_date >= end_date:
         raise ValueError("训练开始日期必须早于训练结束日期")
+    validate_rebalance_schedule_parameters(
+        rebalance_frequency,
+        rebalance_interval_trading_days,
+    )
     if (
         isinstance(minimum_history_days, bool)
         or not isinstance(minimum_history_days, int)
@@ -100,10 +116,13 @@ def prepare_factor_training_data(
         FactorEngine.get_required_columns(names),
     )
     label_column = f"forward_return_{label_horizon_days}d"
-    signal_dates = get_confirmed_month_end_trading_dates(normalized["date"])
-    signal_dates = signal_dates[
-        (signal_dates >= start_date) & (signal_dates <= end_date)
-    ]
+    signal_dates = get_confirmed_rebalance_signal_dates(
+        normalized["date"],
+        rebalance_frequency=rebalance_frequency,
+        rebalance_interval_trading_days=rebalance_interval_trading_days,
+        start_date=start_date,
+        end_date=end_date,
+    )
     factor_frame = FactorEngine().calculate_factors_on_dates(
         normalized,
         names,
@@ -199,8 +218,10 @@ def fit_factor_weights(
     minimum_training_dates: int = 24,
     prepared_data: pd.DataFrame | None = None,
     prior_factor_weights: Mapping[str, float] | None = None,
+    rebalance_frequency: str = "monthly",
+    rebalance_interval_trading_days: int | None = None,
 ) -> FactorTrainingResult:
-    """Fit prior-shrunk simplex weights from monthly point-in-time factor rows.
+    """Fit prior-shrunk simplex weights from scheduled point-in-time rows.
 
     Factors are transformed exactly as the factor-composite strategy transforms
     them: cross-sectional winsorization followed by a direction-aware
@@ -216,6 +237,10 @@ def fit_factor_weights(
     end_date = _normalize_date(train_end_date, "train_end_date")
     if start_date >= end_date:
         raise ValueError("训练开始日期必须早于训练结束日期")
+    validate_rebalance_schedule_parameters(
+        rebalance_frequency,
+        rebalance_interval_trading_days,
+    )
     _validate_training_parameters(
         minimum_history_days=minimum_history_days,
         winsorize_lower=winsorize_lower,
@@ -238,6 +263,8 @@ def fit_factor_weights(
             end_date,
             minimum_history_days=minimum_history_days,
             label_horizon_days=label_horizon_days,
+            rebalance_frequency=rebalance_frequency,
+            rebalance_interval_trading_days=rebalance_interval_trading_days,
         )
     else:
         candidates = _validate_prepared_training_data(
@@ -338,6 +365,12 @@ def fit_factor_weights(
         signal_date_start=signal_dates.iloc[0].date().isoformat(),
         signal_date_end=signal_dates.iloc[-1].date().isoformat(),
         prior_factor_weights=normalized_prior.to_dict(),
+        rebalance_frequency=rebalance_frequency,
+        rebalance_interval_trading_days=rebalance_interval_trading_days,
+        rebalance_anchor_date=resolve_rebalance_anchor_metadata(
+            rebalance_frequency,
+            start_date.date(),
+        )[1],
     )
 
 

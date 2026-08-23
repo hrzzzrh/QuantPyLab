@@ -33,7 +33,7 @@ from backtest.strategy_base import (
     validate_target_weights,
 )
 from backtest.strategy_registry import get_backtest_strategy
-from backtest.trading_calendar import get_confirmed_month_end_trading_dates
+from backtest.trading_calendar import get_configured_rebalance_signal_dates
 from storage.database.manager import DBManager
 
 FULL_COMBINATION_VARIANT = "full_combination"
@@ -203,7 +203,7 @@ def build_common_factor_candidates(
     )
     candidates = candidates[
         candidates["date"].isin(
-            get_confirmed_month_end_trading_dates(candidates["date"])
+            get_configured_rebalance_signal_dates(candidates["date"], config)
         )
     ].copy()
     candidates = candidates[candidates["date"].dt.date >= config.start_date]

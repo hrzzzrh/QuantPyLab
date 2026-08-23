@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from backtest.config import BacktestConfig
+from backtest.config import REBALANCE_TRADE_REASONS, BacktestConfig
 from backtest.constrained_selection_diagnostics import (
     build_constrained_targets,
 )
@@ -488,7 +488,7 @@ def run_factor_selection_variant_comparison(
         minimum_history_days=parameters["min_listing_days"],
         include_market_cap=True,
     )
-    factor_frame = strategy.calculate_factor_frame(signal_data, parameters)
+    factor_frame = strategy.calculate_factor_frame(signal_data, config, parameters)
     candidates = strategy.prepare_target_candidates(
         signal_data,
         factor_frame,
@@ -686,7 +686,7 @@ def _summarize_trades(trades: pd.DataFrame, initial_capital: float) -> dict:
         "total_transaction_cost": float(costs.sum()),
         "executed_trade_count": int(execution_mask.sum()),
         "rebalance_day_count": int(
-            trades.loc[reason == "monthly_rebalance", "date"].nunique()
+            trades.loc[reason.isin(REBALANCE_TRADE_REASONS), "date"].nunique()
         ),
         "skipped_rebalance_count": int((side == "SKIP_REBALANCE").sum()),
         "delist_count": int((side == "DELIST").sum()),

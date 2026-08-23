@@ -19,7 +19,7 @@ from backtest.strategy_base import (
     rank_candidates_deterministically,
     select_equal_weight_targets,
 )
-from backtest.trading_calendar import get_confirmed_month_end_trading_dates
+from backtest.trading_calendar import get_configured_rebalance_signal_dates
 
 DEFAULT_FACTOR_WEIGHTS = {
     "price_momentum_120d": 0.20,
@@ -38,7 +38,7 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
     metadata = StrategyMetadata(
         name="multi-factor-quality-value-momentum",
         version="1",
-        description="价值、质量、动量、趋势与低波动因子合成的月度等权策略。",
+        description="价值、质量、动量、趋势与低波动因子合成的可配置调仓等权策略。",
         parameter_summary="holding_count, min_listing_days, winsorize_lower, winsorize_upper, factor_weights, factor_parameters",
     )
 
@@ -159,14 +159,16 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
 
     @staticmethod
     def calculate_factor_frame(
-        signal_data: pd.DataFrame, parameters: dict
+        signal_data: pd.DataFrame,
+        config: BacktestConfig,
+        parameters: dict,
     ) -> pd.DataFrame:
         factor_names = tuple(parameters["factor_weights"])
         return FactorEngine().calculate_factors_on_dates(
             signal_data,
             factor_names,
             parameters["factor_parameters"],
-            get_confirmed_month_end_trading_dates(signal_data["date"]),
+            get_configured_rebalance_signal_dates(signal_data["date"], config),
             symbol_batch_size=125,
         )
 
@@ -177,10 +179,12 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
         config: BacktestConfig,
         parameters: dict,
     ) -> pd.DataFrame:
-        """Build the factor-valid monthly candidate universe before scoring."""
+        """Build the factor-valid scheduled candidate universe before scoring."""
 
         factor_names = tuple(parameters["factor_weights"])
-        signal_dates = get_confirmed_month_end_trading_dates(signal_data["date"])
+        signal_dates = get_configured_rebalance_signal_dates(
+            signal_data["date"], config
+        )
         signal_date_mask = signal_data["date"].isin(signal_dates) & (
             signal_data["date"].dt.date >= config.start_date
         )
@@ -263,11 +267,11 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
     def build_candidates(
         self, signal_data: pd.DataFrame, config: BacktestConfig, parameters: dict
     ) -> pd.DataFrame:
-        """Build the scored monthly candidate universe once for reuse by reports."""
+        """Build the scored scheduled candidate universe once for reuse."""
 
         candidates = self.prepare_target_candidates(
             signal_data,
-            self.calculate_factor_frame(signal_data, parameters),
+            self.calculate_factor_frame(signal_data, config, parameters),
             config,
             parameters,
         )

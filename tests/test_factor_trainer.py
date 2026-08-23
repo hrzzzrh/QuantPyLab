@@ -208,6 +208,63 @@ def test_prepare_factor_training_data_drops_labels_after_train_end():
     assert (prepared["label_exit_date"] <= pd.Timestamp("2024-04-30")).all()
 
 
+def test_weekly_factor_training_uses_configured_signal_dates_and_reports_schedule():
+    data = _training_data()
+    monthly = prepare_factor_training_data(
+        data,
+        ("valuation_pb", "quality_roic"),
+        {},
+        date(2024, 1, 1),
+        date(2024, 4, 30),
+        label_horizon_days=2,
+    )
+    weekly = prepare_factor_training_data(
+        data,
+        ("valuation_pb", "quality_roic"),
+        {},
+        date(2024, 1, 1),
+        date(2024, 4, 30),
+        label_horizon_days=2,
+        rebalance_frequency="weekly",
+    )
+
+    assert weekly["date"].nunique() > monthly["date"].nunique()
+    result = fit_factor_weights(
+        data,
+        ("valuation_pb", "quality_roic"),
+        {},
+        date(2024, 1, 1),
+        date(2024, 4, 30),
+        label_horizon_days=2,
+        rebalance_frequency="weekly",
+        minimum_training_observations=8,
+        minimum_training_dates=3,
+    )
+
+    assert result.rebalance_frequency == "weekly"
+    assert result.rebalance_interval_trading_days is None
+    assert result.rebalance_anchor_date is None
+
+
+def test_every_n_factor_training_reports_split_start_anchor():
+    result = fit_factor_weights(
+        _training_data(),
+        ("valuation_pb", "quality_roic"),
+        {},
+        date(2024, 1, 1),
+        date(2024, 4, 30),
+        label_horizon_days=2,
+        rebalance_frequency="every_n_trading_days",
+        rebalance_interval_trading_days=5,
+        minimum_training_observations=8,
+        minimum_training_dates=3,
+    )
+
+    assert result.rebalance_frequency == "every_n_trading_days"
+    assert result.rebalance_interval_trading_days == 5
+    assert result.rebalance_anchor_date == "2024-01-01"
+
+
 def test_fit_factor_weights_requires_enough_training_observations():
     with pytest.raises(ValueError, match="训练样本不足"):
         fit_factor_weights(

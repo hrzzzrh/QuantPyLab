@@ -152,7 +152,8 @@ def test_execute_backtest_reuses_factor_candidates_within_cache(monkeypatch):
         def build_targets(self, signal_data, config, parameters):
             raise AssertionError("缓存能力存在时应走拆分后的目标生成路径")
 
-        def calculate_factor_frame(self, signal_data, parameters):
+        def calculate_factor_frame(self, signal_data, config, parameters):
+            del config
             calls["calculate"] += 1
             return pd.DataFrame(
                 [
@@ -346,6 +347,13 @@ def test_factor_execution_cache_matches_real_strategy_and_isolates_keys():
     )
     cache.prepare_inputs(strategy, data_access, config, short_reversal_parameters)
     cache.prepare_inputs(strategy, data_access, config, short_reversal_parameters)
+    weekly_config = replace(config, rebalance_frequency="weekly")
+    cache.prepare_inputs(
+        strategy,
+        data_access,
+        weekly_config,
+        short_reversal_parameters,
+    )
 
     assert first_signal_data.equals(signal_data)
     pd.testing.assert_frame_equal(
@@ -356,10 +364,10 @@ def test_factor_execution_cache_matches_real_strategy_and_isolates_keys():
         reweighted_targets.reset_index(drop=True),
         expected_reweighted_targets.reset_index(drop=True),
     )
-    assert len(load_calls) == 5
-    assert cache.stats == {"cache_hits": 2, "cache_misses": 5}
+    assert len(load_calls) == 6
+    assert cache.stats == {"cache_hits": 2, "cache_misses": 6}
 
     cache.clear()
     cache.prepare_inputs(strategy, data_access, config, two_factor_parameters)
-    assert len(load_calls) == 6
-    assert cache.stats == {"cache_hits": 2, "cache_misses": 6}
+    assert len(load_calls) == 7
+    assert cache.stats == {"cache_hits": 2, "cache_misses": 7}

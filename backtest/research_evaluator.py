@@ -93,6 +93,9 @@ TRAINING_MODEL_COLUMNS = (
     "sample_weighting",
     "weight_constraint",
     "prior_factor_weights",
+    "rebalance_frequency",
+    "rebalance_interval_trading_days",
+    "rebalance_anchor_date",
 )
 HYPERPARAMETER_TRIAL_COLUMNS = (
     "split_id",
@@ -1698,6 +1701,8 @@ def _fit_candidate_config(
         train_period.start_date,
         train_period.end_date,
         training.label_horizon_days,
+        training_config.rebalance_frequency,
+        training_config.rebalance_interval_trading_days,
     )
     if training_data_cache is not None and cache_key in training_data_cache:
         training_data = training_data_cache[cache_key]
@@ -1721,6 +1726,10 @@ def _fit_candidate_config(
             train_period.end_date,
             minimum_history_days=resolved_parameters["min_listing_days"],
             label_horizon_days=training.label_horizon_days,
+            rebalance_frequency=training_config.rebalance_frequency,
+            rebalance_interval_trading_days=(
+                training_config.rebalance_interval_trading_days
+            ),
         )
         del raw_training_data
         if training_data_cache is not None:
@@ -1741,6 +1750,10 @@ def _fit_candidate_config(
         minimum_training_dates=training.minimum_training_dates,
         prepared_data=training_data,
         prior_factor_weights=resolved_parameters["factor_weights"],
+        rebalance_frequency=training_config.rebalance_frequency,
+        rebalance_interval_trading_days=(
+            training_config.rebalance_interval_trading_days
+        ),
     )
     trained_parameters = dict(candidate_config.strategy_parameters)
     trained_weights = strategy.apply_trained_factor_weights(
@@ -2269,6 +2282,17 @@ def _build_failed_training_row(
         "target_transform": details.get("target_transform"),
         "sample_weighting": details.get("sample_weighting"),
         "weight_constraint": details.get("weight_constraint"),
+        "rebalance_frequency": details.get(
+            "rebalance_frequency", trial.config.rebalance_frequency
+        ),
+        "rebalance_interval_trading_days": details.get(
+            "rebalance_interval_trading_days",
+            trial.config.rebalance_interval_trading_days,
+        ),
+        "rebalance_anchor_date": details.get(
+            "rebalance_anchor_date",
+            _replace_backtest_period(trial.config, split.train).rebalance_anchor_date,
+        ),
         "prior_factor_weights": json.dumps(
             details.get("prior_factor_weights"),
             ensure_ascii=False,
@@ -2395,6 +2419,7 @@ def _build_reproducibility_audit(
 ) -> dict[str, object]:
     candidate_hashes = {}
     factor_versions = {}
+    rebalance_schedules = {}
     search_parameter_coverage = {}
     configured_factor_parameters = (
         config.hyperparameter_search.factor_parameter_values
@@ -2414,6 +2439,17 @@ def _build_reproducibility_audit(
                 candidate_config.strategy_parameters
             )
             factor_versions[path.stem] = resolved.get("factor_versions", {})
+            rebalance_schedules[path.stem] = {
+                "rebalance_frequency": candidate_config.rebalance_frequency,
+                "rebalance_interval_trading_days": (
+                    candidate_config.rebalance_interval_trading_days
+                ),
+                "anchor": (
+                    "evaluation_split_start_date"
+                    if candidate_config.rebalance_frequency == "every_n_trading_days"
+                    else "fixed_calendar_period"
+                ),
+            }
             selected_factors = set(factor_versions[path.stem])
             configured_factors = set(configured_factor_parameters)
             search_parameter_coverage[path.stem] = {
@@ -2426,6 +2462,7 @@ def _build_reproducibility_audit(
             }
         except Exception as error:
             factor_versions[path.stem] = {"_error": str(error)}
+            rebalance_schedules[path.stem] = {"_error": str(error)}
             search_parameter_coverage[path.stem] = {"_error": str(error)}
 
     git_commit = "未取得"
@@ -2462,6 +2499,7 @@ def _build_reproducibility_audit(
     return {
         "candidate_config_sha256": candidate_hashes,
         "factor_versions": factor_versions,
+        "rebalance_schedules": rebalance_schedules,
         "search_parameter_coverage": search_parameter_coverage,
         "git_commit": git_commit,
         "git_worktree_dirty": git_worktree_dirty,
@@ -2625,7 +2663,11 @@ def _build_evaluation_summary(
                 "搜索参数覆盖",
                 _format_json_value(audit.get("search_parameter_coverage", {})),
             ),
-            ("信号频率", "月末信号；信号日收盘后生成，下一交易日开盘成交"),
+            (
+                "候选调仓日程",
+                _format_json_value(audit.get("rebalance_schedules", {})),
+            ),
+            ("信号执行", "信号日收盘后生成，下一交易日开盘成交"),
             (
                 "标签定义",
                 f"信号日后下一交易日开盘至 {config.training.label_horizon_days if training_enabled else '固定'} 个交易观察后的收盘收益；训练时按信号日转为截面百分位排名并去均值"
@@ -2680,7 +2722,7 @@ def _build_evaluation_summary(
         lines.append("本次未启用因子权重训练，因此没有训练信号日和训练样本统计。")
     else:
         lines.append(
-            "训练样本按月末信号日构造；股票观测行数是横截面样本，不能代替时间维度的信号日数量。"
+            "训练样本按候选配置的调仓信号日构造；股票观测行数是横截面样本，不能代替时间维度的信号日数量。"
         )
         lines.append("")
         coverage_rows = []
@@ -3363,7 +3405,7 @@ def _build_evaluation_summary(
         [
             "",
             "建议下一步检查：",
-            "- 扩大训练时间范围并确认月末信号日数量是否足够。",
+            "- 扩大训练时间范围并确认配置化调仓信号日数量是否足够。",
             "- 对权重高度集中或窗口全部失败的因子组合单独做因子诊断。",
             "- 比较 Walk-forward 各窗口的入选候选和权重变化，而不是只看平均测试收益。",
             "- 使用独立测试配置复核入选方案，避免继续用同一验证集反复调参。",

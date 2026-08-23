@@ -14,6 +14,7 @@ from backtest.engine import BacktestResult
 from backtest.factor_trainer import FactorTrainingResult
 from backtest.hyperparameter_search import (
     HyperparameterSearchSpec,
+    HyperparameterTrial,
     expand_hyperparameter_trials,
 )
 from backtest.research_evaluator import (
@@ -712,6 +713,110 @@ def test_research_validity_report_contains_phase_coverage(tmp_path, monkeypatch)
     assert "研究有效性门禁" in report
     assert "资源审计" in report
     assert "research_validity.csv" in report
+
+
+def test_training_model_report_persists_rebalance_schedule_metadata(
+    tmp_path, monkeypatch
+):
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    weekly_config = BacktestConfig(
+        start_date=date(2018, 1, 1),
+        end_date=date(2026, 1, 1),
+        strategy_name="factor-composite-experiment",
+        rebalance_frequency="weekly",
+        benchmark_symbol=None,
+    )
+    every_n_config = replace(
+        weekly_config,
+        rebalance_frequency="every_n_trading_days",
+        rebalance_interval_trading_days=5,
+    )
+    weekly_trial = HyperparameterTrial(
+        trial_id="weekly_trial",
+        candidate_id="weekly",
+        config=weekly_config,
+        parameters={},
+    )
+    every_n_trial = HyperparameterTrial(
+        trial_id="every_n_trial",
+        candidate_id="every_n",
+        config=every_n_config,
+        parameters={},
+    )
+    weekly_training = FactorTrainingResult(
+        factor_weights={"valuation_pb": 1.0},
+        observation_count=100,
+        signal_date_count=50,
+        iterations=2,
+        converged=True,
+        label_horizon_days=20,
+        ridge_alpha=0.1,
+        prior_factor_weights={"valuation_pb": 1.0},
+        rebalance_frequency="weekly",
+    )
+    every_n_training = replace(
+        weekly_training,
+        rebalance_frequency="every_n_trading_days",
+        rebalance_interval_trading_days=5,
+        rebalance_anchor_date="2020-01-01",
+    )
+    fitted_row = evaluator_module._build_training_row(
+        split, weekly_trial, weekly_training
+    )
+    rejected_row = evaluator_module._build_failed_training_row(
+        split,
+        every_n_trial,
+        evaluator_module.ResearchValidityError("模型门禁拒绝"),
+        training_result=every_n_training,
+    )
+    rejected_row["status"] = "rejected"
+    failed_row = evaluator_module._build_failed_training_row(
+        split,
+        every_n_trial,
+        ValueError("训练失败"),
+    )
+    config = FactorExperimentEvaluationConfig(
+        name="schedule-metadata",
+        candidate_configs=(tmp_path / "candidate.toml",),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+        training=TrainingSpec(
+            minimum_training_observations=1,
+            minimum_training_dates=1,
+        ),
+    )
+    result = FactorExperimentEvaluationResult(
+        config=config,
+        metric_rows=(),
+        selection_rows=(),
+        training_rows=(fitted_row, rejected_row, failed_row),
+    )
+    monkeypatch.setattr(evaluator_module, "_build_reproducibility_audit", lambda *_: {})
+    monkeypatch.setattr(evaluator_module, "_write_evaluation_summary", lambda *_: None)
+
+    output_dir = write_factor_experiment_evaluation_report(
+        result, tmp_path / "schedule-metadata-output"
+    )
+    models = pd.read_csv(output_dir / "training_models.csv")
+
+    assert models["rebalance_frequency"].tolist() == [
+        "weekly",
+        "every_n_trading_days",
+        "every_n_trading_days",
+    ]
+    assert pd.isna(models.loc[0, "rebalance_interval_trading_days"])
+    assert models.loc[1:, "rebalance_interval_trading_days"].tolist() == [5.0, 5.0]
+    assert pd.isna(models.loc[0, "rebalance_anchor_date"])
+    assert models.loc[1:, "rebalance_anchor_date"].tolist() == [
+        "2020-01-01",
+        "2020-01-01",
+    ]
 
 
 def test_report_separates_successful_training_from_validation_rejection():

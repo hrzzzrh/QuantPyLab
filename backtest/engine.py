@@ -253,7 +253,7 @@ class DailyBacktestEngine:
                     "adjusted_open": row.get("open_hfq"),
                     "notional": notional,
                     "cost": notional * self.config.transaction_cost_rate,
-                    "reason": "monthly_rebalance",
+                    "reason": self.config.rebalance_trade_reason,
                 }
             )
         return positions, cash, trades

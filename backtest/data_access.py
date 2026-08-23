@@ -10,7 +10,7 @@ import pandas as pd
 
 from analysis.factors.registry import get_factor_definition
 from backtest.config import BacktestConfig
-from backtest.trading_calendar import get_confirmed_month_end_trading_dates
+from backtest.trading_calendar import get_configured_rebalance_signal_dates
 from storage.database.manager import DBManager
 
 
@@ -338,7 +338,7 @@ class BacktestDataAccess:
             # 这样避免 DuckDB 在不同视图加载顺序下错误复用区间连接结果。
             if financial_signal_dates_only:
                 # 滚动行情因子需要完整日频 close_hfq，但估值和财务指标只会在
-                # 月末信号日参与选股。若把历史财务值复制到每个交易日，会在
+                # 配置化调仓信号日参与选股。若把历史财务值复制到每个交易日，会在
                 # 数百万行行情上重复构造宽表并显著抬高峰值内存。
                 kline_frame["date"] = pd.to_datetime(kline_frame["date"])
                 kline_frame["raw_close"] = pd.to_numeric(
@@ -350,11 +350,11 @@ class BacktestDataAccess:
                 kline_frame["close_hfq"] = (
                     kline_frame["raw_close"] * kline_frame["adj_factor"]
                 )
-                confirmed_month_end_dates = get_confirmed_month_end_trading_dates(
-                    kline_frame["date"]
+                rebalance_signal_dates = get_configured_rebalance_signal_dates(
+                    kline_frame["date"], config
                 )
                 financial_signal_mask = kline_frame["date"].isin(
-                    confirmed_month_end_dates
+                    rebalance_signal_dates
                 ) & (kline_frame["date"].dt.date >= config.start_date)
                 financial_input = kline_frame.loc[financial_signal_mask].copy()
                 financial_input["_financial_row_id"] = financial_input.index.to_numpy()
@@ -430,7 +430,7 @@ class BacktestDataAccess:
         # 后复权开盘价让开盘成交与收盘收益使用同一经济口径。
         frame["open_hfq"] = frame["open"] * frame["close_hfq"] / frame["raw_close"]
         if financial_signal_dates_only:
-            # Monthly factor consumers sort their per-symbol history before
+            # Scheduled factor consumers sort their per-symbol history before
             # rolling calculations and the execution engine builds its own
             # date calendar. Avoid a second full-frame date/symbol sort here;
             # it otherwise duplicates millions of rows at the peak.

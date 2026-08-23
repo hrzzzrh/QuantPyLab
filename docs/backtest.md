@@ -2,7 +2,7 @@
 
 ## 1. 定位与范围
 
-`backtest/` 是基于统一视图的 A 股日频、长仓、横截面选股回测模块。当前内置 `quality-value-recovery`、`price-momentum`、`multi-factor-quality-value-momentum` 与 `factor-composite-experiment` 四个策略，统一使用月度调仓和 ETF 基准比较；另提供候选实验的训练/验证/测试与 Walk-forward 评估器。它用于验证研究假设，不能直接替代实盘交易系统。
+`backtest/` 是基于统一视图的 A 股日频、长仓、横截面选股回测模块。当前内置 `quality-value-recovery`、`price-momentum`、`multi-factor-quality-value-momentum` 与 `factor-composite-experiment` 四个策略，统一支持月频、周频、双周和每 N 个交易日调仓及 ETF 基准比较；另提供候选实验的训练/验证/测试与 Walk-forward 评估器。它用于验证研究假设，不能直接替代实盘交易系统。
 
 不支持分钟级交易、融资融券、整手委托、停复牌原因、涨跌停成交限制或税费；研究评估器只在配置文件显式列出的候选和有限参数网格内搜索，不进行无上限的自动超参数寻优。启用 `[training]` 时会在训练集内把未来收益转换为逐信号日截面排名，对各信号日等权，并拟合向候选先验收缩的非负、和为 1 的因子权重。
 
@@ -34,7 +34,7 @@
 | `backtest/strategy_registry.py` | 显式注册可执行策略 |
 | `backtest/strategies/` | 每个策略独立加载信号数据并生成目标权重 |
 | `backtest/runner.py` | 统一执行已解析的内存回测，供正式回测和研究评估复用；研究评估器可按窗口缓存因子与市场输入 |
-| `backtest/factor_trainer.py` | 使用点时月末因子、截面收益排名、月份等权和先验收缩拟合单纯形因子权重 |
+| `backtest/factor_trainer.py` | 使用配置化调仓日的点时因子、截面收益排名、信号日等权和先验收缩拟合单纯形因子权重 |
 | `backtest/hyperparameter_search.py` | 展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度的有限组合 |
 | `backtest/research_evaluator.py` | 按固定切分和滚动 Walk-forward 训练、选择候选并锁定测试集 |
 | `analysis/factors/` | 定义可复用点时因子、注册表、计算引擎和截面变换 |
@@ -42,7 +42,7 @@
 | `backtest/metrics.py` | 计算收益、波动率、夏普和最大回撤 |
 | `backtest/reporter.py` | 将输入参数、目标、交易、净值和摘要写入独立结果目录 |
 
-回测引擎只保留成交所需的行情列，并按交易日保存紧凑数值表；不把每条行情转换成嵌套 Python 字典。`BacktestDataAccess` 对大型 DuckDB 查询设置 256MB 内存上限和 2 个工作线程，并按股票批次读取行情；财务与行情结果在返回前脱离 DuckDB 结果缓冲区，避免下一次查询覆盖仍被 Pandas 使用的数组。月末策略仍保留完整日频价格历史供滚动因子使用，但财务和估值字段只在月末信号日物化。`DBManager` 提供连接级可重入锁，回测点时查询、视图注册和连接释放在同一锁协议内串行化，避免资源设置恢复或连接关闭与并发查询交错。研究诊断在完成信号数据物化后关闭 DuckDB 查询连接、完成候选和目标后释放宽因子表，只向引擎传递 `date`、`symbol`、`open`、`open_hfq`、`close_hfq` 五列。正式报告和重复性验证应串行执行，避免同一进程同时保留多份全量信号数据。
+回测引擎只保留成交所需的行情列，并按交易日保存紧凑数值表；不把每条行情转换成嵌套 Python 字典。`BacktestDataAccess` 对大型 DuckDB 查询设置 256MB 内存上限和 2 个工作线程，并按股票批次读取行情；财务与行情结果在返回前脱离 DuckDB 结果缓冲区，避免下一次查询覆盖仍被 Pandas 使用的数组。策略保留完整日频价格历史供滚动因子使用，但财务和估值字段只在配置化调仓信号日物化。`DBManager` 提供连接级可重入锁，回测点时查询、视图注册和连接释放在同一锁协议内串行化，避免资源设置恢复或连接关闭与并发查询交错。研究诊断在完成信号数据物化后关闭 DuckDB 查询连接、完成候选和目标后释放宽因子表，只向引擎传递 `date`、`symbol`、`open`、`open_hfq`、`close_hfq` 五列。正式报告和重复性验证应串行执行，避免同一进程同时保留多份全量信号数据。
 
 ## 3. 无未来函数规则
 
@@ -58,7 +58,16 @@
 
 ## 4. 内置策略
 
-所有内置策略在已经确认的每月最后一个交易日筛选标的，并于下一交易日开盘等权调仓。月末必须由后续交易日已经进入新月份来确认；输入行情的最后一个日期没有后续交易日证据，不生成月末信号，也不会产生无法执行的 T+1 调仓计划。可用策略通过以下命令查看：
+所有内置策略都从 `[run]` 读取统一调仓日程，在信号日收盘后筛选标的，并于下一实际交易日开盘等权调仓。月频、周频和双周的周期末必须由下一交易日已经进入新周期确认；每 N 个交易日按回测或评估切分的 `start_date` 计数。输入行情的最后一个日期没有 T+1 证据，任何频率都不生成目标。
+
+| `rebalance_frequency` | 日程 | `rebalance_interval_trading_days` |
+|:---|:---|:---|
+| `monthly` | 每个自然月最后一个已确认交易日，默认值 | 必须省略 |
+| `weekly` | 每个周一至周日自然周最后一个已确认交易日 | 必须省略 |
+| `biweekly` | 以 1970-01-05 为固定周一锚点的双周区间末 | 必须省略 |
+| `every_n_trading_days` | 从当前区间 `start_date` 起第 N、2N、3N……个实际交易日 | 必填正整数 |
+
+周频和双周按日历周期处理节假日；每 N 个交易日只数实际交易日，因此每 5 个交易日不等同于自然周频。可用策略通过以下命令查看：
 
 ```bash
 uv run main.py list-backtest-strategies
@@ -256,6 +265,7 @@ initial_capital = 1000000
 commission_bps = 5
 slippage_bps = 5
 benchmark_symbol = "510300"
+rebalance_frequency = "weekly"
 
 [strategy]
 name = "price-momentum"
@@ -266,6 +276,16 @@ lookback_days = 120
 trend_window = 120
 min_listing_days = 250
 ```
+
+每 N 个交易日调仓示例：
+
+```toml
+[run]
+rebalance_frequency = "every_n_trading_days"
+rebalance_interval_trading_days = 10
+```
+
+除 `every_n_trading_days` 外的频率禁止设置 `rebalance_interval_trading_days`；非法频率、缺少 N、非正 N 和布尔 N 都会在配置解析时拒绝。
 
 ```bash
 uv run main.py run-backtest \

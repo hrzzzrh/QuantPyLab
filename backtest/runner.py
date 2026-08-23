@@ -145,7 +145,7 @@ class BacktestExecutionCache:
                 # both full signal frames alive at the memory peak.
                 self._factor_candidates.popitem(last=False)
             signal_data = strategy.load_signal_data(data_access, config, parameters)
-            factor_frame = calculate_factor_frame(signal_data, parameters)
+            factor_frame = calculate_factor_frame(signal_data, config, parameters)
             candidates = prepare_target_candidates(
                 signal_data,
                 factor_frame,
@@ -174,6 +174,8 @@ class BacktestExecutionCache:
             strategy.metadata.version,
             config.start_date,
             config.end_date,
+            config.rebalance_frequency,
+            config.rebalance_interval_trading_days,
             tuple(factor_weights),
             json.dumps(
                 factor_parameters,
