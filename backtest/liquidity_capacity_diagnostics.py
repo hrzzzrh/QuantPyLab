@@ -24,11 +24,11 @@ from backtest.engine import DailyBacktestEngine
 from backtest.metrics import calculate_performance_metrics
 from backtest.selection_comparison import summarize_trade_statistics
 from backtest.strategy_base import (
-    get_month_end_dates,
     select_equal_weight_targets,
     validate_target_weights,
 )
 from backtest.strategy_registry import get_backtest_strategy
+from backtest.trading_calendar import get_confirmed_month_end_trading_dates
 from storage.database.manager import DBManager
 
 DEFAULT_LIQUIDITY_LOOKBACK_DAYS = 20
@@ -245,7 +245,9 @@ def build_formal_factor_candidates(
         validate="one_to_one",
     )
     candidates = candidates[
-        candidates["date"].isin(get_month_end_dates(candidates["date"]))
+        candidates["date"].isin(
+            get_confirmed_month_end_trading_dates(candidates["date"])
+        )
     ].copy()
     candidates = candidates[candidates["date"].dt.date >= config.start_date]
     candidates = candidates[
@@ -650,11 +652,20 @@ def _run_factor_liquidity_capacity_diagnostic(
         pd.Timestamp(config.start_date), pd.Timestamp(config.end_date)
     )
     market_data = signal_data.loc[market_date_mask, market_columns].copy()
+    confirmed_delisting_dates = data_access.load_confirmed_delisting_dates(
+        market_data["symbol"].drop_duplicates().tolist(),
+        config.end_date,
+    )
     del signal_data
     gc.collect()
     engine = DailyBacktestEngine(config)
     benchmark_prices = data_access.load_benchmark_prices(config)
-    result = engine.run(market_data, targets, benchmark_prices)
+    result = engine.run(
+        market_data,
+        targets,
+        benchmark_prices,
+        confirmed_delisting_dates=confirmed_delisting_dates,
+    )
     del market_data
     gc.collect()
     trades = calculate_liquidity_trade_diagnostics(

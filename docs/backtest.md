@@ -24,7 +24,7 @@
 @enduml
 ```
 
-回测启动时通过 `db_manager.ensure_views(...)` 按策略数据需求显式加载 `daily_kline_raw`、`daily_kline_calendar`、`share_capital`、`fin_ttm`、`fin_balance_sheet`、`fin_indicator` 和 `etf_kline`。所有市场与财务查询均经统一视图完成，不直接读取 Parquet 文件；视图只匹配原子晋级后的 `*/data.parquet`，不会把同步过程中的 `.tmp_*.parquet` 或备份文件读入查询。`BacktestDataAccess` 先用轻量行情日历确定回看区间和股票集合，再物化请求股票的财务历史，在 Python 中确定性去重并按 `effective_date <= signal_date` 回溯，最后读取原始行情；只有检测到重复 `date/symbol` 时才按 `daily_kline` 的排序口径补充字段并去重，避免为正常行情执行全量窗口排序。
+回测启动时通过 `db_manager.ensure_views(...)` 按策略数据需求显式加载 `stocks`、`daily_kline_raw`、`daily_kline_calendar`、`share_capital`、`fin_ttm`、`fin_balance_sheet`、`fin_indicator` 和 `etf_kline`。所有元数据、市场与财务查询均经统一视图完成，不直接读取 SQLite 底表或 Parquet 文件；`stocks` 视图通过 DuckDB `sqlite_scan` 只读映射元数据事实表，其余基础视图只匹配原子晋级后的 `*/data.parquet`，不会把同步过程中的 `.tmp_*.parquet` 或备份文件读入查询。`BacktestDataAccess` 先用轻量行情日历确定回看区间和股票集合，再物化请求股票的财务历史，在 Python 中确定性去重并按 `effective_date <= signal_date` 回溯，最后读取原始行情；只有检测到重复 `date/symbol` 时才按 `daily_kline` 的排序口径补充字段并去重，避免为正常行情执行全量窗口排序。
 
 | 模块 | 职责 |
 |:---|:---|
@@ -52,13 +52,13 @@
 4. `fin_indicator` 的质量因子在回测查询中以 `数据可用日期` 回溯对齐，不能以 `report_date` 直接对齐；同一股票同一生效日的多条记录按 `report_date`、文件名和字段值确定性去重。
 5. 调仓最早在下一个实际有行情的交易日 T+1 开盘执行，禁止 T 日收盘信号以 T 日价格成交。
 6. 不复权价用于估值与原始成交价记录；后复权价用于持仓收益、净值和基准收益。
-7. 持仓证券的行情在其最后交易日收盘后终结（退市/摘牌），当日收盘后按收盘价强制清算为现金并记录 `DELIST` 交易；清算后不再产生交易与定价，亦不再阻塞后续调仓。行情终结判定基于数据湖实际行情（该股最后一条日线），不依赖 `stocks` 快照的 `is_active` 状态。
+7. 持仓证券只有在 `stocks.is_active=0` 且存在有效 `last_trade_date` 时才视为已经确认退市/摘牌，并在该日收盘后按收盘价强制清算为现金、记录 `DELIST` 交易；清算后不再产生交易与定价，亦不再阻塞后续调仓。禁止从按回测区间截断后的最后一条日线推断退市；在市股票、退市日期缺失股票和未确认状态的行情终结按缺失行情处理，不伪造退市事件。
 
 持仓以连续价值而非整手股数表示。这样可以隔离策略本身与不同证券价格、最小交易单位导致的资金闲置；整手及涨跌停等实盘撮合约束留待独立模块实现。
 
 ## 4. 内置策略
 
-所有内置策略在每月最后一个交易日筛选标的，并于下一交易日开盘等权调仓。可用策略通过以下命令查看：
+所有内置策略在已经确认的每月最后一个交易日筛选标的，并于下一交易日开盘等权调仓。月末必须由后续交易日已经进入新月份来确认；输入行情的最后一个日期没有后续交易日证据，不生成月末信号，也不会产生无法执行的 T+1 调仓计划。可用策略通过以下命令查看：
 
 ```bash
 uv run main.py list-backtest-strategies

@@ -16,10 +16,10 @@ from backtest.data_access import BacktestDataAccess
 from backtest.strategy_base import (
     BacktestStrategy,
     StrategyMetadata,
-    get_month_end_dates,
     rank_candidates_deterministically,
     select_equal_weight_targets,
 )
+from backtest.trading_calendar import get_confirmed_month_end_trading_dates
 
 MAX_EXPERIMENT_FACTOR_COUNT = 6
 
@@ -175,7 +175,7 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
             signal_data,
             factor_names,
             parameters["factor_parameters"],
-            get_month_end_dates(signal_data["date"]),
+            get_confirmed_month_end_trading_dates(signal_data["date"]),
             symbol_batch_size=125,
         )
 
@@ -194,7 +194,9 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
             ordered_input.groupby("symbol", sort=False).cumcount() + 1
         )
         listing_days = ordered_input.loc[
-            ordered_input["date"].isin(get_month_end_dates(signal_data["date"]))
+            ordered_input["date"].isin(
+                get_confirmed_month_end_trading_dates(signal_data["date"])
+            )
             & (ordered_input["date"].dt.date >= config.start_date),
             ["date", "symbol", "listing_days"],
         ]
@@ -204,9 +206,6 @@ class FactorCompositeExperimentStrategy(BacktestStrategy):
             how="left",
             validate="one_to_one",
         )
-        candidates = candidates[
-            candidates["date"].isin(get_month_end_dates(candidates["date"]))
-        ].copy()
         candidates = candidates[candidates["date"].dt.date >= config.start_date]
         candidates = candidates[
             candidates["listing_days"] >= parameters["min_listing_days"]

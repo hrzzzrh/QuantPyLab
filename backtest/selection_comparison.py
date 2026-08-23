@@ -297,6 +297,7 @@ def run_target_backtests(
     *,
     benchmark_prices: pd.DataFrame | None = None,
     prepared_market_data: PreparedMarketData | None = None,
+    confirmed_delisting_dates: Mapping[str, object] | None = None,
 ) -> dict[str, BacktestResult]:
     """Run arbitrary labeled target sets through one prepared market engine."""
 
@@ -316,6 +317,7 @@ def run_target_backtests(
             targets,
             benchmark_prices,
             prepared_market_data=prepared,
+            confirmed_delisting_dates=confirmed_delisting_dates,
         )
         for variant, targets in normalized_targets.items()
     }
@@ -330,6 +332,7 @@ def compare_selection_variants(
     candidates: pd.DataFrame | None = None,
     benchmark_prices: pd.DataFrame | None = None,
     prepared_market_data: PreparedMarketData | None = None,
+    confirmed_delisting_dates: Mapping[str, object] | None = None,
 ) -> SelectionComparisonReport:
     """Run all target variants through one prepared daily backtest engine."""
 
@@ -349,6 +352,7 @@ def compare_selection_variants(
         normalized_targets,
         benchmark_prices=benchmark_prices,
         prepared_market_data=prepared_market_data,
+        confirmed_delisting_dates=confirmed_delisting_dates,
     )
 
     nav_frames = []
@@ -513,6 +517,10 @@ def run_factor_selection_variant_comparison(
         quantile_count=quantile_count,
     )
     prepared_market_data = DailyBacktestEngine.prepare_market_data(signal_data, config)
+    confirmed_delisting_dates = data_access.load_confirmed_delisting_dates(
+        signal_data["symbol"].drop_duplicates().tolist(),
+        config.end_date,
+    )
     benchmark_prices = data_access.load_benchmark_prices(config)
     return compare_selection_variants(
         config,
@@ -522,6 +530,7 @@ def run_factor_selection_variant_comparison(
         benchmark_prices=benchmark_prices,
         candidates=scored_candidates,
         prepared_market_data=prepared_market_data,
+        confirmed_delisting_dates=confirmed_delisting_dates,
     )
 
 

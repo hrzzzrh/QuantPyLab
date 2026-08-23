@@ -1,6 +1,6 @@
 # 股票基础信息表 (stocks)
 
-存储 A 股全量股票的基础索引信息，位于 `metadata.db` (SQLite)。
+存储 A 股全量股票的基础索引信息，事实表位于 `metadata.db` (SQLite)。分析与回测查询通过同名 DuckDB 统一视图 `stocks` 完成；该视图由 `storage/database/views/market/stocks.py` 定义，并使用 `sqlite_scan` 只读映射事实表，业务代码不得直接查询 SQLite 底表。
 
 `industry` 是雪球个股资料的当前行业快照，没有历史生效日期，不能用于历史回测的行业暴露或行业中性化。历史点时行业分类使用独立数据集 `industry_classification_sw`。
 

@@ -205,10 +205,16 @@ def test_run_factor_exposure_diagnostics_builds_targets_and_writes_report(
         },
         benchmark_symbol=None,
     )
-    signal_data = _candidates().assign(
+    signal_data = pd.concat(
+        [
+            _candidates(),
+            _candidates().iloc[:4].assign(date=pd.Timestamp("2024-03-01")),
+        ],
+        ignore_index=True,
+    ).assign(
         open_hfq=100.0,
         close_hfq=101.0,
-        pb=[4.0, 3.0, 2.0, 1.0] * 2,
+        pb=[4.0, 3.0, 2.0, 1.0] * 3,
     )
     captured = {}
 

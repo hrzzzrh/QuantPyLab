@@ -201,7 +201,11 @@ def test_delisted_position_is_liquidated_at_last_close():
         [{"date": pd.Timestamp("2024-01-02"), "symbol": "000001", "target_weight": 1.0}]
     )
 
-    result = DailyBacktestEngine(_config()).run(prices, targets)
+    result = DailyBacktestEngine(_config()).run(
+        prices,
+        targets,
+        confirmed_delisting_dates={"000001": pd.Timestamp("2024-01-03")},
+    )
 
     delist_trades = result.trades.loc[result.trades["side"] == "DELIST"]
     assert len(delist_trades) == 1
@@ -259,7 +263,11 @@ def test_delisted_position_does_not_block_rebalance():
         ]
     )
 
-    result = DailyBacktestEngine(_config()).run(prices, targets)
+    result = DailyBacktestEngine(_config()).run(
+        prices,
+        targets,
+        confirmed_delisting_dates={"000001": pd.Timestamp("2024-01-03")},
+    )
 
     assert not result.trades["side"].isin(["SKIP_REBALANCE"]).any()
     buy_b = result.trades.loc[
@@ -267,3 +275,22 @@ def test_delisted_position_does_not_block_rebalance():
     ]
     assert len(buy_b) == 1
     assert buy_b.iloc[0]["date"] == pd.Timestamp("2024-01-04")
+
+
+def test_truncated_active_position_is_not_misclassified_as_delisted():
+    targets = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-02"),
+                "symbol": "000001",
+                "target_weight": 1.0,
+            }
+        ]
+    )
+
+    result = DailyBacktestEngine(_config()).run(_prices(), targets)
+
+    assert not result.trades["side"].eq("DELIST").any()
+    final_nav = result.daily_nav.iloc[-1]
+    assert final_nav["cash"] == pytest.approx(0.0)
+    assert final_nav["positions_value"] == pytest.approx(final_nav["nav"])

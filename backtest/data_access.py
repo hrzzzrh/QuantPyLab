@@ -1,6 +1,6 @@
 import gc
 import hashlib
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -10,6 +10,7 @@ import pandas as pd
 
 from analysis.factors.registry import get_factor_definition
 from backtest.config import BacktestConfig
+from backtest.trading_calendar import get_confirmed_month_end_trading_dates
 from storage.database.manager import DBManager
 
 
@@ -34,6 +35,63 @@ class BacktestDataAccess:
 
     def __init__(self, db_manager: DBManager):
         self.db_manager = db_manager
+
+    def load_confirmed_delisting_dates(
+        self,
+        symbols: Sequence[str] | pd.Series,
+        end_date: date,
+    ) -> dict[str, pd.Timestamp]:
+        """Load confirmed delisting dates through the unified stock view."""
+
+        requested_symbols = sorted(
+            {
+                str(symbol).strip()
+                for symbol in symbols
+                if symbol is not None and pd.notna(symbol) and str(symbol).strip()
+            }
+        )
+        if not requested_symbols:
+            return {}
+
+        with self._duckdb_guard():
+            self.db_manager.ensure_views("stocks")
+            conn = self.db_manager.get_duckdb_conn()
+            relation_name = "_requested_delisting_symbols"
+            conn.register(
+                relation_name,
+                pd.DataFrame({"symbol": pd.Series(requested_symbols, dtype="string")}),
+            )
+            try:
+                rows = conn.execute(
+                    f"""
+                    SELECT stocks.code, stocks.last_trade_date
+                    FROM stocks
+                    INNER JOIN {relation_name} AS requested
+                      ON stocks.code = requested.symbol
+                    WHERE stocks.is_active = 0
+                      AND stocks.last_trade_date IS NOT NULL
+                    ORDER BY stocks.code
+                    """
+                ).fetchall()
+            finally:
+                conn.unregister(relation_name)
+
+        confirmed_dates = {}
+        for symbol, raw_last_trade_date in rows:
+            normalized_symbol = str(symbol)
+            parsed_date = pd.to_datetime(
+                raw_last_trade_date,
+                format="%Y%m%d",
+                errors="coerce",
+            )
+            if pd.isna(parsed_date):
+                raise ValueError(
+                    f"退市股票 {normalized_symbol} 的 last_trade_date 无效: "
+                    f"{raw_last_trade_date}"
+                )
+            if parsed_date.date() <= end_date:
+                confirmed_dates[normalized_symbol] = pd.Timestamp(parsed_date)
+        return confirmed_dates
 
     def load_market_data(
         self,
@@ -292,13 +350,12 @@ class BacktestDataAccess:
                 kline_frame["close_hfq"] = (
                     kline_frame["raw_close"] * kline_frame["adj_factor"]
                 )
-                periods = kline_frame["date"].dt.to_period("M")
-                month_end_dates = kline_frame.groupby(periods, sort=False)[
-                    "date"
-                ].transform("max")
-                financial_signal_mask = kline_frame["date"].eq(month_end_dates) & (
-                    kline_frame["date"].dt.date >= config.start_date
+                confirmed_month_end_dates = get_confirmed_month_end_trading_dates(
+                    kline_frame["date"]
                 )
+                financial_signal_mask = kline_frame["date"].isin(
+                    confirmed_month_end_dates
+                ) & (kline_frame["date"].dt.date >= config.start_date)
                 financial_input = kline_frame.loc[financial_signal_mask].copy()
                 financial_input["_financial_row_id"] = financial_input.index.to_numpy()
                 financial_frame = self._build_valuation_frame(

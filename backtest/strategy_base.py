@@ -70,13 +70,6 @@ def validate_target_weights(targets: pd.DataFrame) -> pd.DataFrame:
     return validated.sort_values(["date", "rank", "symbol"])
 
 
-def get_month_end_dates(dates: pd.Series) -> pd.DatetimeIndex:
-    unique_dates = pd.DatetimeIndex(
-        pd.to_datetime(dates.drop_duplicates()).sort_values()
-    )
-    return unique_dates.to_series().groupby(unique_dates.to_period("M")).max().values
-
-
 def rank_candidates_deterministically(
     candidates: pd.DataFrame,
     *,

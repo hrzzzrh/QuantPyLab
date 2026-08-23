@@ -29,11 +29,11 @@ from backtest.strategies.factor_composite_experiment import (
 )
 from backtest.strategy_base import (
     TARGET_COLUMNS,
-    get_month_end_dates,
     select_equal_weight_targets,
     validate_target_weights,
 )
 from backtest.strategy_registry import get_backtest_strategy
+from backtest.trading_calendar import get_confirmed_month_end_trading_dates
 from storage.database.manager import DBManager
 
 FULL_COMBINATION_VARIANT = "full_combination"
@@ -202,7 +202,9 @@ def build_common_factor_candidates(
         validate="one_to_one",
     )
     candidates = candidates[
-        candidates["date"].isin(get_month_end_dates(candidates["date"]))
+        candidates["date"].isin(
+            get_confirmed_month_end_trading_dates(candidates["date"])
+        )
     ].copy()
     candidates = candidates[candidates["date"].dt.date >= config.start_date]
     candidates = candidates[candidates["listing_days"] >= minimum_history_days].copy()
@@ -339,6 +341,7 @@ def compare_marginal_contributions(
     holding_count: int,
     benchmark_prices: pd.DataFrame | None = None,
     prepared_market_data: PreparedMarketData | None = None,
+    confirmed_delisting_dates: Mapping[str, object] | None = None,
 ) -> MarginalContributionReport:
     """Run all marginal variants through one prepared daily engine."""
 
@@ -364,6 +367,7 @@ def compare_marginal_contributions(
         normalized_targets,
         benchmark_prices=benchmark_prices,
         prepared_market_data=prepared_market_data,
+        confirmed_delisting_dates=confirmed_delisting_dates,
     )
     full_metrics = calculate_performance_metrics(
         raw_results[FULL_COMBINATION_VARIANT].daily_nav
@@ -517,6 +521,10 @@ def run_factor_marginal_contribution(
         winsorize_upper=parameters["winsorize_upper"],
     )
     prepared_market_data = DailyBacktestEngine.prepare_market_data(signal_data, config)
+    confirmed_delisting_dates = data_access.load_confirmed_delisting_dates(
+        signal_data["symbol"].drop_duplicates().tolist(),
+        config.end_date,
+    )
     benchmark_prices = data_access.load_benchmark_prices(config)
     report = compare_marginal_contributions(
         config,
@@ -527,6 +535,7 @@ def run_factor_marginal_contribution(
         holding_count=parameters["holding_count"],
         benchmark_prices=benchmark_prices,
         prepared_market_data=prepared_market_data,
+        confirmed_delisting_dates=confirmed_delisting_dates,
     )
     metadata = {
         "factor_names": list(factor_names),

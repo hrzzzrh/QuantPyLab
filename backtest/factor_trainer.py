@@ -14,7 +14,7 @@ from analysis.factors.transforms import (
     rank_factor_cross_sectionally,
     winsorize_factor_cross_sectionally,
 )
-from backtest.strategy_base import get_month_end_dates
+from backtest.trading_calendar import get_confirmed_month_end_trading_dates
 
 TRAINING_SYMBOL_BATCH_SIZE = 125
 
@@ -100,7 +100,7 @@ def prepare_factor_training_data(
         FactorEngine.get_required_columns(names),
     )
     label_column = f"forward_return_{label_horizon_days}d"
-    signal_dates = get_month_end_dates(normalized["date"])
+    signal_dates = get_confirmed_month_end_trading_dates(normalized["date"])
     signal_dates = signal_dates[
         (signal_dates >= start_date) & (signal_dates <= end_date)
     ]

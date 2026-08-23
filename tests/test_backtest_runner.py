@@ -64,12 +64,25 @@ def test_execute_backtest_resolves_strategy_and_skips_benchmark_when_requested(
         def load_benchmark_prices(self, config):
             raise AssertionError("include_benchmark=False 时不应加载基准")
 
+        def load_confirmed_delisting_dates(self, symbols, end_date):
+            assert symbols == ["000001"]
+            assert end_date == date(2024, 1, 5)
+            return {"000001": pd.Timestamp("2024-01-05")}
+
     class FakeEngine:
         def __init__(self, config):
             self.config = config
 
-        def run(self, signal_data, resolved_targets, benchmark_prices):
+        def run(
+            self,
+            signal_data,
+            resolved_targets,
+            benchmark_prices,
+            *,
+            confirmed_delisting_dates=None,
+        ):
             assert benchmark_prices is None
+            assert confirmed_delisting_dates == {"000001": pd.Timestamp("2024-01-05")}
             return BacktestResult(
                 daily_nav=pd.DataFrame(
                     [{"date": pd.Timestamp("2024-01-02"), "nav": 1.0}]
@@ -171,6 +184,10 @@ def test_execute_backtest_reuses_factor_candidates_within_cache(monkeypatch):
         def load_benchmark_prices(self, config):
             raise AssertionError("benchmark_symbol=None 时不应加载基准")
 
+        def load_confirmed_delisting_dates(self, symbols, end_date):
+            del symbols, end_date
+            return {}
+
     prepare_market_data = runner_module.DailyBacktestEngine.prepare_market_data
 
     class FakeEngine:
@@ -188,9 +205,11 @@ def test_execute_backtest_reuses_factor_candidates_within_cache(monkeypatch):
             benchmark_prices,
             *,
             prepared_market_data=None,
+            confirmed_delisting_dates=None,
         ):
             assert benchmark_prices is None
             assert prepared_market_data is not None
+            assert confirmed_delisting_dates == {}
             assert resolved_targets.equals(targets)
             return BacktestResult(
                 daily_nav=pd.DataFrame(
@@ -238,7 +257,7 @@ def test_execute_backtest_reuses_factor_candidates_within_cache(monkeypatch):
 
 
 def test_factor_execution_cache_matches_real_strategy_and_isolates_keys():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, pb, ps in [("000001", 1.0, 2.0), ("000002", 2.0, 1.0)]:
         for index, current_date in enumerate(dates):

@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pandas as pd
@@ -17,7 +18,6 @@ class PreparedMarketData:
 
     price_data: pd.DataFrame
     calendar: pd.DatetimeIndex
-    last_trade_dates: dict
     price_map: dict
 
 
@@ -47,7 +47,6 @@ class DailyBacktestEngine:
         if calendar.empty:
             raise ValueError("指定区间没有可用交易日行情")
 
-        last_trade_dates = price_data.groupby("symbol")["date"].max().to_dict()
         daily_columns = [
             column for column in price_columns if column not in {"date", "symbol"}
         ]
@@ -60,7 +59,6 @@ class DailyBacktestEngine:
         return PreparedMarketData(
             price_data=price_data,
             calendar=calendar,
-            last_trade_dates=last_trade_dates,
             price_map=price_map,
         )
 
@@ -71,13 +69,16 @@ class DailyBacktestEngine:
         benchmark_prices: pd.DataFrame | None = None,
         *,
         prepared_market_data: PreparedMarketData | None = None,
+        confirmed_delisting_dates: Mapping[str, object] | None = None,
     ) -> BacktestResult:
         market_data = prepared_market_data or self.prepare_market_data(
             prices, self.config
         )
         calendar = market_data.calendar
-        last_trade_dates = market_data.last_trade_dates
         price_map = market_data.price_map
+        normalized_delisting_dates = self._normalize_confirmed_delisting_dates(
+            confirmed_delisting_dates
+        )
         # 将 T 日收盘后的信号映射至下一个实际交易日，禁止同日成交。
         execution_plans = self._build_execution_plans(targets, calendar)
         positions: dict[str, float] = {}
@@ -126,13 +127,13 @@ class DailyBacktestEngine:
             )
             # 行情终结 (退市/摘牌) 清算: 最后交易日收盘后按收盘价强制变现。
             positions, cash, last_close_prices, delist_trades = (
-                self._liquidate_delisted(
+                self._liquidate_confirmed_delisted_positions(
                     trading_date,
                     positions,
                     cash,
                     last_close_prices,
                     today_prices,
-                    last_trade_dates,
+                    normalized_delisting_dates,
                 )
             )
             trades.extend(delist_trades)
@@ -278,22 +279,22 @@ class DailyBacktestEngine:
         return close_values, last_close_prices
 
     @staticmethod
-    def _liquidate_delisted(
+    def _liquidate_confirmed_delisted_positions(
         trading_date,
         positions,
         cash,
         last_close_prices,
         today_prices,
-        last_trade_dates,
+        confirmed_delisting_dates,
     ):
-        """最后交易日收盘后按收盘价强制清算持仓 (退市/摘牌/行情终结)。
+        """确认退市日收盘后按收盘价强制清算持仓。
 
         清算后持仓移出组合, 避免次日缺失行情触发 blocked 冻结整次调仓,
         也避免持仓价值悬空在最后价格造成净值失真。
         """
         delist_trades = []
         for symbol in list(positions):
-            if last_trade_dates.get(symbol) != trading_date:
+            if confirmed_delisting_dates.get(symbol) != trading_date:
                 continue
             row = DailyBacktestEngine._get_price_row(today_prices, symbol)
             if row is None or pd.isna(row.get("close_hfq")) or not row.get("close_hfq"):
@@ -319,6 +320,18 @@ class DailyBacktestEngine:
                 }
             )
         return positions, cash, last_close_prices, delist_trades
+
+    @staticmethod
+    def _normalize_confirmed_delisting_dates(
+        confirmed_delisting_dates: Mapping[str, object] | None,
+    ) -> dict[str, pd.Timestamp]:
+        normalized_dates = {}
+        for symbol, raw_date in (confirmed_delisting_dates or {}).items():
+            parsed_date = pd.to_datetime(raw_date, errors="coerce")
+            if pd.isna(parsed_date):
+                raise ValueError(f"确认退市日期无效: {symbol}={raw_date}")
+            normalized_dates[str(symbol)] = pd.Timestamp(parsed_date).normalize()
+        return normalized_dates
 
     @staticmethod
     def _get_price_row(today_prices, symbol):

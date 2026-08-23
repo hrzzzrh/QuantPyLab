@@ -24,7 +24,7 @@ def _config(end_date, strategy_name):
 
 
 def test_quality_value_recovery_selects_lowest_value_scores():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, pe_ttm, pb in [
         ("000001", 10.0, 1.0),
@@ -58,7 +58,7 @@ def test_quality_value_recovery_selects_lowest_value_scores():
 
 
 def test_price_momentum_selects_highest_returns():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, daily_gain in [
         ("000001", 0.50),
@@ -88,7 +88,7 @@ def test_price_momentum_selects_highest_returns():
 
 
 def test_price_momentum_preserves_custom_factor_windows():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, daily_gain in [("000001", 0.50), ("000002", 0.40)]:
         for index, current_date in enumerate(dates):
@@ -112,7 +112,7 @@ def test_price_momentum_preserves_custom_factor_windows():
 
 
 def test_multi_factor_strategy_builds_equal_weight_targets_from_registered_factors():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, pe_ttm, pb, daily_gain in [
         ("000001", 10.0, 1.0, 0.50),
@@ -202,7 +202,7 @@ def test_factor_composite_experiment_supports_single_factor_and_normalizes_weigh
 
 
 def test_factor_composite_experiment_selects_lowest_value_small_combination():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, pb, ps in [
         ("000001", 1.0, 1.0),
@@ -288,7 +288,7 @@ def test_factor_composite_experiment_rejects_invalid_factor_configuration():
 
 
 def test_quality_value_recovery_preserves_custom_trend_window():
-    dates = pd.bdate_range("2023-01-02", periods=251)
+    dates = pd.bdate_range("2023-01-02", periods=262)
     rows = []
     for symbol, pe_ttm in [
         ("000001", 10.0),

@@ -218,6 +218,10 @@ def execute_backtest(
             signal_data, resolved_config
         )
     targets = validate_target_weights(targets)
+    confirmed_delisting_dates = data_access.load_confirmed_delisting_dates(
+        signal_data["symbol"].drop_duplicates().tolist(),
+        resolved_config.end_date,
+    )
     benchmark_prices = (
         data_access.load_benchmark_prices(resolved_config)
         if include_benchmark
@@ -225,13 +229,19 @@ def execute_backtest(
     )
     engine = DailyBacktestEngine(resolved_config)
     if prepared_market_data is None:
-        result = engine.run(signal_data, targets, benchmark_prices)
+        result = engine.run(
+            signal_data,
+            targets,
+            benchmark_prices,
+            confirmed_delisting_dates=confirmed_delisting_dates,
+        )
     else:
         result = engine.run(
             signal_data,
             targets,
             benchmark_prices,
             prepared_market_data=prepared_market_data,
+            confirmed_delisting_dates=confirmed_delisting_dates,
         )
     return BacktestRun(
         config=resolved_config,

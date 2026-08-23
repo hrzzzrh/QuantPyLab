@@ -2,6 +2,7 @@ from datetime import date
 
 import duckdb
 import pandas as pd
+import pytest
 
 from backtest.config import BacktestConfig
 from backtest.data_access import BacktestDataAccess, IndicatorField
@@ -88,6 +89,72 @@ def test_load_factor_data_forwards_sparse_financial_signal_mode(monkeypatch):
     )
 
     assert captured["financial_signal_dates_only"] is True
+
+
+def test_load_confirmed_delisting_dates_uses_only_inactive_dated_stocks():
+    connection = duckdb.connect()
+    connection.register(
+        "stocks",
+        pd.DataFrame(
+            [
+                ("000001", 0, "20240103"),
+                ("000002", 1, None),
+                ("000003", 0, None),
+                ("000004", 0, "20250103"),
+                ("000005", 1, "20240104"),
+            ],
+            columns=["code", "is_active", "last_trade_date"],
+        ),
+    )
+
+    class FakeManager:
+        def __init__(self):
+            self.ensured_views = []
+
+        def ensure_views(self, *view_names):
+            self.ensured_views.extend(view_names)
+
+        def get_duckdb_conn(self):
+            return connection
+
+    manager = FakeManager()
+    try:
+        result = BacktestDataAccess(manager).load_confirmed_delisting_dates(
+            ["000001", "000002", "000003", "000004", "000005"],
+            date(2024, 12, 31),
+        )
+    finally:
+        connection.close()
+
+    assert result == {"000001": pd.Timestamp("2024-01-03")}
+    assert manager.ensured_views == ["stocks"]
+
+
+def test_load_confirmed_delisting_dates_rejects_invalid_metadata_date():
+    connection = duckdb.connect()
+    connection.register(
+        "stocks",
+        pd.DataFrame(
+            [("000001", 0, "bad-date")],
+            columns=["code", "is_active", "last_trade_date"],
+        ),
+    )
+
+    class FakeManager:
+        def ensure_views(self, *view_names):
+            assert view_names == ("stocks",)
+
+        def get_duckdb_conn(self):
+            return connection
+
+    try:
+        with pytest.raises(ValueError, match="last_trade_date 无效"):
+            BacktestDataAccess(FakeManager()).load_confirmed_delisting_dates(
+                ["000001"],
+                date(2024, 12, 31),
+            )
+    finally:
+        connection.close()
 
 
 def test_configure_query_connection_sets_bounded_duckdb_resources():
@@ -177,7 +244,9 @@ def test_load_market_data_restores_resources_when_calendar_query_fails(monkeypat
 def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values(
     monkeypatch,
 ):
-    dates = pd.to_datetime(["2024-01-30", "2024-01-31", "2024-02-28", "2024-02-29"])
+    dates = pd.to_datetime(
+        ["2024-01-30", "2024-01-31", "2024-02-28", "2024-02-29", "2024-03-01"]
+    )
     kline_rows = []
     for symbol_index, symbol in enumerate(("000001", "000002", "000003"), start=1):
         for day_index, current_date in enumerate(dates, start=1):
@@ -195,7 +264,11 @@ def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values
                     "filename": f"{symbol}-canonical.parquet",
                 }
             )
-    duplicate = dict(kline_rows[7])
+    duplicate = next(
+        dict(row)
+        for row in kline_rows
+        if row["symbol"] == "000002" and row["date"] == pd.Timestamp("2024-02-29")
+    )
     duplicate["close"] = 999.0
     duplicate["filename"] = "zz-duplicate.parquet"
     kline_rows.append(duplicate)
@@ -254,13 +327,13 @@ def test_sparse_financial_market_load_preserves_batches_and_point_in_time_values
         result = access.load_market_data(
             _config(),
             lookback_days=0,
-            data_end_date=date(2024, 2, 29),
+            data_end_date=date(2024, 3, 1),
             financial_signal_dates_only=True,
         )
     finally:
         connection.close()
 
-    assert len(result) == 12
+    assert len(result) == 15
     assert not result.duplicated(["date", "symbol"]).any()
     assert set(result["symbol"].astype("string")) == {"000001", "000002", "000003"}
     duplicate_key = (result["date"] == pd.Timestamp("2024-02-29")) & (

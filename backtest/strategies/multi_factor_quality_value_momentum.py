@@ -16,10 +16,10 @@ from backtest.data_access import BacktestDataAccess
 from backtest.strategy_base import (
     BacktestStrategy,
     StrategyMetadata,
-    get_month_end_dates,
     rank_candidates_deterministically,
     select_equal_weight_targets,
 )
+from backtest.trading_calendar import get_confirmed_month_end_trading_dates
 
 DEFAULT_FACTOR_WEIGHTS = {
     "price_momentum_120d": 0.20,
@@ -166,7 +166,7 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
             signal_data,
             factor_names,
             parameters["factor_parameters"],
-            get_month_end_dates(signal_data["date"]),
+            get_confirmed_month_end_trading_dates(signal_data["date"]),
             symbol_batch_size=125,
         )
 
@@ -180,7 +180,7 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
         """Build the factor-valid monthly candidate universe before scoring."""
 
         factor_names = tuple(parameters["factor_weights"])
-        signal_dates = get_month_end_dates(signal_data["date"])
+        signal_dates = get_confirmed_month_end_trading_dates(signal_data["date"])
         signal_date_mask = signal_data["date"].isin(signal_dates) & (
             signal_data["date"].dt.date >= config.start_date
         )
