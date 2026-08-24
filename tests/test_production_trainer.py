@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 import backtest.research_evaluator as evaluator_module
 from backtest.config import BacktestConfig
@@ -195,6 +196,23 @@ def test_select_locked_trial_uses_validation_only_and_is_deterministic():
         changed_test_result, _trials(), 3
     )
     assert selected_after_test_change.trial_id == selected.trial_id
+
+
+def test_loads_biweekly_inverse_volatility_production_config():
+    config = load_factor_production_training_config(
+        "config/backtest/multi_factor_quality_value_momentum_biweekly_inverse_volatility_production.toml"
+    )
+
+    assert config.research.training is not None
+    assert config.research.training.label_horizon_days == 10
+    assert config.research.hyperparameter_search is not None
+    assert config.research.hyperparameter_search.max_combinations == 8
+    assert config.research.hyperparameter_search.holding_counts == (20, 30, 40, 50)
+    assert config.research.hyperparameter_search.ridge_alphas == (0.1, 1.0)
+    assert config.research.candidate_configs[0].name == (
+        "multi_factor_quality_value_momentum_inverse_volatility_biweekly.toml"
+    )
+    assert config.production.minimum_validation_windows == 3
 
 
 def test_select_locked_trial_prioritizes_validation_window_coverage():
@@ -469,6 +487,45 @@ def test_build_initial_deployment_targets_uses_latest_close(monkeypatch):
     assert set(targets["target_kind"]) == {"initial_deployment"}
     assert set(targets["earliest_execution_date"]) == {"2026-08-24"}
     assert targets["target_weight"].sum() == 1.0
+
+
+def test_build_initial_deployment_targets_rejects_insufficient_candidates(monkeypatch):
+    import backtest.production_trainer as production_module
+
+    config = _candidate_config()
+    dates = pd.bdate_range(end="2026-08-21", periods=251)
+    signal_data = pd.DataFrame(
+        [{"date": trading_date, "symbol": "600519"} for trading_date in dates]
+    )
+    monkeypatch.setattr(
+        production_module.BacktestDataAccess,
+        "load_factor_data",
+        lambda self, *args, **kwargs: signal_data,
+    )
+
+    class FakeFactorEngine:
+        def calculate_factors_on_dates(
+            self, data, factor_names, factor_parameters, signal_dates, **kwargs
+        ):
+            return pd.DataFrame(
+                [
+                    {
+                        "date": signal_dates[0],
+                        "symbol": "600519",
+                        **dict.fromkeys(factor_names, 1.0),
+                    }
+                ]
+            )
+
+    monkeypatch.setattr(production_module, "FactorEngine", FakeFactorEngine)
+
+    with pytest.raises(ValueError, match="有效生产目标不足"):
+        build_initial_deployment_targets(
+            config,
+            object(),
+            signal_date=date(2026, 8, 21),
+            next_execution_date=date(2026, 8, 24),
+        )
 
 
 def test_project_production_config_loads():

@@ -179,6 +179,8 @@ uv run main.py train-factor-production-model \
 
 默认结果写入 `workspace/backtest/production_models/`，包含完整历史研究子报告、`production_model.json`、`validation_selection.csv`、`training_summary.csv`、`production_targets.csv`、`parameters.json` 和 `summary.md`。生产目标使用最新完整收盘数据，是首次从空仓上线的初始化目标，不是成交记录；已经运行的账户在非调仓日应保持原策略持仓，没有真实持仓时系统不会伪造差额订单。模型目标仍遵守收盘后形成、下一交易日执行的 T+1 口径。本模块不连接券商，也不自动下单。
 
+生产目标必须达到锁定的 `holding_count`。若最新信号日行情或点时因子覆盖不完整，导致有效目标数量不足，命令会明确拒绝，而不会把少数股票重新归一化后伪装为完整生产组合。应改用最近一个全市场数据完整的交易日，或先完成数据同步和质量核验后重试。
+
 ### 4.6 因子实验点时规模暴露诊断
 
 `diagnose-factor-exposures` 是独立于训练和回测结果的暴露审计命令，仅支持 `factor-composite-experiment`。它按每个信号日的可选股票池计算 `v_daily_valuation.market_cap` 的截面规模分组，再比较最终入选持仓在各组的占比和选择提升；缺失或非正市值会从分组中排除，并单独记录覆盖率。为保证规模组编号有效，每个信号日必须至少有 `quantile_count` 个有效市值候选；不满足时命令会拒绝生成报告。该命令不改变策略目标、因子权重、成交或净值。

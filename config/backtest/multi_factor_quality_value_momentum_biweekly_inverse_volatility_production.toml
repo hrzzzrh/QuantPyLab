@@ -1,0 +1,59 @@
+[experiment]
+name = "multi-factor-quality-value-momentum-biweekly-inverse-volatility-production"
+selection_metric = "sharpe_ratio"
+selection_direction = "max"
+candidate_configs = ["multi_factor_quality_value_momentum_inverse_volatility_biweekly.toml"]
+retrospective_method_development = true
+
+[training]
+enabled = true
+label_horizon_days = 10
+ridge_alpha = 0.1
+max_iterations = 5000
+minimum_training_observations = 200
+minimum_training_dates = 48
+max_training_cache_entries = 2
+refit_selected_on_train_validation = true
+
+[validity]
+enabled = true
+minimum_training_signal_dates = 48
+minimum_validation_signal_dates = 20
+minimum_test_signal_dates = 10
+minimum_validation_observations = 100
+minimum_test_observations = 100
+minimum_effective_factor_count = 2.0
+maximum_factor_weight = 0.80
+minimum_validation_selection_score = 0.0
+maximum_training_failure_ratio = 0.0
+maximum_trials_per_validation_signal_date = 0.50
+minimum_completed_test_windows = 3
+require_non_overlapping_test_windows = true
+
+[hyperparameter_search]
+enabled = true
+max_combinations = 8
+holding_counts = [20, 30, 40, 50]
+winsorize_ranges = [[0.05, 0.95]]
+ridge_alphas = [0.1, 1.0]
+
+[split]
+train_start_date = "2012-01-01"
+train_end_date = "2017-12-31"
+validation_start_date = "2018-01-01"
+validation_end_date = "2022-12-31"
+test_start_date = "2023-01-01"
+test_end_date = "2026-08-22"
+
+[walk_forward]
+enabled = true
+start_date = "2012-01-01"
+end_date = "2025-12-31"
+train_years = 6
+validation_years = 5
+test_years = 1
+step_years = 1
+
+[production]
+training_years = 6
+minimum_validation_windows = 3

@@ -435,6 +435,12 @@ def build_initial_deployment_targets(
     targets = strategy.build_targets_from_candidates(candidates, parameters)
     if targets.empty:
         raise ValueError(f"最新信号日 {signal_date} 没有可用生产目标")
+    required_holding_count = int(parameters["holding_count"])
+    if len(targets) < required_holding_count:
+        raise ValueError(
+            f"最新信号日 {signal_date} 的有效生产目标不足: "
+            f"{len(targets)} < holding_count={required_holding_count}"
+        )
     targets = targets.copy()
     targets["target_kind"] = "initial_deployment"
     targets["earliest_execution_date"] = (

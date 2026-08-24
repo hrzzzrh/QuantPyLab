@@ -137,6 +137,8 @@ uv run ruff format --check .   # 检查格式是否符合规范（CI 用）
 
 若要分别研究月频和双周频下的持仓数、Ridge 与仓位法，可使用 `multi_factor_quality_value_momentum_monthly_expanded_grid_evaluation.toml` 与 `multi_factor_quality_value_momentum_biweekly_expanded_grid_evaluation.toml`。两者各比较持仓数 20/30/40/50、Ridge 0.1/1.0 和三种仓位法，共 24 个候选；月频使用 20 日标签，双周频使用 10 日标签。两份研究各自只以验证集选参，频率间的测试结果只能并列描述，不能据此自动替换生产频率。
 
+`multi_factor_quality_value_momentum_biweekly_inverse_volatility_production.toml` 是已人工确认的双周逆波动生产训练配置：它固定逆波动仓位法，只在持仓数 20/30/40/50 与 Ridge 0.1/1.0 的 8 个候选中使用 Walk-forward 验证指标锁参，然后按最新完整标签窗口重新拟合因子权重并输出首次上线目标；测试收益不参与锁参。
+
 ```bash
 uv run main.py list-backtest-strategies
 
@@ -196,6 +198,8 @@ uv run main.py train-factor-production-model \
 ```
 
 结果默认写入 `workspace/backtest/production_models/`。`production_targets.csv` 是首次从空仓上线的初始化目标，信号由最新完整收盘数据形成，最早下一交易日执行；它不是成交记录。若账户已经运行，非调仓日应维持原策略持仓，必须结合真实持仓才能计算差额订单。命令不连接券商、不自动下单。
+
+目标数量必须等于锁定的 `holding_count`。若当天行情或点时因子尚未完整同步，导致有效股票不足，生产训练会拒绝输出集中化目标；请使用最近完整市场日，或待同步和质量核验完成后重试。
 
 ### 3.3.4 因子实验暴露诊断 (`diagnose-factor-exposures`)
 
