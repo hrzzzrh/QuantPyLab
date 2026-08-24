@@ -147,6 +147,66 @@ def test_loads_portfolio_weighting_production_research_config():
     )
 
 
+@pytest.mark.parametrize(
+    ("config_path", "expected_frequency", "expected_label_horizon"),
+    [
+        (
+            "config/backtest/multi_factor_quality_value_momentum_monthly_expanded_grid_evaluation.toml",
+            "monthly",
+            20,
+        ),
+        (
+            "config/backtest/multi_factor_quality_value_momentum_biweekly_expanded_grid_evaluation.toml",
+            "biweekly",
+            10,
+        ),
+    ],
+)
+def test_loads_frequency_specific_expanded_grid_research_configs(
+    config_path, expected_frequency, expected_label_horizon
+):
+    config = load_factor_experiment_evaluation_config(config_path)
+
+    assert config.training is not None
+    assert config.training.label_horizon_days == expected_label_horizon
+    assert config.validity is not None
+    assert config.validity.maximum_trials_per_validation_signal_date == 0.5
+    assert config.hyperparameter_search is not None
+    assert config.hyperparameter_search.max_combinations == 24
+    assert config.hyperparameter_search.holding_counts == (20, 30, 40, 50)
+    assert config.hyperparameter_search.ridge_alphas == (0.1, 1.0)
+    assert config.walk_forward is not None
+    assert config.walk_forward.train_years == 6
+    assert config.walk_forward.validation_years == 5
+    assert config.walk_forward.test_years == 1
+    assert config.walk_forward.step_years == 1
+    splits = config.get_splits()
+    assert len(splits) == 4
+    walk_forward_splits = splits[1:]
+    assert config.validity.require_non_overlapping_test_windows is True
+    assert all(
+        previous.test.end_date < current.test.start_date
+        for previous, current in zip(
+            walk_forward_splits, walk_forward_splits[1:], strict=False
+        )
+    )
+    candidate_configs = [
+        (path.stem, load_backtest_config(path)) for path in config.candidate_configs
+    ]
+    assert all(
+        candidate_config.rebalance_frequency == expected_frequency
+        for _, candidate_config in candidate_configs
+    )
+    assert (
+        len(
+            expand_hyperparameter_trials(
+                candidate_configs, config.hyperparameter_search
+            )
+        )
+        == 24
+    )
+
+
 def test_loads_formal_strategy_training_config():
     config = load_factor_experiment_evaluation_config(
         "config/backtest/multi_factor_quality_value_momentum_evaluation.toml"

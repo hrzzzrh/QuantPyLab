@@ -1,0 +1,27 @@
+[run]
+start_date = "2018-01-01"
+end_date = "2026-08-07"
+initial_capital = 1000000
+commission_bps = 5
+slippage_bps = 5
+benchmark_symbol = "510300"
+rebalance_frequency = "biweekly"
+
+[strategy]
+name = "multi-factor-quality-value-momentum"
+
+[strategy.parameters]
+holding_count = 20
+min_listing_days = 250
+winsorize_lower = 0.05
+winsorize_upper = 0.95
+portfolio_weighting = "inverse_volatility"
+
+[strategy.parameters.factor_weights]
+price_momentum_120d = 0.20
+price_trend_gap_120d = 0.15
+price_volatility_60d = 0.10
+valuation_pe_ttm = 0.15
+valuation_pb = 0.15
+quality_roe_weighted = 0.125
+quality_operating_cashflow_ratio = 0.125

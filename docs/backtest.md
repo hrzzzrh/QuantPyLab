@@ -124,6 +124,8 @@ uv run main.py list-backtest-strategies
 
 三种仓位法都使用同一因子评分、同一前 N 名、同一调仓日和同一成交成本；它们不训练个股预期收益或协方差矩阵。候选研究可把三份仅 `portfolio_weighting` 不同的 TOML 同时交给评估器，用验证集选择仓位法，再由测试集评价。因子接口、输入字段和未来函数约束见 [独立因子库](factor_library.md)。
 
+扩展研究可分别使用月频和双周频候选池，同时比较 `holding_count=20/30/40/50`、`ridge_alpha=0.1/1.0` 与三种仓位法。月频研究使用 20 日训练标签，双周研究使用 10 日标签；两者必须生成独立报告，不能把已观察到的测试收益作为频率选择依据。
+
 ### 4.4 factor-composite-experiment
 
 该策略用于单因子和小组合研究，不改变三个正式策略的配置和行为。调用方通过 `factor_weights` 显式选择因子；策略根据因子元数据的 `higher_is_better` 统一方向，先按交易日缩尾并做百分位排名，再按权重合成分数，选择前 `holding_count` 只股票等权持有。
@@ -150,7 +152,7 @@ uv run main.py run-backtest \
 
 研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，当前支持 `factor-composite-experiment` 和 `multi-factor-quality-value-momentum`：未来收益先在每个信号日转换为百分位排名并去均值，每个信号日在目标函数中的总权重相同，投影梯度法把因子权重约束为非负且总和为 1，Ridge 项向候选策略预先声明的完整权重收缩。正式七因子策略会完整覆盖七个因子，显式零权重不会回退为默认权重。启用 `[hyperparameter_search]` 后，每组显式有限参数组合都独立拟合权重；验证集选择完整组合，测试集只运行通过模型、样本、选择分数和协议门禁的入选组合。若显式设置 `[training].refit_selected_on_train_validation=true`，验证完成后会用入选外层参数在“训练集+验证集”上重新拟合权重，再冻结进入测试；测试数据不参与该次重拟合。验证分数不足、模型过度集中或重拟合失败时窗口可以标记为 `rejected` 或 `failed`，不会读取测试段，也不会退回默认权重。
 
-`[validity]` 除训练、验证和测试覆盖门槛外，还可配置最少有效因子数、最大单因子权重、最低验证选择分数、最大训练失败比例、最大组合/验证信号日、最少完成测试窗口和测试窗口不得重叠。报告分别输出 `protocol_status` 和 `strategy_evidence_status`；协议通过只表示预先声明的流程被遵守，不证明策略有效。正式七因子配置采用 5 年训练、2 年验证、2 年测试和 2 年步长，测试窗口互不重叠，外层只比较 4 组参数。其历史测试期已被用于方法诊断，因此配置明确标记 `retrospective_method_development=true`，策略证据状态只能是 `retrospective_descriptive_only`，不能把重跑结果称为新的盲测证据。训练缓存由 `[training].max_training_cache_entries` 限制在单个窗口内，窗口结束后释放；未启用训练时保留原候选比较行为。
+`[validity]` 除训练、验证和测试覆盖门槛外，还可配置最少有效因子数、最大单因子权重、最低验证选择分数、最大训练失败比例、最大组合/验证信号日、最少完成测试窗口和 Walk-forward 测试窗口不得重叠。该独立性门禁、完成窗口数及 Walk-forward 汇总只针对滚动窗口；固定切分是独立的描述性基线，不计入前述汇总或生产参数选择，因此可以与 Walk-forward 测试期重叠，但两类结果不得合并为独立样本外证据。报告分别输出 `protocol_status` 和 `strategy_evidence_status`；协议通过只表示预先声明的流程被遵守，不证明策略有效。正式七因子配置采用 5 年训练、2 年验证、2 年测试和 2 年步长，Walk-forward 测试窗口互不重叠，外层只比较 4 组参数。其历史测试期已被用于方法诊断，因此配置明确标记 `retrospective_method_development=true`，策略证据状态只能是 `retrospective_descriptive_only`，不能把重跑结果称为新的盲测证据。训练缓存由 `[training].max_training_cache_entries` 限制在单个窗口内，窗口结束后释放；未启用训练时保留原候选比较行为。
 
 为避免有限参数网格重复加载相同点时数据和行情结构，研究评估器在每个 split 内以有界 LRU 复用因子实验的原始信号数据、基础候选表以及与目标无关的市场日历/价格映射；当前评估器最多保留 2 组因子输入和 1 个市场区间，超出后释放最久未使用项。训练输入另外由 `[training].max_training_cache_entries` 限制，正式配置当前为 2。缩尾边界、因子权重、排名、持仓数量和逐日持仓状态仍按每组试验重新计算。行情查询按股票批次读取并预分配紧凑数值数组，缓存不跨 split，也不改变普通 `run-backtest` 的默认路径。
 
