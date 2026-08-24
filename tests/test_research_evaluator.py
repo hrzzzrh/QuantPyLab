@@ -118,6 +118,22 @@ def test_loads_robust_evaluation_config_with_longer_time_windows():
     assert config.walk_forward.validation_years == 2
     assert config.walk_forward.test_years == 2
     assert config.walk_forward.step_years == 1
+
+
+def test_loads_portfolio_weighting_production_research_config():
+    config = load_factor_experiment_evaluation_config(
+        "config/backtest/multi_factor_quality_value_momentum_portfolio_weighting_production.toml"
+    )
+
+    assert [path.stem for path in config.candidate_configs] == [
+        "multi_factor_quality_value_momentum",
+        "multi_factor_quality_value_momentum_rank_decay",
+        "multi_factor_quality_value_momentum_inverse_volatility",
+    ]
+    assert config.hyperparameter_search is not None
+    assert config.hyperparameter_search.max_combinations == 3
+    assert config.hyperparameter_search.holding_counts == (50,)
+    assert config.hyperparameter_search.ridge_alphas == (0.1,)
     candidate_configs = [
         (path.stem, load_backtest_config(path)) for path in config.candidate_configs
     ]
@@ -127,7 +143,7 @@ def test_loads_robust_evaluation_config_with_longer_time_windows():
                 candidate_configs, config.hyperparameter_search
             )
         )
-        == 18
+        == 3
     )
 
 
@@ -817,6 +833,59 @@ def test_training_model_report_persists_rebalance_schedule_metadata(
         "2020-01-01",
         "2020-01-01",
     ]
+
+
+def test_report_uses_test_refit_factor_weights_for_selected_model():
+    split = EvaluationSplit(
+        split_id="fixed_split",
+        train=EvaluationPeriod(date(2020, 1, 1), date(2020, 12, 31)),
+        validation=EvaluationPeriod(date(2021, 1, 1), date(2021, 12, 31)),
+        test=EvaluationPeriod(date(2022, 1, 1), date(2022, 12, 31)),
+    )
+    config = FactorExperimentEvaluationConfig(
+        name="refit-weight-report",
+        candidate_configs=(Path("candidate.toml"),),
+        selection_metric="sharpe_ratio",
+        selection_direction="max",
+        fixed_split=split,
+        training=TrainingSpec(
+            minimum_training_observations=1,
+            minimum_training_dates=1,
+            refit_selected_on_train_validation=True,
+        ),
+    )
+    result = FactorExperimentEvaluationResult(
+        config=config,
+        metric_rows=(),
+        training_rows=(
+            {
+                "split_id": "fixed_split",
+                "trial_id": "trial_001",
+                "status": "fitted",
+                "factor_weights": '{"initial_factor": 1.0}',
+            },
+        ),
+        selection_rows=(
+            {
+                "split_id": "fixed_split",
+                "status": "completed",
+                "selected_candidate": "candidate",
+                "selected_trial_id": "trial_001",
+                "selected_factor_parameters": "{}",
+                "selected_factor_weights": '{"refit_factor": 1.0}',
+                "selected_holding_count": 20,
+                "selected_winsorize_lower": 0.05,
+                "selected_winsorize_upper": 0.95,
+                "selected_ridge_alpha": 0.1,
+                "test_refit_performed": True,
+            },
+        ),
+    )
+
+    report = evaluator_module._build_evaluation_summary(result, audit={})
+
+    assert "refit_factor=1.0000" in report
+    assert "initial_factor=1.0000" not in report
 
 
 def test_report_separates_successful_training_from_validation_rejection():

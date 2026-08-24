@@ -14,10 +14,11 @@ from analysis.factors.transforms import (
 from backtest.config import BacktestConfig
 from backtest.data_access import BacktestDataAccess
 from backtest.strategy_base import (
+    PORTFOLIO_WEIGHTING_METHODS,
     BacktestStrategy,
     StrategyMetadata,
     rank_candidates_deterministically,
-    select_equal_weight_targets,
+    select_portfolio_weight_targets,
 )
 from backtest.trading_calendar import get_configured_rebalance_signal_dates
 
@@ -37,9 +38,9 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
 
     metadata = StrategyMetadata(
         name="multi-factor-quality-value-momentum",
-        version="1",
-        description="价值、质量、动量、趋势与低波动因子合成的可配置调仓等权策略。",
-        parameter_summary="holding_count, min_listing_days, winsorize_lower, winsorize_upper, factor_weights, factor_parameters",
+        version="2",
+        description="价值、质量、动量、趋势与低波动因子合成的可配置调仓策略。",
+        parameter_summary="holding_count, min_listing_days, winsorize_lower, winsorize_upper, portfolio_weighting, factor_weights, factor_parameters",
     )
 
     def validate_parameters(self, parameters: dict) -> dict:
@@ -48,6 +49,7 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
             "min_listing_days": 250,
             "winsorize_lower": 0.05,
             "winsorize_upper": 0.95,
+            "portfolio_weighting": "equal",
             "factor_weights": DEFAULT_FACTOR_WEIGHTS,
             "factor_parameters": {},
         }
@@ -80,6 +82,14 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
             raise ValueError(
                 "winsorize_lower 和 winsorize_upper 必须满足 0 <= lower < upper <= 1"
             )
+
+        portfolio_weighting = resolved["portfolio_weighting"]
+        if (
+            not isinstance(portfolio_weighting, str)
+            or portfolio_weighting not in PORTFOLIO_WEIGHTING_METHODS
+        ):
+            available = ", ".join(sorted(PORTFOLIO_WEIGHTING_METHODS))
+            raise ValueError("portfolio_weighting 必须为以下之一: " + available)
 
         factor_weights = resolved["factor_weights"]
         if not isinstance(factor_weights, Mapping):
@@ -257,12 +267,16 @@ class MultiFactorQualityValueMomentumStrategy(BacktestStrategy):
     def build_targets_from_candidates(
         candidates: pd.DataFrame, parameters: dict
     ) -> pd.DataFrame:
-        """Apply trial-specific transforms and build equal-weight targets."""
+        """Apply trial-specific transforms and build configured portfolio weights."""
 
         candidates = MultiFactorQualityValueMomentumStrategy.score_candidates(
             candidates, parameters
         )
-        return select_equal_weight_targets(candidates, parameters["holding_count"])
+        return select_portfolio_weight_targets(
+            candidates,
+            parameters["holding_count"],
+            parameters["portfolio_weighting"],
+        )
 
     def build_candidates(
         self, signal_data: pd.DataFrame, config: BacktestConfig, parameters: dict

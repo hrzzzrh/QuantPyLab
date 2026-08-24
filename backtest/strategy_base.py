@@ -1,3 +1,4 @@
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -7,6 +8,7 @@ from backtest.config import BacktestConfig
 from backtest.data_access import BacktestDataAccess
 
 TARGET_COLUMNS = ("date", "symbol", "score", "rank", "target_weight")
+PORTFOLIO_WEIGHTING_METHODS = frozenset({"equal", "rank_decay", "inverse_volatility"})
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,54 @@ def rank_candidates_deterministically(
 def select_equal_weight_targets(
     candidates: pd.DataFrame, holding_count: int
 ) -> pd.DataFrame:
+    return select_portfolio_weight_targets(candidates, holding_count, "equal")
+
+
+def select_portfolio_weight_targets(
+    candidates: pd.DataFrame,
+    holding_count: int,
+    weighting_method: str,
+    *,
+    volatility_column: str = "price_volatility_60d",
+) -> pd.DataFrame:
+    """Select the same top-ranked stocks and build deterministic target weights."""
+
+    if (
+        isinstance(holding_count, bool)
+        or not isinstance(holding_count, int)
+        or holding_count <= 0
+    ):
+        raise ValueError("holding_count 必须是正整数")
+    if (
+        not isinstance(weighting_method, str)
+        or weighting_method not in PORTFOLIO_WEIGHTING_METHODS
+    ):
+        available = ", ".join(sorted(PORTFOLIO_WEIGHTING_METHODS))
+        raise ValueError(
+            f"不支持的 portfolio_weighting: {weighting_method} (可选: {available})"
+        )
     targets = candidates[candidates["rank"] <= holding_count].copy()
-    targets["target_weight"] = 1 / targets.groupby("date")["symbol"].transform("count")
+    if targets.empty:
+        return targets.loc[:, TARGET_COLUMNS]
+    if weighting_method == "equal":
+        raw_weights = 1 / targets.groupby("date")["symbol"].transform("count")
+    elif weighting_method == "rank_decay":
+        ranks = pd.to_numeric(targets["rank"], errors="coerce")
+        selected_count = targets.groupby("date")["symbol"].transform("count")
+        raw_weights = selected_count + 1 - ranks
+        if raw_weights.isna().any() or not raw_weights.gt(0).all():
+            raise ValueError("排名递减权重要求入选股票的 rank 位于 1 至 holding_count")
+    else:
+        if volatility_column not in targets:
+            raise ValueError(f"波动率倒数权重缺少波动率字段: {volatility_column}")
+        volatility = pd.to_numeric(targets[volatility_column], errors="coerce")
+        if volatility.isna().any() or not volatility.map(math.isfinite).all():
+            raise ValueError("波动率倒数权重要求波动率为有限正数")
+        if not volatility.gt(0).all():
+            raise ValueError("波动率倒数权重要求波动率为正数")
+        raw_weights = 1 / volatility
+    denominator = raw_weights.groupby(targets["date"], sort=False).transform("sum")
+    if denominator.isna().any() or not denominator.gt(0).all():
+        raise ValueError("目标权重归一化分母必须为正数")
+    targets["target_weight"] = raw_weights / denominator
     return targets.loc[:, TARGET_COLUMNS]

@@ -80,6 +80,7 @@ TRAINING_MODEL_COLUMNS = (
     "winsorize_lower",
     "winsorize_upper",
     "ridge_alpha",
+    "portfolio_weighting",
     "factor_parameters",
     "factor_weights",
     "observation_count",
@@ -107,6 +108,7 @@ HYPERPARAMETER_TRIAL_COLUMNS = (
     "winsorize_lower",
     "winsorize_upper",
     "ridge_alpha",
+    "portfolio_weighting",
     "factor_parameters",
     "factor_weights",
     "train_total_return",
@@ -326,6 +328,7 @@ class TrainingSpec:
     minimum_training_observations: int = 200
     minimum_training_dates: int = DEFAULT_MINIMUM_TRAINING_SIGNAL_DATES
     max_training_cache_entries: int = DEFAULT_MAX_TRAINING_CACHE_ENTRIES
+    refit_selected_on_train_validation: bool = False
 
     def __post_init__(self):
         if not isinstance(self.enabled, bool):
@@ -352,6 +355,10 @@ class TrainingSpec:
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise ValueError(f"[training].{name} 必须是正整数")
+        if not isinstance(self.refit_selected_on_train_validation, bool):
+            raise ValueError(
+                "[training].refit_selected_on_train_validation 必须是布尔值"
+            )
 
     def to_dict(self) -> dict:
         return {
@@ -362,6 +369,9 @@ class TrainingSpec:
             "minimum_training_observations": self.minimum_training_observations,
             "minimum_training_dates": self.minimum_training_dates,
             "max_training_cache_entries": self.max_training_cache_entries,
+            "refit_selected_on_train_validation": (
+                self.refit_selected_on_train_validation
+            ),
         }
 
 
@@ -1045,6 +1055,64 @@ def evaluate_factor_experiments(
             continue
         selected_trial = trial_map[selected_trial_id]
         selected_config = effective_configs[selected_trial_id]
+        test_refit_period = None
+        test_refit_result = None
+        if (
+            training_enabled
+            and config.training is not None
+            and config.training.refit_selected_on_train_validation
+        ):
+            test_refit_period = EvaluationPeriod(
+                split.train.start_date,
+                split.validation.end_date,
+            )
+            try:
+                if search_enabled:
+                    selected_config, test_refit_result = _fit_candidate_config(
+                        selected_trial.config,
+                        test_refit_period,
+                        config.training,
+                        database_manager,
+                        ridge_alpha=selected_trial.parameters["ridge_alpha"],
+                    )
+                else:
+                    selected_config, test_refit_result = _fit_candidate_config(
+                        selected_trial.config,
+                        test_refit_period,
+                        config.training,
+                        database_manager,
+                    )
+                if config.validity is not None and config.validity.enabled:
+                    validate_factor_training_result(
+                        test_refit_result,
+                        config.training,
+                        config.validity,
+                    )
+            except Exception as error:
+                evaluation_failure_rows.append(
+                    _build_evaluation_failure_row(
+                        split,
+                        selected_trial,
+                        "test_refit",
+                        error,
+                    )
+                )
+                selection_rows.append(
+                    _build_selection_row(
+                        split,
+                        selected_trial,
+                        selected_score,
+                        status="failed",
+                        error=str(error),
+                        training_enabled=training_enabled,
+                        training=config.training,
+                        effective_config=effective_configs[selected_trial_id],
+                        validation_coverage=validation_coverage.get(selected_trial_id),
+                        test_refit_period=test_refit_period,
+                    )
+                )
+                execution_cache.clear()
+                continue
         selection_diagnostic_rows.append(
             _build_selection_diagnostic_row(
                 split,
@@ -1100,6 +1168,8 @@ def evaluate_factor_experiments(
                     training=config.training,
                     effective_config=selected_config,
                     validation_coverage=validation_coverage.get(selected_trial_id),
+                    test_refit_period=test_refit_period,
+                    test_refit_result=test_refit_result,
                 )
             )
             if training_data_cache is not None:
@@ -1131,6 +1201,8 @@ def evaluate_factor_experiments(
                 test_metrics=test_metrics,
                 validation_coverage=validation_coverage.get(selected_trial_id),
                 test_coverage=test_coverage,
+                test_refit_period=test_refit_period,
+                test_refit_result=test_refit_result,
             )
         )
         if training_data_cache is not None:
@@ -1322,6 +1394,9 @@ def _parse_training(section: object) -> TrainingSpec | None:
         max_training_cache_entries=section.get(
             "max_training_cache_entries", DEFAULT_MAX_TRAINING_CACHE_ENTRIES
         ),
+        refit_selected_on_train_validation=section.get(
+            "refit_selected_on_train_validation", False
+        ),
     )
 
 
@@ -1484,6 +1559,8 @@ def _build_selection_row(
     test_metrics: dict | None = None,
     validation_coverage: dict | None = None,
     test_coverage: dict | None = None,
+    test_refit_period: EvaluationPeriod | None = None,
+    test_refit_result: FactorTrainingResult | None = None,
 ) -> dict:
     try:
         resolved = get_backtest_strategy(
@@ -1523,11 +1600,31 @@ def _build_selection_row(
         "selected_winsorize_lower": resolved.get("winsorize_lower"),
         "selected_winsorize_upper": resolved.get("winsorize_upper"),
         "selected_ridge_alpha": ridge_alpha,
+        "selected_portfolio_weighting": resolved.get("portfolio_weighting", "equal"),
         "selected_factor_parameters": json.dumps(
             factor_parameters, ensure_ascii=False, sort_keys=True
         ),
         "selected_factor_weights": json.dumps(
             resolved.get("factor_weights", {}), ensure_ascii=False, sort_keys=True
+        ),
+        "test_refit_performed": test_refit_result is not None,
+        "test_refit_train_start_date": (
+            test_refit_period.start_date.isoformat() if test_refit_period else None
+        ),
+        "test_refit_train_end_date": (
+            test_refit_period.end_date.isoformat() if test_refit_period else None
+        ),
+        "test_refit_observation_count": (
+            test_refit_result.observation_count if test_refit_result else None
+        ),
+        "test_refit_signal_date_count": (
+            test_refit_result.signal_date_count if test_refit_result else None
+        ),
+        "test_refit_signal_date_start": (
+            test_refit_result.signal_date_start if test_refit_result else None
+        ),
+        "test_refit_signal_date_end": (
+            test_refit_result.signal_date_end if test_refit_result else None
         ),
         "test_total_return": metrics.get("total_return"),
         "test_annualized_return": metrics.get("annualized_return"),
@@ -1772,6 +1869,51 @@ def _fit_candidate_config(
         strategy_version=strategy.metadata.version,
     )
     return trained_config, training_result
+
+
+def fit_factor_candidate_config(
+    candidate_config: BacktestConfig,
+    train_period: EvaluationPeriod,
+    training: TrainingSpec,
+    database_manager: DBManager,
+    *,
+    ridge_alpha: float | None = None,
+) -> tuple[BacktestConfig, FactorTrainingResult]:
+    """使用研究训练口径拟合一个候选，供最终生产重训复用。"""
+
+    return _fit_candidate_config(
+        candidate_config,
+        train_period,
+        training,
+        database_manager,
+        ridge_alpha=ridge_alpha,
+    )
+
+
+def validate_factor_training_result(
+    training_result: FactorTrainingResult,
+    training: TrainingSpec,
+    validity: ResearchValiditySpec,
+) -> None:
+    """对最终生产训练结果应用与历史研究一致的样本和模型门禁。"""
+
+    _enforce_validity_thresholds(
+        phase="training",
+        observation_count=training_result.observation_count,
+        signal_date_count=training_result.signal_date_count,
+        minimum_observations=training.minimum_training_observations,
+        minimum_signal_dates=validity.minimum_training_signal_dates,
+    )
+    _enforce_training_model_validity(training_result, validity)
+
+
+def build_research_reproducibility_audit(
+    config: FactorExperimentEvaluationConfig,
+    data_snapshot: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """构建研究与生产报告共享的代码、配置、因子和资源审计。"""
+
+    return _build_reproducibility_audit(config, data_snapshot)
 
 
 def _summarize_target_coverage(
@@ -2336,6 +2478,7 @@ def _build_trial_parameter_fields(parameters: dict[str, object]) -> dict:
             "winsorize_lower": None,
             "winsorize_upper": None,
             "ridge_alpha": None,
+            "portfolio_weighting": None,
             "factor_parameters": "",
         }
     return {
@@ -2343,6 +2486,7 @@ def _build_trial_parameter_fields(parameters: dict[str, object]) -> dict:
         "winsorize_lower": parameters["winsorize_lower"],
         "winsorize_upper": parameters["winsorize_upper"],
         "ridge_alpha": parameters["ridge_alpha"],
+        "portfolio_weighting": parameters.get("portfolio_weighting", "equal"),
         "factor_parameters": json.dumps(
             parameters["factor_parameters"], ensure_ascii=False, sort_keys=True
         ),
@@ -3070,7 +3214,9 @@ def _build_evaluation_summary(
         training_row = training_lookup.get((selection.get("split_id"), trial_id), {})
         if training_row:
             selected_training_rows.append(training_row)
-        weight_map = _parse_json_mapping(training_row.get("factor_weights"))
+        weight_map = _parse_json_mapping(selection.get("selected_factor_weights"))
+        if not weight_map:
+            weight_map = _parse_json_mapping(training_row.get("factor_weights"))
         weight_values = list(weight_map.values())
         weight_sum = sum(weight_values) if weight_values else None
         max_weight = max(weight_values) if weight_values else None
@@ -3082,6 +3228,7 @@ def _build_evaluation_summary(
                 trial_id,
                 selection.get("selected_factor_parameters", "—"),
                 selection.get("selected_holding_count", "—"),
+                selection.get("selected_portfolio_weighting", "equal"),
                 _format_winsorize_range(selection),
                 selection.get("selected_ridge_alpha", "—"),
                 _format_weights(weight_map),
@@ -3100,6 +3247,7 @@ def _build_evaluation_summary(
                 "试验",
                 "因子参数",
                 "持仓数",
+                "仓位法",
                 "缩尾范围",
                 "Ridge",
                 "拟合权重",

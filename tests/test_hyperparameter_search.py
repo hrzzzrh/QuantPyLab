@@ -45,6 +45,7 @@ def test_hyperparameter_search_expands_complete_parameter_groups():
     assert trials[0].parameters["holding_count"] == 10
     assert trials[0].parameters["winsorize_lower"] == 0.05
     assert trials[0].parameters["ridge_alpha"] == 0.1
+    assert trials[0].parameters["portfolio_weighting"] == "equal"
     assert trials[0].config.strategy_parameters["factor_parameters"][
         "price_reversal_20d"
     ]["lookback_days"] in {10, 20}

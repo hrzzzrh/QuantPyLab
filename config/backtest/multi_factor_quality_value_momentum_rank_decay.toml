@@ -14,7 +14,7 @@ holding_count = 20
 min_listing_days = 250
 winsorize_lower = 0.05
 winsorize_upper = 0.95
-portfolio_weighting = "equal"
+portfolio_weighting = "rank_decay"
 
 [strategy.parameters.factor_weights]
 price_momentum_120d = 0.20

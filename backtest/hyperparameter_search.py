@@ -179,6 +179,9 @@ def expand_hyperparameter_trials(
                         "winsorize_lower": lower,
                         "winsorize_upper": upper,
                         "ridge_alpha": ridge_alpha,
+                        "portfolio_weighting": strategy_parameters.get(
+                            "portfolio_weighting", "equal"
+                        ),
                         "factor_parameters": factor_parameters,
                     },
                 )

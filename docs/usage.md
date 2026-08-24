@@ -106,6 +106,7 @@ promotion run 的 `state/symbol=XXXXXX.json` 是逐股票崩溃恢复 journal，
 | `list-backtest-strategies` | 列出已注册的日频回测策略 | 无 |
 | `diagnose-factors` | 运行点时因子覆盖率、IC、分位收益和稳定性诊断 | `--factor-names`、`--start-date`、`--end-date`、`[--horizons]`、`[--quantile-count]`、`[--output]` |
 | `evaluate-factor-experiments` | 按训练/验证/测试和 Walk-forward 评估候选因子实验 | `--research-config PATH`、`[--output]` |
+| `train-factor-production-model` | 历史研究通过后锁定参数、按最新标签完整窗口重训权重并生成首次上线初始化目标 | `--research-config PATH`、`[--as-of-date DATE]`、`[--output]`；不连接券商、不自动下单 |
 | `diagnose-factor-exposures` | 诊断因子实验的点时规模暴露 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]` |
 | `diagnose-factor-industry-exposures` | 审计因子实验的点时行业覆盖与暴露 | `--backtest-config PATH`、`[--output]`；使用 `industry_classification_sw` 按 `effective_date` ASOF 对齐，不使用 `stocks.industry` 回填 |
 | `diagnose-factor-neutralization` | 对照因子实验的行业/规模残差化选股与暴露变化 | `--backtest-config PATH`、`[--quantile-count]`、`[--output]`；仅研究，不改变正式策略 |
@@ -131,6 +132,8 @@ uv run ruff format --check .   # 检查格式是否符合规范（CI 用）
 ### 3.3 日频回测 (`run-backtest`)
 
 `run-backtest` 读取 TOML 配置并执行已注册策略。当前内置 `quality-value-recovery`（低估值、质量与趋势）、`price-momentum`（中期动量与趋势）、`multi-factor-quality-value-momentum`（七因子合成）和 `factor-composite-experiment`（单因子/小组合实验）四种策略。所有策略均可通过 `[run].rebalance_frequency` 选择 `monthly`（默认）、`weekly`、`biweekly` 或 `every_n_trading_days`；每 N 日模式还必须设置正整数 `rebalance_interval_trading_days`。信号在配置化调仓日收盘后产生，并在下一交易日开盘成交；估值使用不复权价格，收益使用后复权价格。
+
+正式多因子策略的 `[strategy.parameters].portfolio_weighting` 可设为 `equal`（默认等权）、`rank_decay`（按综合排名线性递减）或 `inverse_volatility`（按60日历史波动率倒数）。三种方式均固定相同前 `holding_count` 只股票，只改变这些股票的权重；波动率倒数法遇到无效波动率会拒绝运行。`config/backtest/multi_factor_quality_value_momentum_portfolio_weighting_production.toml` 提供三种仓位法的同池 Walk-forward/生产训练对照，固定50只股票、缩尾0.05~0.95和Ridge 0.1，验证集负责选择仓位法。
 
 ```bash
 uv run main.py list-backtest-strategies
@@ -165,7 +168,7 @@ uv run main.py diagnose-factors \
 
 ### 3.3.2 因子实验评估 (`evaluate-factor-experiments`)
 
-研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期。启用 `[training]` 后，系统使用候选配置调仓日的点时因子，把未来收益按信号日转为截面百分位排名并去均值，使每个信号日总权重相同，再拟合向候选先验收缩的非负、和为 1 的因子权重。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；有限网格的每组组合独立训练。不同频率和 N 值使用独立缓存键；每 N 日模式在各训练、验证、测试切分的起始日重新计数。验证分数、权重结构或样本覆盖不合格时方案会被拒绝，测试段不被读取。训练缓存只在当前窗口内有效并有明确上限。
+研究配置必须显式列出候选回测 TOML，并定义固定的训练、验证、测试日期。启用 `[training]` 后，系统使用候选配置调仓日的点时因子，把未来收益按信号日转为截面百分位排名并去均值，使每个信号日总权重相同，再拟合向候选先验收缩的非负、和为 1 的因子权重。正式策略训练完整覆盖七个因子，显式零权重不会恢复为默认权重；有限网格的每组组合独立训练。不同频率和 N 值使用独立缓存键；每 N 日模式在各训练、验证、测试切分的起始日重新计数。设置 `refit_selected_on_train_validation=true` 时，验证选参后会在训练集和验证集合并区间重新拟合入选权重，再冻结进入测试。验证分数、权重结构、样本覆盖或重拟合不合格时方案会被拒绝，测试段不被读取。训练缓存只在当前窗口内有效并有明确上限。
 
 ```bash
 uv run main.py evaluate-factor-experiments \
@@ -180,7 +183,19 @@ uv run main.py evaluate-factor-experiments \
 
 研究评估报告的 `parameters.json` 和 `summary.md` 还记录评估进程峰值 RSS、2 GiB 进程资源预算、单次数据加载目标以及训练和回测缓存上限；若全量评估实际超过预算，报告会明确标记而不会伪装成通过。
 
-### 3.3.3 因子实验暴露诊断 (`diagnose-factor-exposures`)
+### 3.3.3 因子生产模型训练 (`train-factor-production-model`)
+
+该命令先运行历史研究协议，只用 Walk-forward 验证指标聚合锁定因子外层参数，测试收益不参与排序；随后从最新行情日向前扣除标签期限，把尚无完整未来收益的交易日排除，并使用最近 6 年数据重新拟合最新因子权重。
+
+```bash
+uv run main.py train-factor-production-model \
+  --research-config config/backtest/multi_factor_quality_value_momentum_production.toml \
+  --as-of-date 2026-08-23
+```
+
+结果默认写入 `workspace/backtest/production_models/`。`production_targets.csv` 是首次从空仓上线的初始化目标，信号由最新完整收盘数据形成，最早下一交易日执行；它不是成交记录。若账户已经运行，非调仓日应维持原策略持仓，必须结合真实持仓才能计算差额订单。命令不连接券商、不自动下单。
+
+### 3.3.4 因子实验暴露诊断 (`diagnose-factor-exposures`)
 
 该命令对 `factor-composite-experiment` 的每个信号日可选股票池和最终入选持仓做点时规模分组比较。市值来自 `v_daily_valuation.market_cap`，规模分组在每个信号日独立计算，规模组 1 为较小市值组，最后一组为较大市值组。
 
@@ -192,7 +207,7 @@ uv run main.py diagnose-factor-exposures \
 
 结果写入 `workspace/factor_exposure_diagnostics/`，包含 `summary.md`、`size_exposure.csv`、`size_exposure_summary.csv`、`size_exposure_coverage.csv` 和 `parameters.json`。每个信号日必须至少有 `quantile_count` 个有效市值候选，否则命令会拒绝生成不完整报告。报告给出可选池与入选持仓的规模占比、选择提升和市值覆盖率；它不改变回测行为，也不构成收益因果归因。当前 `stocks.industry` 没有历史生效日期和版本，不能用于历史行业暴露或行业中性结论，报告会明确记录这一限制。
 
-### 3.3.4 因子实验中性化对照 (`diagnose-factor-neutralization`)
+### 3.3.5 因子实验中性化对照 (`diagnose-factor-neutralization`)
 
 该命令在同一候选池、同一综合评分和同一持仓数量下，对照基准选股与三种逐信号日截面残差化选股：`industry`、`size` 和 `industry_size`。行业控制变量来自 `industry_classification_sw` 的 `effective_date` ASOF 结果，规模控制变量是点时 `market_cap` 的 `log` 值。缺失控制变量的候选会被排除并记录覆盖率；有效候选不足持仓数的信号日标记失败，不回退到基准目标。
 
@@ -204,7 +219,7 @@ uv run main.py diagnose-factor-neutralization \
 
 结果默认写入 `workspace/factor_neutralization_diagnostics/<name>_<timestamp>/`，包括模式汇总、控制变量覆盖率、与基准目标重合率、逐行业暴露明细和逐规模组暴露明细。行业暴露以全候选池中的已分类股票为 universe 分母，规模暴露以全候选池中的正且有限市值候选为 universe 分母，selected 分母只使用相应有效目标；被排除候选仍记录在覆盖率文件。残差化只改变评分排序，不保证最终组合严格满足行业或规模配额；目标重合率下降、暴露下降也不等于样本外收益提升。因此该命令是研究对照，不接入正式策略，不改变训练权重、交易和净值。
 
-### 3.3.5 因子实验比例配额选股对照 (`diagnose-factor-constrained-selection`)
+### 3.3.6 因子实验比例配额选股对照 (`diagnose-factor-constrained-selection`)
 
 该命令固定原始综合评分，在有效行业、规模或行业×规模候选池内按候选数量比例分配持仓配额。三种模式分别为 `industry_quota`、`size_quota` 和 `industry_size_quota`；配额使用 Hamilton 最大余数法，组内再按原始 `score` 降序和股票代码升序选股。缺失控制变量的候选不参与对应模式配额，覆盖率和失败信号日单独记录，不回退到基准目标。
 
@@ -216,7 +231,7 @@ uv run main.py diagnose-factor-constrained-selection \
 
 结果默认写入 `workspace/factor_constrained_selection_diagnostics/<name>_<timestamp>/`，包含 `summary.md`、`parameters.json`、`constraint_summary.csv`、`constraint_coverage.csv`、`constraint_target_overlap.csv` 和 `constraint_exposure.csv`。配额误差是实际入选数减目标配额，联合行业×规模配额可能显著改变原始目标；该命令只用于风险暴露和可执行性对照，不改变正式策略、训练权重、交易或净值。
 
-### 3.3.6 因子选股变体统一成本与成交回测 (`evaluate-factor-selection-variants`)
+### 3.3.7 因子选股变体统一成本与成交回测 (`evaluate-factor-selection-variants`)
 
 该命令把 `baseline`、`neutralized_industry`、`neutralized_size`、`neutralized_industry_size`、`industry_quota`、`size_quota` 和 `industry_size_quota` 七种目标送入同一个日频回测引擎。所有变体共享候选评分、行情结构、T+1 开盘成交、后复权净值、基准、手续费和滑点；换手只统计 BUY/SELL，DELIST 和 SKIP_REBALANCE 单独统计。
 
@@ -230,7 +245,7 @@ uv run main.py evaluate-factor-selection-variants \
 
 评估日期必须成对指定。显式日期用于锁定测试区间时，报告才标记为锁定评估；不指定则使用 TOML 原始区间并明确写为非样本外比较。结果写入 `workspace/factor_selection_comparison/`，包括标准摘要、解析参数、各变体收益/风险/换手/成本、逐日净值、逐笔成交、目标、覆盖失败和与 baseline 的目标重合。控制变量不完整或有效目标不足时不回退到基准，报告必须结合覆盖率和失败原因解释。
 
-### 3.3.7 多因子组合边际贡献验证 (`evaluate-factor-marginal-contributions`)
+### 3.3.8 多因子组合边际贡献验证 (`evaluate-factor-marginal-contributions`)
 
 该命令只接受正式 `multi-factor-quality-value-momentum` 策略，在所有七个因子同时有效的公共候选池上构造 15 个变体：完整组合、七个单因子和七个 leave-one-out 组合。完整组合沿用配置权重，单因子权重为 1，leave-one-out 按剩余配置权重归一化。所有变体共享同一行情准备对象和日频回测引擎，报告同时记录覆盖、目标重合、收益、风险、换手和交易成本。
 
@@ -243,7 +258,7 @@ uv run main.py evaluate-factor-marginal-contributions \
 
 结果写入 `workspace/factor_marginal_contribution/`。该验证用于判断因子是否提供独立信息或与其他因子形成互补，不会自动修改正式策略；若基准行情不可用，报告会保留缺失状态并告警。
 
-### 3.3.8 交易容量与流动性诊断 (`diagnose-factor-liquidity-capacity`)
+### 3.3.9 交易容量与流动性诊断 (`diagnose-factor-liquidity-capacity`)
 
 该命令固定正式 `multi-factor-quality-value-momentum` 的因子、目标和回测成交路径，读取 `daily_kline.amount` 与 `BacktestDataAccess` 构造的点时 `market_cap`。滚动平均成交额只包含信号日及更早的交易日，订单参与率使用信号日快照与回测订单名义金额计算；执行日的成交额不用于容量估算。诊断只保留候选信号日快照和回测所需的五列行情；行情读取使用轻量日历和重复键按需去重，统一视图只读取原子晋级后的 `data.parquet`，查询结果在进入 Pandas 后脱离 DuckDB 缓冲区并在信号物化后释放 DuckDB 缓存，避免多份宽表、同步临时文件和逐行嵌套字典造成不必要的峰值内存。
 

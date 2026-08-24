@@ -138,7 +138,7 @@ lookback_days = 20
 
 缺少任一选中因子的股票不会进入该信号日组合；实验策略最多使用六个因子，并将归一化权重、因子版本和专属参数写入回测结果。该入口用于单因子与小组合比较，不会改变现有正式策略。
 
-候选实验和正式七因子策略的时间切分由 `evaluate-factor-experiments` 自动执行。启用 `[training]` 后，未来收益标签会在每个信号日转换为截面百分位排名并去均值，各信号日对目标函数贡献相同；权重通过确定性投影梯度法约束为非负且总和为 1，并由 `ridge_alpha` 向候选配置预先声明的完整权重收缩。`factor-composite-experiment` 仍按候选配置选择 1 至 6 个因子，`multi-factor-quality-value-momentum` 完整覆盖正式七因子，训练得到的零权重不会被默认权重恢复。
+候选实验和正式七因子策略的时间切分由 `evaluate-factor-experiments` 自动执行。启用 `[training]` 后，未来收益标签会在每个信号日转换为截面百分位排名并去均值，各信号日对目标函数贡献相同；权重通过确定性投影梯度法约束为非负且总和为 1，并由 `ridge_alpha` 向候选配置预先声明的完整权重收缩。`factor-composite-experiment` 仍按候选配置选择 1 至 6 个因子，`multi-factor-quality-value-momentum` 完整覆盖正式七因子，训练得到的零权重不会被默认权重恢复。生产研究配置启用 `refit_selected_on_train_validation` 后，每个历史窗口先用训练集拟合候选、用验证集选参，再把入选参数在训练集和验证集的合并区间重新拟合后进入测试。
 
 有限网格中的每组组合独立训练；模型有效因子数或最大权重不合格、验证选择分数低于阈值时标记为拒绝，不读取该窗口测试段。协议门禁还检查训练失败比例、组合/验证信号日、测试窗口不重叠和最少完成测试窗口。`research_validity.csv` 保存样本、模型和验证门禁，`research_protocol.csv` 保存流程级门禁，报告把协议状态和策略测试证据分开。正式七因子配置是 5 年训练、2 年验证、2 年测试、2 年步长和 4 组外层参数；由于历史测试期已经用于修复诊断，结果标记为回溯性方法开发而不是新盲测。完整配置协议见 [`workspace/design_factor_research_validity_remediation.md`](../workspace/design_factor_research_validity_remediation.md)。
 
@@ -149,6 +149,10 @@ lookback_days = 20
 动量与趋势因子支持调用方传入正整数窗口参数；因子名称中的 `120d` 表示默认口径，不限制策略使用自定义窗口。
 
 研究评估报告的 `parameters.json` 和 `summary.md` 还记录评估进程峰值 RSS、2 GiB 进程资源预算、单次数据加载目标和训练缓存上限，便于核对长窗口训练的资源边界；若真实全量运行超过预算，报告会明确标记。滚动因子按股票批次计算，训练器只保留候选配置调仓日的因子和标签样本，并记录频率、N 值及每 N 日模式的切分起始日锚点；默认因子批次为 125 只股票。
+
+历史评估通过后，`train-factor-production-model` 只聚合验证指标锁定外层参数，不读取测试收益选参；再以最新行情日为标签退出边界，自动排除最后 `label_horizon_days` 个尚无完整未来收益的交易日，并在最近 6 年窗口重新拟合生产权重。输出的 `production_targets.csv` 是最新收盘后的首次上线初始化目标，最早在下一交易日执行，不代表已经成交，也不替代真实账户持仓和调仓状态。
+
+正式多因子策略还可通过 `portfolio_weighting` 在已经确定的前 N 名股票内构造目标权重：`equal` 为等权基线，`rank_decay` 按综合排名线性递减，`inverse_volatility` 按信号日 `price_volatility_60d` 的倒数归一化。若当日有效候选不足 `holding_count`，N 为实际入选数。它不改变候选池、因子、综合分数或入选股票；无效波动率被明确拒绝，不回退为等权。三种方案的历史比较应使用多候选 Walk-forward，并只以验证集锁定方案。
 
 ## 7. 迁移验证
 

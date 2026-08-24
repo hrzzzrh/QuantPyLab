@@ -12,6 +12,7 @@ from backtest.strategies.multi_factor_quality_value_momentum import (
 )
 from backtest.strategies.price_momentum import PriceMomentumStrategy
 from backtest.strategies.quality_value_recovery import QualityValueRecoveryStrategy
+from backtest.strategy_base import select_portfolio_weight_targets
 from backtest.trading_calendar import get_configured_rebalance_signal_dates
 
 
@@ -22,6 +23,56 @@ def _config(end_date, strategy_name):
         strategy_name=strategy_name,
         benchmark_symbol=None,
     )
+
+
+def _ranked_weighting_candidates() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2024-01-31"] * 4),
+            "symbol": ["000001", "000002", "000003", "000004"],
+            "score": [0.9, 0.8, 0.7, 0.6],
+            "rank": [1.0, 2.0, 3.0, 4.0],
+            "price_volatility_60d": [0.1, 0.2, 0.4, 0.8],
+        }
+    )
+
+
+def test_portfolio_weighting_methods_keep_selected_symbols_and_normalize_weights():
+    candidates = _ranked_weighting_candidates()
+
+    equal = select_portfolio_weight_targets(candidates, 3, "equal")
+    rank_decay = select_portfolio_weight_targets(candidates, 3, "rank_decay")
+    inverse_volatility = select_portfolio_weight_targets(
+        candidates, 3, "inverse_volatility"
+    )
+
+    expected_symbols = ["000001", "000002", "000003"]
+    assert equal["symbol"].tolist() == expected_symbols
+    assert rank_decay["symbol"].tolist() == expected_symbols
+    assert inverse_volatility["symbol"].tolist() == expected_symbols
+    assert equal["target_weight"].tolist() == [1 / 3, 1 / 3, 1 / 3]
+    assert rank_decay["target_weight"].tolist() == [0.5, 1 / 3, 1 / 6]
+    assert inverse_volatility["target_weight"].tolist() == [4 / 7, 2 / 7, 1 / 7]
+    for targets in (equal, rank_decay, inverse_volatility):
+        assert targets["target_weight"].sum() == pytest.approx(1.0)
+
+
+def test_rank_decay_uses_actual_selected_count_when_candidates_are_insufficient():
+    candidates = _ranked_weighting_candidates().head(2)
+
+    targets = select_portfolio_weight_targets(candidates, 3, "rank_decay")
+
+    assert targets["symbol"].tolist() == ["000001", "000002"]
+    assert targets["target_weight"].tolist() == [2 / 3, 1 / 3]
+
+
+@pytest.mark.parametrize("volatility", [0.0, -0.1, float("inf"), float("nan")])
+def test_inverse_volatility_weighting_rejects_invalid_volatility(volatility):
+    candidates = _ranked_weighting_candidates()
+    candidates.loc[0, "price_volatility_60d"] = volatility
+
+    with pytest.raises(ValueError, match="波动率倒数权重"):
+        select_portfolio_weight_targets(candidates, 3, "inverse_volatility")
 
 
 def test_quality_value_recovery_selects_lowest_value_scores():
@@ -160,6 +211,53 @@ def test_multi_factor_strategy_builds_equal_weight_targets_from_registered_facto
         targets.reset_index(drop=True), cached_targets.reset_index(drop=True)
     )
     assert {"score", "rank"}.issubset(scored_candidates.columns)
+
+
+@pytest.mark.parametrize(
+    ("portfolio_weighting", "expected_weights"),
+    [
+        ("rank_decay", [2 / 3, 1 / 3]),
+        ("inverse_volatility", [pytest.approx(2 / 3), pytest.approx(1 / 3)]),
+    ],
+)
+def test_multi_factor_strategy_applies_configured_portfolio_weighting(
+    portfolio_weighting, expected_weights
+):
+    strategy = MultiFactorQualityValueMomentumStrategy()
+    parameters = strategy.validate_parameters(
+        {"holding_count": 2, "portfolio_weighting": portfolio_weighting}
+    )
+    candidates = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp("2024-01-31"),
+                "symbol": symbol,
+                **{
+                    factor_name: value
+                    for factor_name in parameters["factor_weights"]
+                    if factor_name != "price_volatility_60d"
+                },
+                "price_volatility_60d": volatility,
+            }
+            for symbol, value, volatility in (
+                ("000001", 3.0, 0.1),
+                ("000002", 2.0, 0.2),
+                ("000003", 1.0, 0.4),
+            )
+        ]
+    )
+
+    targets = strategy.build_targets_from_candidates(candidates, parameters)
+
+    assert targets["symbol"].tolist() == ["000001", "000002"]
+    assert targets["target_weight"].tolist() == pytest.approx(expected_weights)
+
+
+def test_multi_factor_strategy_rejects_unknown_portfolio_weighting():
+    with pytest.raises(ValueError, match="portfolio_weighting"):
+        MultiFactorQualityValueMomentumStrategy().validate_parameters(
+            {"portfolio_weighting": "score_proportional"}
+        )
 
 
 def test_multi_factor_strategy_breaks_equal_scores_by_symbol_deterministically():

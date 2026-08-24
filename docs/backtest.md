@@ -37,6 +37,7 @@
 | `backtest/factor_trainer.py` | 使用配置化调仓日的点时因子、截面收益排名、信号日等权和先验收缩拟合单纯形因子权重 |
 | `backtest/hyperparameter_search.py` | 展开因子组合、因子窗口、持仓数量、缩尾范围和 Ridge 强度的有限组合 |
 | `backtest/research_evaluator.py` | 按固定切分和滚动 Walk-forward 训练、选择候选并锁定测试集 |
+| `backtest/production_trainer.py` | 聚合历史验证证据锁定外层参数，按最新标签完整窗口重训权重并生成首次上线初始化目标 |
 | `analysis/factors/` | 定义可复用点时因子、注册表、计算引擎和截面变换 |
 | `backtest/engine.py` | 按 T+1 开盘调仓，逐日计算净值、现金和交易成本 |
 | `backtest/metrics.py` | 计算收益、波动率、夏普和最大回撤 |
@@ -58,7 +59,7 @@
 
 ## 4. 内置策略
 
-所有内置策略都从 `[run]` 读取统一调仓日程，在信号日收盘后筛选标的，并于下一实际交易日开盘等权调仓。月频、周频和双周的周期末必须由下一交易日已经进入新周期确认；每 N 个交易日按回测或评估切分的 `start_date` 计数。输入行情的最后一个日期没有 T+1 证据，任何频率都不生成目标。
+所有内置策略都从 `[run]` 读取统一调仓日程，在信号日收盘后筛选标的，并于下一实际交易日开盘按其配置的目标权重调仓。除正式多因子策略可显式选择仓位构建法外，其余内置策略仍为等权。月频、周频和双周的周期末必须由下一交易日已经进入新周期确认；每 N 个交易日按回测或评估切分的 `start_date` 计数。输入行情的最后一个日期没有 T+1 证据，任何频率都不生成目标。
 
 | `rebalance_frequency` | 日程 | `rebalance_interval_trading_days` |
 |:---|:---|:---|
@@ -113,7 +114,15 @@ uv run main.py list-backtest-strategies
 | `quality_roe_weighted` | 12.5% |
 | `quality_operating_cashflow_ratio` | 12.5% |
 
-默认要求上市交易日不少于 250 日，综合分数最高的前 20 只股票等权持有。因子接口、输入字段和未来函数约束见 [独立因子库](factor_library.md)。
+默认要求上市交易日不少于 250 日，综合分数最高的前 20 只股票持有。`portfolio_weighting` 决定这 N 只已入选股票的目标权重，默认 `equal`，不改变原有行为；若当日有效候选不足 `holding_count`，N 是实际入选数：
+
+| 值 | 权重规则 | 风险边界 |
+|:---|:---|:---|
+| `equal` | 每只 `1 / N` | 基线方案 |
+| `rank_decay` | 与 `(N + 1 - rank)` 成正比并归一化 | 仅提高更高综合分数股票的权重，不改变入选集合 |
+| `inverse_volatility` | 与 `1 / price_volatility_60d` 成正比并归一化 | 仅在入选集合内降低高波动股票权重；波动率必须为有效正数，否则明确拒绝 |
+
+三种仓位法都使用同一因子评分、同一前 N 名、同一调仓日和同一成交成本；它们不训练个股预期收益或协方差矩阵。候选研究可把三份仅 `portfolio_weighting` 不同的 TOML 同时交给评估器，用验证集选择仓位法，再由测试集评价。因子接口、输入字段和未来函数约束见 [独立因子库](factor_library.md)。
 
 ### 4.4 factor-composite-experiment
 
@@ -139,7 +148,7 @@ uv run main.py run-backtest \
 
 ### 4.5 训练/验证/测试与 Walk-forward 评估
 
-研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，当前支持 `factor-composite-experiment` 和 `multi-factor-quality-value-momentum`：未来收益先在每个信号日转换为百分位排名并去均值，每个信号日在目标函数中的总权重相同，投影梯度法把因子权重约束为非负且总和为 1，Ridge 项向候选策略预先声明的完整权重收缩。正式七因子策略会完整覆盖七个因子，显式零权重不会回退为默认权重。启用 `[hyperparameter_search]` 后，每组显式有限参数组合都独立拟合权重；验证集选择完整组合，测试集只运行通过模型、样本、选择分数和协议门禁的入选组合。验证分数不足或模型过度集中时窗口可以标记为 `rejected`，不会读取测试段，也不会退回默认权重。
+研究评估器读取一个研究 TOML，候选回测配置必须显式列出。启用 `[training]` 后，当前支持 `factor-composite-experiment` 和 `multi-factor-quality-value-momentum`：未来收益先在每个信号日转换为百分位排名并去均值，每个信号日在目标函数中的总权重相同，投影梯度法把因子权重约束为非负且总和为 1，Ridge 项向候选策略预先声明的完整权重收缩。正式七因子策略会完整覆盖七个因子，显式零权重不会回退为默认权重。启用 `[hyperparameter_search]` 后，每组显式有限参数组合都独立拟合权重；验证集选择完整组合，测试集只运行通过模型、样本、选择分数和协议门禁的入选组合。若显式设置 `[training].refit_selected_on_train_validation=true`，验证完成后会用入选外层参数在“训练集+验证集”上重新拟合权重，再冻结进入测试；测试数据不参与该次重拟合。验证分数不足、模型过度集中或重拟合失败时窗口可以标记为 `rejected` 或 `failed`，不会读取测试段，也不会退回默认权重。
 
 `[validity]` 除训练、验证和测试覆盖门槛外，还可配置最少有效因子数、最大单因子权重、最低验证选择分数、最大训练失败比例、最大组合/验证信号日、最少完成测试窗口和测试窗口不得重叠。报告分别输出 `protocol_status` 和 `strategy_evidence_status`；协议通过只表示预先声明的流程被遵守，不证明策略有效。正式七因子配置采用 5 年训练、2 年验证、2 年测试和 2 年步长，测试窗口互不重叠，外层只比较 4 组参数。其历史测试期已被用于方法诊断，因此配置明确标记 `retrospective_method_development=true`，策略证据状态只能是 `retrospective_descriptive_only`，不能把重跑结果称为新的盲测证据。训练缓存由 `[training].max_training_cache_entries` 限制在单个窗口内，窗口结束后释放；未启用训练时保留原候选比较行为。
 
@@ -155,6 +164,18 @@ uv run main.py evaluate-factor-experiments \
 示例配置见 `config/backtest/factor_experiment_evaluation.toml`；正式七因子策略训练配置见 `config/backtest/multi_factor_quality_value_momentum_evaluation.toml`。设计与边界见 [`workspace/design_factor_experiment_evaluation.md`](../workspace/design_factor_experiment_evaluation.md)、[`workspace/design_factor_hyperparameter_training.md`](../workspace/design_factor_hyperparameter_training.md)、[`workspace/design_formal_factor_strategy_training.md`](../workspace/design_formal_factor_strategy_training.md) 和 [`workspace/design_factor_research_validity_remediation.md`](../workspace/design_factor_research_validity_remediation.md)。结果写入 `workspace/backtest/evaluations/<name>_<timestamp>/`，除原有指标、训练、选择和权重诊断文件外，`research_validity.csv` 保存逐组合的样本、模型和验证门禁，`research_protocol.csv` 保存训练失败比例、选择负担、测试窗口独立性和完成窗口数门禁。`summary.md` 和 `parameters.json` 分别记录执行状态、`protocol_status`、回溯性方法开发标记和弱溯源数据快照。当前数据快照不是逐 Parquet 内容寻址版本，必须显示 `best_effort`、`content_addressed=false` 及限制原因，并在评估运行首尾核对可观察快照；评估器不把测试结果反写到候选配置，也不跨窗口传递持仓或净值。
 
 研究评估报告的 `parameters.json` 和 `summary.md` 还记录评估进程峰值 RSS、2 GiB 进程资源预算、单次数据加载目标以及训练和回测缓存上限，便于核对长窗口运行是否触及内存控制目标。资源预算是审计边界而不是静默截断；若真实全量运行超过预算，报告会明确标记，结果不能宣称资源门禁通过。
+
+### 4.5.1 最新生产模型滚动训练
+
+`train-factor-production-model` 复用同一研究配置和训练器，把历史 Walk-forward 与最新生产模型分开处理。命令首先要求历史研究协议通过，再只使用各窗口验证指标聚合锁定外层参数；测试收益不会进入生产参数排序。随后按 `as_of_date` 的最新行情日向前扣除 `label_horizon_days`，确定最后一个标签完整日期，并在最近 `[production].training_years` 年窗口重新拟合权重。
+
+```bash
+uv run main.py train-factor-production-model \
+  --research-config config/backtest/multi_factor_quality_value_momentum_production.toml \
+  --as-of-date 2026-08-23
+```
+
+默认结果写入 `workspace/backtest/production_models/`，包含完整历史研究子报告、`production_model.json`、`validation_selection.csv`、`training_summary.csv`、`production_targets.csv`、`parameters.json` 和 `summary.md`。生产目标使用最新完整收盘数据，是首次从空仓上线的初始化目标，不是成交记录；已经运行的账户在非调仓日应保持原策略持仓，没有真实持仓时系统不会伪造差额订单。模型目标仍遵守收盘后形成、下一交易日执行的 T+1 口径。本模块不连接券商，也不自动下单。
 
 ### 4.6 因子实验点时规模暴露诊断
 
