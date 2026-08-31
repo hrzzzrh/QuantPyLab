@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国经济十五年变迁 — 上市公司财报视角（2011-2025 + 2026H1）| QuantPyLab</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--primary:#0f2a44;--accent:#1a7f64;--accent2:#d97706;--bg:#f7f8fa;--card:#fff;--muted:#6b7280;--border:#e5e7eb;--success:#059669;--warning:#d97706;--danger:#dc2626}
+  *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:#111827;line-height:1.6}
+  a{color:var(--accent);text-decoration:none}
+  .container{max-width:1280px;margin:0 auto;padding:0 24px}
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+  .h-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+  .brand{display:flex;align-items:center;gap:12px} .logo{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+  .brand h1{margin:0;font-size:16px;color:var(--primary)} .brand p{margin:0;font-size:12px;color:var(--muted)}
+  .meta{font-size:12px;color:var(--muted);text-align:right} .meta strong{color:var(--primary)}
+  .hero{background:linear-gradient(135deg,#0f2a44 0%,#1a3a5f 40%,#1a7f64 100%);color:#fff;padding:48px 0 40px}
+  .hero h2{margin:0 0 12px;font-size:32px;line-height:1.2} .hero p{margin:0;opacity:0.9;max-width:900px;font-size:15px}
+  .badges{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap} .badge{padding:6px 12px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.18);border-radius:999px;font-size:12px}
+  .kpis{margin-top:-28px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;position:relative;z-index:2}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}} @media(max-width:560px){.kpis{grid-template-columns:1fr}}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;box-shadow:0 4px 24px rgba(15,42,68,0.06)}
+  .kpi .label{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .kpi .value{font-size:26px;font-weight:800;color:var(--primary)} .kpi .value small{font-size:14px;color:var(--muted)}
+  .kpi .trend{font-size:12px;color:var(--muted)}
+  .section{margin:32px 0} .section-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:16px;gap:16px}
+  .section-head h3{margin:0;font-size:20px;color:var(--primary);display:flex;align-items:center;gap:10px}
+  .section-head h3 span.num{width:32px;height:32px;background:var(--primary);color:#fff;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+  .section-head p{margin:0;color:var(--muted);font-size:13px;max-width:520px;text-align:right}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px} @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.04)}
+  .card h4{margin:0 0 6px;font-size:14px;color:var(--primary)} .card .desc{margin:0 0 14px;font-size:12px;color:var(--muted)}
+  .chart-wrap{position:relative;height:320px} .chart-wrap.small{height:280px} .chart-wrap.tall{height:380px}
+  table{width:100%;border-collapse:collapse;font-size:13px} th{text-align:left;padding:10px 12px;background:#f9fafb;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.06em;text-transform:uppercase}
+  td{padding:10px 12px;border-bottom:1px solid #f3f4f6} td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600} .pill.green{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0} .pill.red{background:#fef2f2;color:#991b1b;border:1px solid #fecaca} .pill.amber{background:#fffbeb;color:#92400e;border:1px solid #fde68a} .pill.blue{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+  .insight{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;font-size:13px;color:#064e3b;margin-top:14px}
+  .warn{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;font-size:13px;color:#78350f;margin-top:14px}
+  .toc{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0} .toc a{padding:7px 12px;background:#fff;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--primary)}
+  .divider{height:1px;background:var(--border);margin:28px 0}
+  footer{margin:48px 0 0;padding:24px 0;border-top:1px solid var(--border);color:var(--muted);font-size:12px}
+  .legend{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap} .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+<header><div class="container h-inner"><div class="brand"><div class="logo">QL</div><div><h1>QuantPyLab · 十五年变迁 2011-2026</h1><p>上市公司财报视角 · 2011-2025年报15年 + 2026H1可比</p></div></div><div class="meta"><div><strong>报告日期</strong> 2026-08-29</div><div>数据 2011-2025 全量 + 2026H1 4601/5550</div><div><span class="pill blue">HTML可视化</span> <a href="中国经济十五年变迁_上市公司财报视角_2011-2026_20260829.md" target="_blank">Markdown</a> · <a href="中国经济十年变迁_上市公司财报视角_2014-2026H1_20260828.md" target="_blank">10年版</a></div></div></div></header>
+<div class="hero"><div class="container"><h2>十五年：从“四万亿”到“挤水分”<br>上市公司财报里的新常态切换</h2><p>2011-2025在市营收23.79→73.06万亿（CAGR 8.3%），但2022后三年零增长；归母1.197→峰值3.077→2.600万亿，净利率5.03%→3.56%跌破起点；盈利占比92.7%→72.0%。研发0.0085→1.704万亿（200倍）是唯一穿越周期，电池/半导体/消费电子15年超25倍，2026H1可比量增利增现金改善为探底后首次共振。</p><div class="badges"><span class="badge">📊 15年 2011-2025</span><span class="badge">🔄 H1可比4601家 +10.1%/+19.4%</span><span class="badge">🏭 2011→2025 行业置换</span><span class="badge">💡 研发2.33%</span></div></div></div>
+<div class="container">
+  <div class="kpis">
+    <div class="kpi"><div class="label">营收 2025</div><div class="value">73.06 <small>万亿</small></div><div class="trend">2011 23.79T · 15年CAGR 8.3% · 2022后三年+2.3%</div></div>
+    <div class="kpi"><div class="label">归母净利 2025</div><div class="value">2.60 <small>万亿</small></div><div class="trend" style="color:#dc2626">▼ 较峰值3.077T -15.5% · 三连降</div></div>
+    <div class="kpi"><div class="label">盈利占比 2025</div><div class="value">72.0 <small>%</small></div><div class="trend" style="color:#dc2626">▼ 2011 92.7% → 15年最低 · 1/4亏损</div></div>
+    <div class="kpi"><div class="label">2026H1可比修复</div><div class="value">+19.4 <small>%</small></div><div class="trend" style="color:#059669">▲ 营收+10.1% · OCF+40.1% · 51.27%正向</div></div>
+  </div>
+  <div class="toc">
+    <a href="#s1">方法</a><a href="#s2">总量</a><a href="#s3">杠杆</a><a href="#s4">现金流</a><a href="#s5">结构</a><a href="#s6">创新</a><a href="#s7">分化</a><a href="#s8">2026H1</a>
+  </div>
+
+  <div class="section" id="s1">
+    <div class="section-head"><h3><span class="num">01</span> 方法</h3><p>15年年报全量 + 当期半年报可比 · 2025年报为何纳入</p></div>
+    <div class="grid2">
+      <div class="card"><h4>为何是2011-2025 + 2026H1</h4><p class="desc">2011年为4万亿退出后、创业板扩容起点；2025年报已于2026-04-30前披露完毕（本报告截止2026-08-29，5550/5550全量），故15个完整会计年度为2011-2025，2026H1作当期边际观察。若仅至2024会遗漏2025年“第三年平台+利润三连降+OCF创纪录”的关键拐点。</p>
+        <table><tr><th>维度</th><th>口径</th><th>家数</th></tr><tr><td>历史年报</td><td>2011-2025 在市</td><td class="num">3061→5550</td></tr><tr><td>当期H1</td><td>2026H1已披露可比</td><td class="num">4601/5550 (83%)</td></tr><tr><td>2025年报</td><td>已披露</td><td class="num">5550 全量</td></tr></table>
+        <div class="warn">上版10年报告（2014-2024）遗漏2025，系保守以2024为末年；本版已补齐，结论从“两年平台”修正为“三年平台+三连降”。</div>
+      </div>
+      <div class="card"><h4>家数扩张与样本</h4><div class="chart-wrap small"><canvas id="cFirms"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="s2">
+    <div class="section-head"><h3><span class="num">02</span> 总量：三倍扩张后三年停滞</h3><p>营收15年+CAGR 8.3%，但2022后+0.77%/年</p></div>
+    <div class="grid2">
+      <div class="card"><h4>营收与归母（万亿）2011-2025</h4><div class="chart-wrap"><canvas id="cRev"></canvas></div></div>
+      <div class="card"><h4>净利率与盈利占比</h4><div class="chart-wrap"><canvas id="cMargin"></canvas></div><div class="insight"><strong>15年钟摆：</strong>净利率5.03%→3.74%(2012谷底)→4.56%(2017)→3.56%(2025)跌破起点；盈利占比92.7%→72.0%单调下行7年。</div></div>
+    </div>
+    <div class="card" style="margin-top:20px"><h4>15年核心数据（在市年报）</h4><div style="overflow:auto"><table><thead><tr><th>年</th><th>家数</th><th>营收(T)</th><th>归母(T)</th><th>净利率</th><th>盈利占比</th><th>资产(T)</th><th>杠杆率</th><th>研发(T)</th><th>强度</th><th>OCF(T)</th></tr></thead><tbody id="tbody"></tbody></table></div></div>
+  </div>
+
+  <div class="section" id="s3">
+    <div class="section-head"><h3><span class="num">03</span> 杠杆：42%中枢震荡后小幅回升</h3><p>资产4.29倍扩张，产出比下降28%</p></div>
+    <div class="grid2">
+      <div class="card"><h4>总资产 vs 负债（万亿）</h4><div class="chart-wrap"><canvas id="cAssets"></canvas></div></div>
+      <div class="card"><h4>平均资产负债率</h4><div class="chart-wrap small"><canvas id="cLev"></canvas></div><div class="insight">2011 46.93%→2017 42.22%（去杠杆显效）→2020 45.13%脉冲→2025 42.73%小幅回升0.8pp，2026H1可比负债+9.04%略超资产+8.57%。</div></div>
+    </div>
+  </div>
+
+  <div class="section" id="s4">
+    <div class="section-head"><h3><span class="num">04</span> 现金流：2025创纪录的现金囤积</h3><p>OCF 3.59→20.03万亿，7.7倍净利</p></div>
+    <div class="grid2">
+      <div class="card"><h4>OCF vs 净利（万亿）</h4><div class="chart-wrap"><canvas id="cOCF"></canvas></div></div>
+      <div class="card"><h4>2025为何OCF创纪录</h4><ul style="font-size:13px;line-height:1.8"><li>收缩投资+压降应收存货，投资现金流净流出收窄</li><li>筹资现金流转负，依赖内生造血</li><li>2026H1可比OCF+40.14%延续，但1/3靠压库存不可持续</li></ul><div class="chart-wrap small" style="height:200px;margin-top:12px"><canvas id="cOCF2"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="s5">
+    <div class="section-head"><h3><span class="num">05</span> 结构：新旧置换</h3><p>2011→2025 新兴20-40倍</p></div>
+    <div class="grid2">
+      <div class="card"><h4>2011→2025增长TOP（%）</h4><div class="chart-wrap tall"><canvas id="cSector"></canvas></div></div>
+      <div class="card"><h4>权重行业份额演变（万亿）</h4><div class="chart-wrap tall"><canvas id="cOld"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="s6">
+    <div class="section-head"><h3><span class="num">06</span> 创新：200倍穿越</h3><p>0.0085→1.704万亿，强度0.036%→2.33%</p></div>
+    <div class="grid2">
+      <div class="card"><h4>研发与强度</h4><div class="chart-wrap"><canvas id="cRnd"></canvas></div><div class="insight">2017前披露不全；2017后CAGR 13.8%，利润三连降仍正增长，集中于半导体/电池/通信/汽车。</div></div>
+      <div class="card"><h4>盈利分布演变</h4><div class="chart-wrap small"><canvas id="cProf"></canvas></div><div style="margin-top:12px"><div class="chart-wrap small" style="height:180px"><canvas id="cDist"></canvas></div></div></div>
+    </div>
+  </div>
+
+  <div class="section" id="s8">
+    <div class="section-head"><h3><span class="num">07</span> 2026H1修复</h3><p>同4601家 +10.1%/+19.4%/+40.1%</p></div>
+    <div class="grid2">
+      <div class="card"><h4>可比总量同比</h4><table><tr><th>指标</th><th>2026H1</th><th>2025H1</th><th>同比</th></tr><tr><td>营收</td><td class="num">24.212T</td><td class="num">21.990T</td><td class="num"><span class="pill green">+10.10%</span></td></tr><tr><td>归母</td><td class="num">1.448T</td><td class="num">1.212T</td><td class="num"><span class="pill green">+19.42%</span></td></tr><tr><td>研发</td><td class="num">0.569T</td><td class="num">0.529T</td><td class="num">+7.60%</td></tr><tr><td>资产</td><td class="num">186.93T</td><td class="num">172.17T</td><td class="num">+8.57%</td></tr><tr><td>OCF</td><td class="num">4.301T</td><td class="num">3.069T</td><td class="num"><span class="pill green">+40.14%</span></td></tr></table><div class="chart-wrap small" style="height:220px;margin-top:14px"><canvas id="cH1"></canvas></div></div>
+      <div class="card"><h4>六宫格分化</h4><div class="chart-wrap small"><canvas id="cSix"></canvas></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-top:8px"><div><span class="pill green">增长 1772 38.5%</span></div><div><span class="pill green">扭亏280 6.1%</span></div><div><span class="pill green">减亏309 6.7%</span></div><div><span class="pill red">转亏404 8.8%</span></div></div><div class="warn" style="margin-top:12px">领先指标：盈利占比重回80%+且正向从51%→70%为走出平台信号；当前945家未披露存稀释风险。</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px"><h4>📎 复现</h4><p style="font-size:12px;color:var(--muted)">脚本 <code>workspace/macro_15y_2011_2025.py</code> → <code>macro_15y_2011_2025.csv</code>；视图 <code>fin_income_statement/ fin_balance_sheet/ fin_cashflow_statement/ stocks</code>；H1可比 <code>macro_10y_comparable_h1_fix.py</code></p></div>
+  <footer>© 2026 QuantPyLab · 2025年报5550家全量，2011-2025十五年CAGR基于在市口径 · Chart.js 4.4 · 2026-08-29 15年版</footer>
+</div>
+<script>
+const years=['2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'];
+const rev=[23.7920,26.0587,29.0008,31.8066,32.2840,35.0863,41.9548,48.7022,53.7644,55.8030,67.0708,71.4162,72.1884,72.3206,73.0555];
+const net=[1.1974,0.9759,1.1289,1.1992,1.1437,1.4069,1.9123,2.1401,2.2022,2.2872,2.9900,3.0769,2.9901,2.6580,2.6002];
+const margin=net.map((v,i)=> (v/rev[i]*100));
+const pct=[92.71,91.32,91.59,91.49,90.43,93.18,92.63,89.28,89.31,87.79,86.38,80.88,78.97,73.91,72.01];
+const assets=[114.30,131.58,147.21,168.04,193.32,219.58,239.15,260.43,287.04,318.39,347.90,383.96,420.29,451.04,490.24];
+const liab=[97.85,113.41,126.76,143.92,164.52,186.45,201.38,217.07,238.18,263.92,287.07,317.47,349.07,375.72,410.38];
+const lev=[46.927,45.702,46.675,46.692,44.027,42.462,42.215,44.089,43.545,45.135,41.982,41.465,40.941,41.931,42.728];
+const rnd=[0.00849,0.01004,0.00826,0.01016,0.01619,0.03944,0.5155,0.6821,0.8374,0.9920,1.2388,1.4501,1.5912,1.6472,1.7037];
+const rndI=rnd.map((v,i)=> v/rev[i]*100);
+const ocf=[3.594,5.322,3.921,6.679,10.739,8.348,3.230,5.129,6.282,9.707,7.725,14.374,15.190,11.129,20.026];
+const firms=[3061,3437,3962,4245,4318,4596,4929,5234,5402,5455,5478,5550,5550,5551,5550];
+Chart.defaults.font.family='-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif';
+Chart.defaults.color='#6b7280';
+const mk=(id,cfg)=> new Chart(document.getElementById(id),cfg);
+// firms
+mk('cFirms',{type:'bar',data:{labels:years,datasets:[{label:'在市',data:firms,backgroundColor:'#0f2a44',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}},x:{grid:{display:false}}}}});
+// rev
+mk('cRev',{type:'bar',data:{labels:years,datasets:[{type:'bar',label:'营收',data:rev,backgroundColor:'rgba(15,42,68,0.85)',borderRadius:6},{type:'bar',label:'归母',data:net,backgroundColor:'rgba(26,127,100,0.85)',borderRadius:6},{type:'line',label:'营收增速%',data:rev.map((v,i)=> i?((v-rev[i-1])/rev[i-1]*100).toFixed(1):null),borderColor:'#d97706',backgroundColor:'#d97706',tension:0.35,pointRadius:3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:10}}},scales:{y:{grid:{color:'#f3f4f6'},title:{display:true,text:'万亿'}},y1:{position:'right',grid:{display:false},title:{display:true,text:'%'}},x:{grid:{display:false}}}}});
+// margin
+mk('cMargin',{type:'line',data:{labels:years,datasets:[{label:'净利率%',data:margin,borderColor:'#0f2a44',backgroundColor:'rgba(15,42,68,0.1)',fill:true,tension:0.35,pointRadius:3},{label:'盈利占比%',data:pct,borderColor:'#1a7f64',backgroundColor:'rgba(26,127,100,0.1)',fill:true,tension:0.35,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10}}},scales:{y:{grid:{color:'#f3f4f6'}},x:{grid:{display:false}}}}});
+// tbody
+const tb=document.getElementById('tbody'); years.forEach((y,i)=>{const tr=document.createElement('tr'); tr.innerHTML=`<td><strong>${y}</strong></td><td class="num">${firms[i]}</td><td class="num">${rev[i].toFixed(2)}</td><td class="num">${net[i].toFixed(2)}</td><td class="num">${margin[i].toFixed(2)}%</td><td class="num">${pct[i].toFixed(1)}%</td><td class="num">${assets[i].toFixed(0)}</td><td class="num">${lev[i].toFixed(1)}%</td><td class="num">${rnd[i].toFixed(2)}</td><td class="num">${rndI[i].toFixed(2)}%</td><td class="num">${ocf[i].toFixed(1)}</td>`; tb.appendChild(tr);});
+// assets
+mk('cAssets',{type:'bar',data:{labels:years,datasets:[{label:'资产',data:assets,backgroundColor:'#0f2a44',borderRadius:6},{label:'负债',data:liab,backgroundColor:'#9ca3af',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10}}},scales:{y:{grid:{color:'#f3f4f6'},title:{display:true,text:'万亿'}},x:{grid:{display:false}}}}});
+mk('cLev',{type:'line',data:{labels:years,datasets:[{label:'杠杆%',data:lev,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,0.12)',fill:true,tension:0.35,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'},min:40,max:48},x:{grid:{display:false}}}}});
+// OCF
+mk('cOCF',{type:'bar',data:{labels:years,datasets:[{type:'bar',label:'OCF',data:ocf,backgroundColor:'#1a7f64',borderRadius:6},{type:'bar',label:'归母',data:net,backgroundColor:'#e5e7eb',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10}}},scales:{y:{grid:{color:'#f3f4f6'},title:{display:true,text:'万亿'}},x:{grid:{display:false}}}}});
+mk('cOCF2',{type:'line',data:{labels:years,datasets:[{label:'OCF/净利',data:ocf.map((v,i)=> (v/net[i]).toFixed(2)),borderColor:'#0f2a44',tension:0.35,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'}},x:{grid:{display:false}}}}});
+// sector
+mk('cSector',{type:'bar',data:{labels:['半导体','消费电子','电池','光伏','物流','通信'],datasets:[{label:'2011→2025增长%',data:[4129,2998,2510,1320,1072,334],backgroundColor:['#0f2a44','#1a3a5f','#1a7f64','#2a9d8f','#d97706','#6b7280'],borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f3f4f6'}},y:{grid:{display:false}}}}});
+mk('cOld',{type:'bar',data:{labels:['建筑装饰','石化','银行','钢铁','住宅开发'],datasets:[{label:'2011',data:[22.25,46.95,24.55,13.68,2.94],backgroundColor:'#e5e7eb',borderRadius:6},{label:'2025',data:[75.63,64.90,57.28,17.84,12.14],backgroundColor:'#0f2a44',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10}}},scales:{y:{grid:{color:'#f3f4f6'},title:{display:true,text:'千亿'}},x:{grid:{display:false}}}}});
+// rnd
+mk('cRnd',{type:'bar',data:{labels:years,datasets:[{type:'bar',label:'研发',data:rnd,backgroundColor:'#0f2a44',borderRadius:6,yAxisID:'y'},{type:'line',label:'强度%',data:rndI,borderColor:'#d97706',backgroundColor:'#d97706',tension:0.35,pointRadius:3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{boxWidth:10}}},scales:{y:{grid:{color:'#f3f4f6'},title:{display:true,text:'T'}},y1:{position:'right',grid:{display:false},title:{display:true,text:'%'}},x:{grid:{display:false}}}}});
+mk('cProf',{type:'line',data:{labels:years,datasets:[{label:'盈利占比%',data:pct,borderColor:'#0f2a44',backgroundColor:'rgba(15,42,68,0.08)',fill:true,tension:0.35,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f3f4f6'},min:70,max:95},x:{grid:{display:false}}}}});
+mk('cDist',{type:'doughnut',data:{labels:['盈利增长','盈利回落','扭亏','减亏','转亏','增亏'],datasets:[{data:[1772,1454,280,309,404,386],backgroundColor:['#059669','#a7f3d0','#0f2a44','#1a7f64','#ef4444','#fca5a5'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}}}});
+// H1
+mk('cH1',{type:'bar',data:{labels:['营收','归母','研发','OCF'],datasets:[{label:'同比%',data:[10.10,19.42,7.60,40.14],backgroundColor:['#0f2a44','#059669','#d97706','#1a7f64'],borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f3f4f6'},title:{display:true,text:'%'}},y:{grid:{display:false}}}}});
+mk('cSix',{type:'doughnut',data:{labels:['盈利增长','回落','扭亏','减亏','转亏','增亏'],datasets:[{data:[1772,1454,280,309,404,386],backgroundColor:['#059669','#a7f3d0','#0f2a44','#1a7f64','#ef4444','#fca5a5'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}}}}});
+</script>
+</body>
+</html>
