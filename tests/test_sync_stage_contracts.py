@@ -1,4 +1,4 @@
-"""单元测试: sync-all 七个环节的 (processed, failed) 返回契约。"""
+"""单元测试: sync-all 八个环节的 (processed, failed) 返回契约。"""
 
 from datetime import date
 
@@ -127,6 +127,71 @@ def test_sync_share_capital_counts_failure(monkeypatch):
     monkeypatch.setattr(trade_date, "get_latest_trade_date", lambda: date(2026, 8, 7))
     monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
     assert main_mod.sync_share_capital(symbol="600519") == (1, 1)
+
+
+def test_sync_holder_number_counts_failure(monkeypatch):
+    from data_ingestion.collectors import holder_collector
+
+    class FakeHolderCollector:
+        def collect_holder_number(self, *args, **kwargs):
+            raise RuntimeError("户数接口异常")
+
+    monkeypatch.setattr(main_mod, "get_all_stocks", lambda: [("600519", "测试")])
+    monkeypatch.setattr(holder_collector, "HolderCollector", FakeHolderCollector)
+    monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
+    assert main_mod.sync_holder_number(symbol="600519") == (1, 1)
+
+
+def test_sync_holder_number_batch_uses_active_stocks(monkeypatch):
+    from data_ingestion.collectors import holder_collector
+    from storage.database import sync_status as sync_status_mod
+
+    seen = []
+
+    class FakeHolderCollector:
+        def collect_holder_number(self, code, **kwargs):
+            seen.append(code)
+
+    monkeypatch.setattr(
+        main_mod,
+        "get_active_stocks",
+        lambda: [("600519", "测试")],
+    )
+    monkeypatch.setattr(
+        main_mod,
+        "get_all_stocks",
+        lambda: [("600519", "测试"), ("000004", "退市")],
+    )
+    monkeypatch.setattr(holder_collector, "HolderCollector", FakeHolderCollector)
+    monkeypatch.setattr(sync_status_mod, "is_synced_today", lambda *a, **k: False)
+    monkeypatch.setattr(main_mod.time, "sleep", lambda _: None)
+    assert main_mod.sync_holder_number() == (1, 0)
+    assert seen == ["600519"]
+
+
+def test_get_active_stocks_includes_null_flag(isolated_metadata_db):
+    """is_active 为 NULL 的历史行不得被批量静默丢弃。"""
+    conn = main_mod.db_manager.get_sqlite_conn()
+    conn.execute(
+        "INSERT INTO stocks (symbol, code, name, is_active) VALUES "
+        "('600519', '600519', '测试', NULL), ('000001', '000001', '平安', 0)"
+    )
+    conn.commit()
+    assert main_mod.get_active_stocks() == [("600519", "测试")]
+
+
+def test_sync_holder_number_unknown_symbol_warns_empty(monkeypatch, caplog):
+    from data_ingestion.collectors import holder_collector
+
+    class FakeHolderCollector:
+        def collect_holder_number(self, *args, **kwargs):  # pragma: no cover
+            raise AssertionError("目标为空时不应调用采集器")
+
+    monkeypatch.setattr(main_mod, "get_all_stocks", lambda: [("600519", "测试")])
+    monkeypatch.setattr(holder_collector, "HolderCollector", FakeHolderCollector)
+    with caplog.at_level("WARNING"):
+        assert main_mod.sync_holder_number(symbol="999999") == (0, 0)
+    assert "目标为空" in caplog.text
 
 
 def test_sync_daily_kline_counts_failure(monkeypatch):

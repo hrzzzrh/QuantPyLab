@@ -4,6 +4,7 @@ from storage.database.manager import db_manager
 from utils.logger import logger
 
 DATASET_SHARE_CAPITAL = "share_capital"
+DATASET_HOLDER_NUMBER = "holder_number"
 DATASET_KLINE = "kline"
 DATASET_KLINE_DAILY = "kline_daily"
 DATASET_KLINE_DAILY_NO_DATA = "kline_daily_no_data"

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "built_at": "2026-09-08T19:41:10",
+  "column_count": 7,
+  "columns": {
+    "holder_change": "BIGINT",
+    "holder_change_pct": "DOUBLE",
+    "source": "VARCHAR",
+    "stat_date": "DATE",
+    "prev_holder_count": "BIGINT",
+    "holder_count": "BIGINT",
+    "announce_date": "DATE"
+  }
+}

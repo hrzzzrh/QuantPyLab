@@ -40,6 +40,14 @@ def get_all_stocks():
     return cursor.fetchall()
 
 
+def get_active_stocks():
+    """获取在市股票的 (code, name) (东财个股明细接口无退市股覆盖, 批量同步只跑在市股)"""
+    conn = db_manager.get_sqlite_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT code, name FROM stocks WHERE COALESCE(is_active, 1) = 1")
+    return cursor.fetchall()
+
+
 def get_financial_sync_stock_metadata():
     """通过 stocks 统一视图获取财报同步所需的股票元数据。"""
     db_manager.ensure_views("stocks")
@@ -865,6 +873,63 @@ def sync_share_capital(symbol=None, force_all=False, start_date=None):
     return len(target_tasks), failed
 
 
+def sync_holder_number(symbol=None, force_all=False, start_date=None):
+    """同步股东人数记录 (东财个股明细源, 串行 + 保守节奏)
+
+    批量模式仅覆盖在市股 (源接口无退市股覆盖); 单股模式按 code 精确匹配
+    (含退市股, 失败计入 failed, 下次重跑补抓)。
+
+    返回 (processed, failed): failed 为单股同步异常数 (重试耗尽后计入)。
+    """
+    from data_ingestion.collectors.holder_collector import HolderCollector
+    from storage.database.sync_status import (
+        DATASET_HOLDER_NUMBER,
+        is_synced_today,
+    )
+
+    collector = HolderCollector()
+    if symbol:
+        all_stocks = get_all_stocks()
+        target_tasks = [s for s in all_stocks if s[0] == symbol]
+    else:
+        target_tasks = get_active_stocks()
+
+    if not target_tasks:
+        logger.warning(f"股东人数同步目标为空 (symbol={symbol})，请检查股票代码")
+        return 0, 0
+
+    if force_all and not start_date:
+        start_date = "19900101"
+        logger.info(f"强制全量模式：将从 {start_date} 开始同步股东人数")
+
+    logger.info(f"开始同步 {len(target_tasks)} 只股票的股东人数...")
+    skipped = 0
+    failed = 0
+    pbar = tqdm(target_tasks, desc="户数同步")
+    for code, name in pbar:
+        pbar.set_description(f"户数同步: {code} {name}")
+        # 单股/强制模式绕过"当日已同步"检查, 默认模式跳过今日已同步股票
+        if (
+            not symbol
+            and not force_all
+            and is_synced_today(DATASET_HOLDER_NUMBER, code)
+        ):
+            skipped += 1
+            continue
+        try:
+            collector.collect_holder_number(code, start_date=start_date)
+        except Exception:
+            failed += 1
+            logger.error(f"{code} {name} 股东人数同步最终失败 (已重试)")
+        time.sleep(random.uniform(1, 1.5))
+
+    logger.info(
+        f"股东人数同步完成: 共 {len(target_tasks)} 只, 本次同步 {len(target_tasks) - skipped - failed} 只, "
+        f"跳过 {skipped} 只 (今日已同步), 失败 {failed} 只"
+    )
+    return len(target_tasks), failed
+
+
 def sync_daily_kline(
     symbol=None,
     force_all=False,
@@ -979,7 +1044,7 @@ def sync_all_data_flow(symbol=None, force_all=False) -> str:
     """执行全量数据同步流水线 (含名单/元数据; 单股模式跳过名单与元数据)
 
     返回三态:
-    - SYNC_ALL_SUCCESS: 全部 7 环节失败计数均为 0
+    - SYNC_ALL_SUCCESS: 全部 8 环节失败计数均为 0
     - SYNC_ALL_RETRYABLE: 存在环节失败 (可整体重试, 增量机制自动跳过已完成部分)
     - SYNC_ALL_BLOCKED: 新浪 IP 风控中止 (重试无意义, 需等待解封)
     """
@@ -999,6 +1064,7 @@ def sync_all_data_flow(symbol=None, force_all=False) -> str:
         )
         stage_stats["ttm"] = calculate_ttm_metrics(symbol=symbol, force_all=force_all)
         stage_stats["share"] = sync_share_capital(symbol=symbol, force_all=force_all)
+        stage_stats["holder"] = sync_holder_number(symbol=symbol, force_all=force_all)
         stage_stats["kline"] = sync_daily_kline(symbol=symbol, force_all=force_all)
     except SinaBlockedError as e:
         logger.error(f">>> 新浪接口 IP 风控，数据同步流水线中止 (已同步数据保留): {e}")
@@ -1859,6 +1925,12 @@ def main():
     share_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
     share_p.add_argument("--force-all", action="store_true", help="扫描所有股票")
 
+    # 6.1 sync-holder
+    holder_p = subparsers.add_parser("sync-holder", help="同步股东人数记录")
+    holder_p.add_argument("--symbol", type=str, help="指定单只股票代码")
+    holder_p.add_argument("--start-date", type=str, help="手动指定起始日期 (YYYYMMDD)")
+    holder_p.add_argument("--force-all", action="store_true", help="扫描所有在市股票")
+
     # 7. sync-kline
     kline_p = subparsers.add_parser("sync-kline", help="同步日线行情数据")
     kline_p.add_argument("--symbol", type=str, help="指定单只股票代码")
@@ -2208,6 +2280,10 @@ def main():
         calculate_ttm_metrics(symbol=args.symbol, force_all=args.force_all)
     elif args.command == "sync-share":
         sync_share_capital(
+            symbol=args.symbol, force_all=args.force_all, start_date=args.start_date
+        )
+    elif args.command == "sync-holder":
+        sync_holder_number(
             symbol=args.symbol, force_all=args.force_all, start_date=args.start_date
         )
     elif args.command == "sync-kline":

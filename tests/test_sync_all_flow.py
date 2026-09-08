@@ -20,6 +20,7 @@ FULL_STAGES = {
     "sync_financial_statements": (5, 0),
     "calculate_ttm_metrics": (100, 0),
     "sync_share_capital": (5000, 0),
+    "sync_holder_number": (5000, 0),
     "sync_daily_kline": (5000, 0),
 }
 
@@ -47,7 +48,7 @@ def test_single_stage_failure_returns_retryable(monkeypatch):
 
 
 def test_metadata_failure_returns_retryable(monkeypatch):
-    """元数据环节失败同样计入整体失败判定 (7 环节全覆盖)"""
+    """元数据环节失败同样计入整体失败判定 (8 环节全覆盖)"""
     stats = dict(FULL_STAGES)
     stats["sync_stock_metadata"] = (10, 2)
     _install_stages(monkeypatch, stats)
@@ -93,6 +94,7 @@ def test_single_symbol_skips_list_and_metadata(monkeypatch):
     assert sync_all_data_flow(symbol="600519") == SYNC_ALL_SUCCESS
     assert "sync_stock_list" not in called
     assert "sync_stock_metadata" not in called
+    assert "sync_holder_number" in called
     assert "sync_daily_kline" in called
 
 

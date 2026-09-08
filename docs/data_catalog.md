@@ -18,6 +18,7 @@ title DuckDB View Dependencies
 [fin_indicator]
 [fin_ttm]
 [share_capital]
+[holder_number]
 [industry_classification_sw]
 [v_daily_valuation]
 [daily_kline] --> [v_daily_valuation]
@@ -35,6 +36,7 @@ title DuckDB View Dependencies
 - **[日线行情 (daily_kline)](catalog/market/daily_kline.md)**: 每日价格、成交量及复权因子。
 - **[ETF日线行情 (etf_kline)](catalog/market/etf_kline.md)**: ETF每日价格、成交量及复权因子。
 - **[股本变动 (share_capital)](catalog/market/share_capital.md)**: 历史股本变更记录。
+- **[股东人数 (holder_number)](catalog/market/holder_number.md)**: 股东户数历史（含统计截止日与公告日期双口径）。
 - **[申万历史行业分类 (industry_classification_sw)](catalog/market/industry_classification_sw.md)**: 按生效日期保存个股行业分类变动历史。
 
 ### 财务数据 (Financial Data)

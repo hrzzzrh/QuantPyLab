@@ -27,7 +27,7 @@
 
 ### 3.1 全量同步 (`sync-all`)
 一键执行全流程同步流水线。
-- **执行顺序**: `stocks` (名单 diff + 退市清单合并) -> `metadata` (行业/上市日期) -> `indicators` -> `financial` (含超期公告日期官方二次核验) -> `ttm` -> `share` -> `kline`
+- **执行顺序**: `stocks` (名单 diff + 退市清单合并) -> `metadata` (行业/上市日期) -> `indicators` -> `financial` (含超期公告日期官方二次核验) -> `ttm` -> `share` -> `holder` -> `kline`
 - **行业历史**: `sync-industry-history` 是独立的全量快照同步命令，目前不纳入 `sync-all`；它使用申万计入日期保存历史分类，默认当天成功后跳过。
 - **示例**: `uv run main.py sync-all`
 - **单股示例**: `uv run main.py sync-all --symbol 600519` (强制刷新该股所有财务数据并增量补全行情; 名单与元数据为全市场操作, 单股模式跳过)
@@ -42,6 +42,7 @@
 | `sync-indicators`| 同步东财计算指标 | 披露日历驱动 + 孤儿股补全；入库后统一四源日期并触发 TTM 重算；日期协调或 TTM 失败会记录待重试状态 | 无 |
 | `calc-ttm` | 计算 TTM 滚动财务数据 | **差异驱动**: 校验最近 5 季数据齐全后补算，并优先重试 `financial_ttm_pending`。候选集以数据湖实际存在的报表为准 (含孤儿股/退市股)，不依赖 stocks 表 | 无 |
 | `sync-share` | 同步股本变动 (新浪源) | **本地增量**: 从本地最大日期后补全；默认批量模式跳过当日已同步股票 (见 `sync_status` 表)，`--symbol`/`--force-all` 强制绕过 | `--start-date` |
+| `sync-holder` | 同步股东人数 (东财个股明细主源) | **本地增量**: 补本地缺失季度（含中部缺口），东财行优先；默认批量模式仅覆盖在市股并跳过当日已同步股票 (见 `sync_status` 表)，`--symbol`/`--force-all` 强制绕过；东财缺数股 (A+B/A+H/CDR 等约 48 只) 自动回退巨潮季度统计补齐 (`source` 打标)，不设失败台账，重跑即重试 | `--start-date` |
 | `sync-kline` | 同步日线行情 | **自动续传**: 在市股票从本地最大日期+1同步；起始日自动限制为 `2010-01-01`；无行情响应使用独立的 `kline_daily_no_data` 当日冷却标记；**退市股 (is_active=0) 优先使用新浪 KLC 全量重建，失败时改用腾讯 `newfqkline` 整股重建** (单一复权口径, 完成后写 sync_status 跳过) | `--start-date` |
 | `migrate-kline-source` | staging 验证全部股票 K 线数据源 | **仅写 staging**: 默认选取 20 只分层样本，起始日不早于 `2010-01-01`；最后交易日在最低日期前的退市股票不纳入目标；在市股票使用新浪 KLC；退市股票新浪 KLC 失败时整股 fallback 到腾讯 `newfqkline`；共享质量门禁、`source_used`、`weekend_rows_filtered` 和 `known_bad_rows_filtered` 记录实际来源及清洗证据，旧本地数据不参与验收；本阶段不替换 canonical 分区 | `--source sina-klc`, `--symbol`, `--limit`, `--all-stocks`, `--start-date`, `--end-date`, `--stage-only`, `--dry-run`, `--resume`, `--recover-stale-lock` |
 | `promote-kline-staging` | 将已验收 K 线 staging 晋级到 canonical | 校验 schema 6、目标摘要、每个 staged Parquet 的摘要和质量后，逐 symbol 原子替换；默认保留 backup；`--resume` 恢复 promotion run；`--dry-run` 只校验；晋级与 `sync-kline`/`sync-all` 使用共享 canonical 写锁 | `--run-id`, `--symbol`, `--dry-run`, `--resume`, `--recover-stale-lock` |
@@ -289,12 +290,14 @@ uv run main.py diagnose-factor-liquidity-capacity \
 5. 执行 sync-all 流水线；整体重试次数由 `SYNC_ALL_MAX_RETRIES` 控制，当前配置为 `0`，因此本次调度只执行一次
 6. 全部成功 → 记录状态 `sync_status` 表 (`dataset='sync_all', symbol='ALL'`, **日期=前一天数据日**)，保证每个交易日数据在次日凌晨入库、无延迟；SQLite 状态读写由独立的 `SYNC_STATUS_MAX_RETRIES` 控制，当前配置为 `3`；流水线失败/中止 → 不记录，次日自动补跑
 
-**成功判定（三态）**：`sync_all_data_flow` 汇总 7 个环节（stocks/metadata/indicators/financial/ttm/share/kline）的失败计数：
+**成功判定（三态）**：`sync_all_data_flow` 汇总 8 个环节（stocks/metadata/indicators/financial/ttm/share/holder/kline）的失败计数：
 - `success`：全部环节失败数为 0
 - `retryable`：任一环节存在失败；仅当 `SYNC_ALL_MAX_RETRIES > 0` 时按配置次数与 `SYNC_ALL_RETRY_INTERVAL_SECONDS` 间隔整体重试，当前配置为 `0`，失败留待下次调度或人工重跑
 - `blocked`：新浪 IP 风控（含 kline/share 环节传播）→ 不重试（等待解封），次日补跑
 
 **CLI 退出码**：手动执行 `uv run main.py sync-all` 时，`blocked` 和 `retryable` 状态均退出码为 1；全部成功才退出码为 0。`retryable` 可重跑，增量逻辑会自动补缺。
+
+**耗时**：`holder` 环节全市场约 +2~2.5 小时（逐股串行；巨潮季度快照同批次内共享缓存，缺数股首轮回填约 +1~2 分钟）。顺序上 holder 置于 kline 之前：行情遇新浪风控中止时户数已落袋；反之 holder 失败也会使整单判 `retryable`（次日补跑只补失败部分）。
 
 **安装**：
 ```bash
