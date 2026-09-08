@@ -1,0 +1,14 @@
+{
+  "name": "quantpylab-local",
+  "description": "QuantPyLab local marketplace (custom subagents: research-reviewer, financial-report-extractor).",
+  "plugins": [
+    {
+      "name": "quantpylab-agents",
+      "description": "QuantPyLab custom subagents: research-reviewer and financial-report-extractor (migrated from .opencode/agents, general excluded).",
+      "source": {
+        "source": "directory",
+        "path": "."
+      }
+    }
+  ]
+}

@@ -28,10 +28,8 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Generated backtest research outputs
-workspace/backtest/results/
-workspace/backtest/evaluations/
-workspace/factor_diagnostics/
+# Workspace (dev drafts, temporary scripts, experimental outputs) - entirely ignored
+workspace/
 
 .gemini/*
 !.gemini/GEMINI.md

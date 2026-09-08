@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "browser-control": {
+      "source": "anomalyco/browser-control",
+      "sourceType": "github",
+      "skillPath": "skills/browser-control/SKILL.md",
+      "computedHash": "61e00a02bc22f13581d52893039cb778fc1ee16b6531b6acf494fe45fe609dea"
+    }
+  }
+}

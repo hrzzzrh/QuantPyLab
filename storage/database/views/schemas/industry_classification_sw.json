@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "built_at": "2026-08-21T00:00:00",
+  "built_at": "2026-08-31T23:06:52",
   "column_count": 3,
   "columns": {
     "effective_date": "DATE",
-    "industry_code": "VARCHAR",
-    "source_updated_date": "DATE"
+    "source_updated_date": "DATE",
+    "industry_code": "VARCHAR"
   }
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "财报信息提取"
+  short_description: "将财报 PDF 转换为文本并按主题清单输出结构化提取笔记"
+  default_prompt: "使用 $financial-report-extractor 提取指定财报信息："

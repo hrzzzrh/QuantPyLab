@@ -65,6 +65,7 @@ def main():
 
     try:
         conn = db_manager.get_duckdb_conn()
+        db_manager.ensure_views("v_daily_valuation")
 
         # 基础信息：最近一日
         base = conn.execute(

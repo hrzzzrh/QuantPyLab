@@ -3,7 +3,7 @@ import random
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -1156,6 +1156,44 @@ def evaluate_factor_experiments(
     return output_dir
 
 
+def train_factor_production_model(
+    research_config_path: str,
+    as_of_date: str | None = None,
+    output_path: str | None = None,
+):
+    """验证历史方法后，以最新标签完整窗口训练生产模型和初始化目标。"""
+    from backtest.production_trainer import (
+        load_factor_production_training_config,
+        write_factor_production_training_report,
+    )
+    from backtest.production_trainer import (
+        train_factor_production_model as train_production_model,
+    )
+
+    resolved_as_of_date = date.today()
+    if as_of_date is not None:
+        try:
+            resolved_as_of_date = date.fromisoformat(as_of_date)
+        except (TypeError, ValueError) as error:
+            raise ValueError("--as-of-date 必须使用 YYYY-MM-DD 格式") from error
+    config = load_factor_production_training_config(research_config_path)
+    result = train_production_model(
+        config,
+        db_manager,
+        as_of_date=resolved_as_of_date,
+    )
+    if output_path:
+        output_dir = Path(output_path)
+    else:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("workspace/backtest/production_models") / (
+            f"{config.research.name}_{run_id}"
+        )
+    output_dir = write_factor_production_training_report(result, output_dir)
+    logger.info(f"因子生产模型训练完成，结果目录: {output_dir}")
+    return output_dir
+
+
 def run_factor_exposure_diagnostics(
     backtest_config_path: str,
     quantile_count: int = 5,
@@ -2035,6 +2073,20 @@ def main():
         "--output", help="结果目录，默认写入 workspace/backtest/evaluations"
     )
 
+    production_training_p = subparsers.add_parser(
+        "train-factor-production-model",
+        help="历史研究通过后滚动训练最新因子生产模型和初始化目标",
+    )
+    production_training_p.add_argument(
+        "--research-config", required=True, help="含 [production] 的研究 TOML 配置"
+    )
+    production_training_p.add_argument(
+        "--as-of-date", help="数据可用截止日期 (YYYY-MM-DD)，默认今天"
+    )
+    production_training_p.add_argument(
+        "--output", help="结果目录，默认写入 workspace/backtest/production_models"
+    )
+
     # 19. diagnose-factor-exposures
     exposure_p = subparsers.add_parser(
         "diagnose-factor-exposures",
@@ -2356,6 +2408,16 @@ def main():
             )
         except Exception:
             logger.exception("因子实验评估异常退出")
+            sys.exit(1)
+    elif args.command == "train-factor-production-model":
+        try:
+            train_factor_production_model(
+                research_config_path=args.research_config,
+                as_of_date=args.as_of_date,
+                output_path=args.output,
+            )
+        except Exception:
+            logger.exception("因子生产模型训练异常退出")
             sys.exit(1)
     elif args.command == "diagnose-factor-exposures":
         try:

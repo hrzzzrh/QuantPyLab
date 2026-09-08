@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "servers": {
+      "exa": {
+        "type": "stdio",
+        "command": "/opt/homebrew/bin/uv",
+        "args": ["run", "tools/exa_mcp_server.py"],
+        "cwd": "/Volumes/wdblack/some_project/QuantPyLab",
+        "enabled": true,
+        "timeoutMs": 30000
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "研报独立审查"
+  short_description: "独立审查研报框架合规性与内容质量，识别乐观偏差与事实缺陷"
+  default_prompt: "使用 $research-reviewer 审查指定研报："

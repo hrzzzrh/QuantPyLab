@@ -1,0 +1,6 @@
+{
+  "name": "quantpylab-agents",
+  "version": "0.1.0",
+  "description": "QuantPyLab custom subagents: research-reviewer and financial-report-extractor (migrated from .opencode/agents, general excluded).",
+  "agents": "agents"
+}

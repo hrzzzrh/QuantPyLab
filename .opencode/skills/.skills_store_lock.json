@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "@tencent-adm/ima-skills": {
+      "name": "ima-skills",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=ima-skills&namespace=tencent-adm",
+      "source": "enterprise",
+      "version": "1.1.9",
+      "namespace": {
+        "canonicalName": "@tencent-adm/ima-skills",
+        "displayName": "tencent-adm",
+        "handle": "tencent-adm",
+        "publicSlug": "ima-skills"
+      },
+      "internalSlug": "ima-skills",
+      "publicSlug": "ima-skills",
+      "installDir": "/Volumes/wdblack/some_project/QuantPyLab/.opencode/skills/@tencent-adm/ima-skills"
+    }
+  }
+}

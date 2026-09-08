@@ -17,6 +17,51 @@ def _config():
     )
 
 
+def test_load_trading_dates_uses_unified_calendar_and_date_boundaries():
+    connection = duckdb.connect()
+    connection.register(
+        "daily_kline_calendar",
+        pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2024-01-01", "2024-01-02", "2024-01-02", "2024-01-03"]
+                ),
+                "symbol": ["000001", "000001", "000002", "000001"],
+            }
+        ),
+    )
+
+    class FakeManager:
+        def __init__(self):
+            self.ensured_views = []
+
+        def ensure_views(self, *view_names):
+            self.ensured_views.extend(view_names)
+
+        def get_duckdb_conn(self):
+            return connection
+
+    manager = FakeManager()
+    try:
+        result = BacktestDataAccess(manager).load_trading_dates(
+            start_date=date(2024, 1, 2),
+            end_date=date(2024, 1, 3),
+        )
+    finally:
+        connection.close()
+
+    assert result.equals(pd.DatetimeIndex(["2024-01-02", "2024-01-03"]))
+    assert manager.ensured_views == ["daily_kline_calendar"]
+
+
+def test_load_trading_dates_rejects_reversed_boundaries():
+    with pytest.raises(ValueError, match="开始日期不能晚于结束日期"):
+        BacktestDataAccess(object()).load_trading_dates(
+            start_date=date(2024, 1, 3),
+            end_date=date(2024, 1, 2),
+        )
+
+
 def test_load_factor_data_collects_registered_input_requirements(monkeypatch):
     access = BacktestDataAccess(object())
     captured = {}

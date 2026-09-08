@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "built_at": "2026-08-07T21:48:36",
+  "built_at": "2026-08-31T23:06:53",
   "column_count": 6,
   "columns": {
     "revenue_ttm": "DOUBLE",
     "ocf_ttm": "DOUBLE",
-    "deduct_net_profit_ttm": "DOUBLE",
     "pub_date": "VARCHAR",
+    "deduct_net_profit_ttm": "DOUBLE",
     "report_date": "VARCHAR",
     "net_profit_ttm": "DOUBLE"
   }

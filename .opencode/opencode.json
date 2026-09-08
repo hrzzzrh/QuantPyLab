@@ -1,14 +1,17 @@
 {
-  "mcp": {
-    "exa": {
-      "type": "local",
-      "command": ["uv", "run", "tools/exa_mcp_server.py"],
-      "cwd": ".",
-      "enabled": true,
-      "environment": {
-        "EXA_API_KEYS": "{env:EXA_API_KEYS}"
-      }
-    }
+  "$schema": "https://opencode.ai/config.json",
+  "watcher": {
+    "ignore": [
+      "data/**",
+      "logs/**",
+      ".venv/**",
+      "**/*.db",
+      "**/*.duckdb",
+      "**/*.parquet",
+      ".git/**",
+      "node_modules/**",
+      "workspace/**"
+    ]
   },
   "permission": {
     "websearch": "deny",
@@ -18,5 +21,5 @@
     "websearch": false,
     "webfetch": false
   },
-  "$schema": "https://opencode.ai/config.json"
+  "subagent_depth": 5
 }

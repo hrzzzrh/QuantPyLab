@@ -36,6 +36,42 @@ class BacktestDataAccess:
     def __init__(self, db_manager: DBManager):
         self.db_manager = db_manager
 
+    def load_trading_dates(
+        self,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> pd.DatetimeIndex:
+        """通过统一行情日历视图读取确定性的市场交易日期。"""
+
+        if start_date is not None and end_date is not None and start_date > end_date:
+            raise ValueError("交易日历开始日期不能晚于结束日期")
+        with self._duckdb_guard():
+            self.db_manager.ensure_views("daily_kline_calendar")
+            clauses = []
+            parameters = []
+            if start_date is not None:
+                clauses.append("CAST(date AS DATE) >= ?")
+                parameters.append(start_date)
+            if end_date is not None:
+                clauses.append("CAST(date AS DATE) <= ?")
+                parameters.append(end_date)
+            where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            rows = (
+                self.db_manager.get_duckdb_conn()
+                .execute(
+                    f"""
+                SELECT DISTINCT CAST(date AS DATE) AS trading_date
+                FROM daily_kline_calendar
+                {where_clause}
+                ORDER BY trading_date
+                """,
+                    parameters,
+                )
+                .fetchall()
+            )
+        return pd.DatetimeIndex([row[0] for row in rows])
+
     def load_confirmed_delisting_dates(
         self,
         symbols: Sequence[str] | pd.Series,
