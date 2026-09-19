@@ -1,3 +1,5 @@
+model_auto_compact_token_limit = 800000
+
 [agents]
 max_threads = 6
 max_depth = 2
