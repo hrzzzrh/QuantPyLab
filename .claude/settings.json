@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash",
+      "WebSearch",
+      "WebFetch",
+      "TodoWrite",
+      "Edit",
+      "Write"
+    ]
+  },
+  "ignorePatterns": [
+    "data/**",
+    "logs/**",
+    ".venv/**",
+    "**/*.db",
+    "**/*.duckdb",
+    "**/*.parquet",
+    ".git/**",
+    "node_modules/**",
+    "workspace/**"
+  ]
+}
