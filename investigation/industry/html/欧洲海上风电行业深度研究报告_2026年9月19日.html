@@ -1,0 +1,1487 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>欧洲海上风电行业深度研究报告_2026年9月19日 · 精读版HTML</title>
+<style>
+/* ===== 统一样式契约(总纲6.1/6.2,合并自各批次,前缀已归一) ===== */
+:root{--bg:#ffffff;--bg-soft:#f6f7f9;--ink:#1a1d21;--muted:#6b7280;--accent:#1d4ed8;--up:#15803d;--down:#dc2626;--warn:#d97706;--tier1:#1d4ed8;--tier2:#7c3aed;--tier3:#6b7280;--over:#1d4ed8;--std:#6b7280;--under:#d97706;--card-border:#e5e7eb;--radius:10px;--font:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;--mono:ui-monospace,"SF Mono",Consolas,monospace}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.75;font-size:15px}
+main section[id]{scroll-margin-top:72px}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:60}
+aside.toc{position:fixed;top:0;left:0;bottom:0;width:300px;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--card-border);padding:16px 10px 40px;z-index:40}
+.toc h2{font-size:13px;color:var(--muted);margin:4px 8px 8px;letter-spacing:.1em}
+.toc-link{display:block;font-size:13px;color:var(--ink);text-decoration:none;padding:4px 10px;border-radius:6px;line-height:1.5}
+.toc-link:hover{background:#e9effe}
+.toc-link.active{background:#e9effe;color:var(--accent);font-weight:700}
+.toc-link.lv1{font-weight:700;margin-top:6px}
+main{margin-left:300px;padding:0 0 90px}
+.wrap{max-width:1000px;margin:0 auto;padding:24px 28px 0}
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--card-border);padding:10px 0}
+.topbar-inner{max-width:1000px;margin:0 auto;padding:0 28px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.topbar .doc-title{font-weight:700;margin-right:auto;font-size:14px}
+.btn{border:1px solid var(--card-border);background:#fff;color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+h1{font-size:25px;line-height:1.4;border-bottom:2px solid var(--card-border);padding-bottom:10px}
+h2{font-size:20px;margin-top:40px;border-left:4px solid var(--accent);padding-left:12px}
+h3{font-size:16.5px;margin-top:28px}
+h4{font-size:15px}
+.lead{font-weight:700}
+ul.tight{margin:6px 0 6px 20px;padding:0}
+ul.tight li{margin:3px 0}
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* Tier徽章 */
+.tier-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;color:#fff;vertical-align:middle;margin-left:4px}
+.tier-badge.t1{background:var(--tier1)}.tier-badge.t2{background:var(--tier2)}.tier-badge.t3{background:var(--tier3)}
+/* 术语 */
+dfn.term{font-style:normal;border-bottom:1px dotted var(--accent);cursor:help;color:var(--accent)}
+/* 引用框 */
+.callout{border:1px solid var(--card-border);border-left-width:4px;border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--bg-soft)}
+.callout.quote{border-left-color:var(--accent);background:#eff4ff}
+.callout.warn{border-left-color:var(--warn);background:#fffbeb}
+.callout.method{border-left-color:var(--std);background:var(--bg-soft)}
+.footnote{font-size:12.5px;color:var(--muted);margin:6px 0}
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+.kpi-card{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:12.5px}
+.kpi-card p:first-child{font-family:var(--mono);font-size:21px;font-weight:800;margin:0 0 4px}
+.kpi-card p{margin:0;color:var(--muted)}
+/* 结论卡 */
+.conclusion-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:12px 0}
+.conclusion-cards>div{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff}
+.conclusion-cards h4{margin:0 0 6px;font-size:14px}
+.conclusion-cards p{margin:2px 0;font-size:13px}
+/* 信号灯 */
+.sig-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin:12px 0}
+.sig-board>div{border:1px solid var(--card-border);border-radius:8px;padding:8px 10px;font-size:13px;background:#fff}
+.sig-light{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.sig-light.red{background:var(--down)}.sig-light.yellow{background:var(--warn)}.sig-light.green{background:var(--up)}
+/* 配置矩阵 */
+.config-matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:12px 0}
+.config-matrix>div{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:13px}
+.config-matrix h4{margin:0 0 6px}
+/* 情景条 */
+.scenario-bar{display:flex;width:100%;min-height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);margin:10px 0;font-size:13px;font-weight:700}
+.scenario-bar a{display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;padding:4px}
+.scenario-bar .p60{width:60%;background:var(--accent)}
+.scenario-bar .p25{width:25%;background:#7d9bf0;color:var(--ink)}
+.scenario-bar .p15{width:15%;background:#9ca3af}
+.scenario-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:12px 0}
+.scenario-cards>div{border:1px solid var(--card-border);border-radius:var(--radius);padding:12px 14px;background:#fff;font-size:13px}
+.scenario-cards h3{margin-top:0}
+/* 100%堆积条 */
+.stack100{display:flex;width:100%;min-height:40px;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);margin:8px 0}
+.stack100 div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;padding:2px 4px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin:4px 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:baseline}
+/* 条形 */
+.hbar-list{list-style:none;margin:8px 0;padding:0}
+.hbar-list li{display:grid;grid-template-columns:minmax(180px,1.2fr) 2fr auto;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.hbar{display:inline-block;background:linear-gradient(90deg,var(--accent),#7d9bf0);border-radius:6px;height:16px;color:#fff;font-size:11px;font-family:var(--mono);padding-left:6px;line-height:16px;min-width:44px}
+.hbar-row{display:grid;grid-template-columns:150px 1fr 64px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.hbar-track{background:#eef0f3;border-radius:6px;height:16px;position:relative;overflow:hidden}
+.hbar-fill{height:100%;border-radius:6px}
+.prog-row{display:grid;grid-template-columns:170px 1fr 52px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.prog-track{background:#eef0f3;border-radius:6px;height:14px;overflow:hidden}
+.prog-fill{height:100%}
+.ps-bars{margin:10px 0}
+.ps-row{display:grid;grid-template-columns:170px 1fr auto;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.ps-name{font-weight:600}
+.ps-track{background:#eef0f3;border-radius:6px;height:16px;overflow:hidden}
+.ps-fill{display:block;height:100%}
+.ps-val{font-size:12px;color:var(--muted)}
+/* 图表 */
+.chart{border:1px solid var(--card-border);border-radius:var(--radius);padding:12px;margin:12px 0;background:#fff}
+.chart-title{font-weight:700;font-size:13.5px;margin:0 0 8px}
+.bar-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.bar-group p:first-child{font-size:13px;font-weight:600;margin:0 0 6px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:130px;border-bottom:1px solid var(--card-border);padding-bottom:2px}
+.bars span{flex:1;background:linear-gradient(180deg,#7d9bf0,var(--accent));border-radius:3px 3px 0 0;color:#fff;font-size:10px;font-family:var(--mono);text-align:center;min-height:8px;padding-top:2px}
+.bars span.anchor{background:linear-gradient(180deg,var(--warn),#b45309)}
+.bars span.t3peak{background:linear-gradient(180deg,#b45309,var(--warn));outline:2px dashed var(--warn);outline-offset:-2px}
+.watermarked{position:relative}
+.watermarked::after{content:"Tier3峰值 · 未经本地验证";position:absolute;top:8px;right:10px;font-size:11px;color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:1px 8px;background:rgba(255,251,235,.9)}
+.chart svg{width:100%;height:auto}
+.chart svg text{font-family:var(--font)}
+.hbars .hbar-list{list-style:none;margin:8px 0;padding:0}
+.hbars .hbar-list li{display:grid;grid-template-columns:minmax(180px,1.2fr) 2fr auto;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.hbars .hbar{display:inline-block;background:linear-gradient(90deg,var(--accent),#7d9bf0);border-radius:6px;height:16px;color:#fff;font-size:11px;font-family:var(--mono);padding-left:6px;line-height:16px;min-width:44px}
+.matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin:12px 0}
+.matrix .company-card{margin:0}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:0;font-size:12px}
+.grid5>div{padding:8px 10px;border-right:1px solid var(--card-border)}
+.grid5>div:last-child{border-right:none}
+.grid5 .k{color:var(--muted);font-size:11px}
+th.n,td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num.up{color:var(--up);font-weight:700}
+.num.down{color:var(--down);font-weight:700}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:baseline}
+.dot.r{background:var(--down)}.dot.y{background:var(--warn)}.dot.g{background:var(--up)}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14171c;--bg-soft:#1b1f26;--ink:#e6e8eb;--muted:#9aa3af;--card-border:#2c333d}
+  .kpi-card,.conclusion-cards>div,.sig-board>div,.config-matrix>div,.compare-col,.ladder-step,.tier-card,.tl-step,.company-card,.chart,.tbl-wrap,.scenario-cards>div,.pyr-lvl,.glossary>div,details{background:#1b1f26}
+  .company-card header{background:#22272f}
+  .chart svg text{fill:#e6e8eb}
+  .chart svg line{stroke:#3a4250}
+  .hbar-track,.prog-track,.ps-track{background:#2c333d}
+  table.data-table tbody tr:nth-child(even){background:#181c22}
+  .callout.quote{background:#1c2942}
+  .callout.warn{background:#2c2417}
+  .watermarked::after{background:rgba(44,36,23,.95)}
+}
+/* 双栏/阶梯/Tier卡 */
+.compare-dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.compare-col{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:13px}
+.ladder{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.ladder-step{border:1px solid var(--card-border);border-left:6px solid var(--accent);border-radius:8px;padding:8px 12px;background:#fff;font-size:13px}
+.tier-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+.tier-card{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:13px}
+/* 时间轴/金字塔 */
+.timeline-h{display:flex;gap:0;margin:12px 0;overflow-x:auto}
+.tl-step{flex:1;min-width:150px;border-top:3px solid var(--accent);padding:8px 10px 0;margin-right:8px;font-size:12.5px;background:#fff}
+.timeline-v{border-left:3px solid var(--card-border);margin:12px 0 12px 8px;padding-left:0}
+.timeline-v>div{position:relative;padding:6px 0 6px 18px;font-size:13px}
+.timeline-v>div::before{content:"";position:absolute;left:-7px;top:12px;width:11px;height:11px;border-radius:50%;background:var(--accent)}
+.pyramid{display:flex;flex-direction:column;align-items:center;gap:6px;margin:12px 0}
+.pyr-lvl{background:linear-gradient(180deg,#e9effe,#d3e0fd);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:13px;text-align:center}
+/* 公司卡 */
+.company-card{border:1px solid var(--card-border);border-radius:var(--radius);margin:12px 0;overflow:hidden;background:#fff}
+.company-card header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:var(--bg-soft);border-bottom:1px solid var(--card-border)}
+.company-card header .nm{font-weight:800;font-size:15px}
+.company-card header .code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.company-card .body{padding:10px 12px;font-size:13px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.badge.good{background:#e7f6ec;color:var(--up);border:1px solid var(--up)}
+.badge.bad{background:#fdecec;color:var(--down);border:1px solid var(--down)}
+.badge.mid{background:#fff7e6;color:var(--warn);border:1px solid var(--warn)}
+.badge.info{background:#e9effe;color:var(--accent);border:1px solid var(--accent)}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:0;font-size:12px}
+.grid6>div{padding:8px 10px;border-right:1px solid var(--card-border)}
+.grid6>div:last-child{border-right:none}
+.grid6 .k{color:var(--muted);font-size:11px}
+/* 表格 */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--card-border);border-radius:var(--radius);margin:12px 0;background:#fff}
+table.data-table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+table.data-table thead th{position:sticky;top:0;background:var(--bg-soft);z-index:2}
+table.data-table th,table.data-table td{border:1px solid var(--card-border);padding:7px 10px;text-align:left;vertical-align:top}
+table.data-table tbody tr:nth-child(even){background:#fafbfc}
+table.data-table td.num,table.data-table th.num{text-align:right;font-family:var(--mono)}
+/* 折叠 */
+details{border:1px dashed var(--card-border);border-radius:var(--radius);margin:10px 0;background:#fff}
+details summary{cursor:pointer;padding:9px 14px;font-size:13.5px;color:var(--muted)}
+details .fold-body{padding:0 14px 12px}
+details.puml summary{color:var(--accent)}
+.fold-summary{font-size:13px;color:var(--muted);background:var(--bg-soft);border-radius:8px;padding:8px 12px}
+/* 术语表 */
+.glossary{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin:12px 0}
+.glossary>div{border:1px solid var(--card-border);border-radius:8px;padding:8px 10px;font-size:12.5px;background:#fff}
+.integrity{margin-top:44px;border:1px solid var(--card-border);border-radius:var(--radius);background:var(--bg-soft);padding:14px 18px;font-size:13px;color:var(--muted)}
+#backtop{position:fixed;right:22px;bottom:22px;z-index:50;display:none}
+@media (max-width:1000px){aside.toc{position:static;width:auto;max-height:44vh;border-right:none;border-bottom:1px solid var(--card-border)}main{margin-left:0}.compare-dual{grid-template-columns:1fr}.grid6{grid-template-columns:repeat(2,1fr)}.grid5{grid-template-columns:repeat(2,1fr)}.hbar-list li{grid-template-columns:1fr}.hbars .hbar-list li{grid-template-columns:1fr}.ps-row,.hbar-row,.prog-row{grid-template-columns:1fr;gap:2px}}
+@media print{aside.toc,#progress,#backtop,.topbar .btn{display:none}main{margin:0}body{font-size:12px}main details{display:block}main details>details{display:block}}
+
+/* ECharts容器(替代手写svg,数字与语义不变) */
+.echart{width:100%;height:320px;min-height:260px;margin:8px 0}
+#ec-07{height:360px}
+</style>
+<style>
+/* 本篇新增(总纲6.1)：状态徽章 + 推演树等宽 */
+.status-badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--card-border);background:var(--bg-soft);color:var(--muted)}
+pre.fenced-tree{background:var(--bg-soft);border:1px solid var(--card-border);border-radius:8px;padding:10px 14px;font-size:12.5px;line-height:1.7;overflow-x:auto;font-family:var(--mono)}
+@media (prefers-color-scheme:dark){pre.fenced-tree{background:#1b1f26}}
+/* P1-1修复：dark覆盖后置且提特异度（main前缀），基准在源码后方曾覆盖暗色 */
+@media (prefers-color-scheme:dark){
+main .compare-col,main .ladder-step,main .tier-card,main .tl-step,main .company-card,main .tbl-wrap,main .pyr-lvl,main .glossary>div,main details{background:#1b1f26}
+main .company-card header{background:#22272f}
+main table.data-table tbody tr:nth-child(even){background:#181c22}
+main .callout.quote{background:#1c2942}
+main .callout.warn{background:#2c2417}
+main pre.fenced-tree{background:#1b1f26}
+}
+/* P2-2：.status-badge六色（未授标蓝/未公告灰/待FID黄/待观察紫/已落地绿/流标红） */
+.status-badge.sb-blue{background:#e9effe;color:#1d4ed8;border-color:#1d4ed8}
+.status-badge.sb-gray{background:#f6f7f9;color:#6b7280;border-color:#6b7280}
+.status-badge.sb-yellow{background:#fff7e6;color:#d97706;border-color:#d97706}
+.status-badge.sb-purple{background:#f0e9fd;color:#7c3aed;border-color:#7c3aed}
+.status-badge.sb-green{background:#e7f6ec;color:#15803d;border-color:#15803d}
+.status-badge.sb-red{background:#fdecec;color:#dc2626;border-color:#dc2626}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<script>window.__ECHARTS_CDN__=true;/* ECharts 5.6.0 via CDN (Apache 2.0); 离线阅读请用 .inline-bak 备份文件 */</script>
+</head>
+<body>
+<div id="progress"></div>
+<aside class="toc">
+  <h2>目录 · 全文导航</h2>
+  <nav id="tocnav">
+    <a class="toc-link lv1" href="#cockpit" data-target="cockpit">驾驶舱（5分钟读完）</a>
+    <a class="toc-link lv1" href="#ch1" data-target="ch1">一、摘要</a>
+    <a class="toc-link lv1" href="#ch2" data-target="ch2">二、背景与行业定义</a>
+    <a class="toc-link lv1" href="#ch3" data-target="ch3">三、装机规模、目标与开发节奏</a>
+    <a class="toc-link lv1" href="#ch4" data-target="ch4">四、拍卖机制与CfD经济性</a>
+    <a class="toc-link lv1" href="#ch5" data-target="ch5">五、关键产品产能与供应商</a>
+    <a class="toc-link" href="#ch5b" data-target="ch5b">塔筒与海缆</a>
+    <a class="toc-link" href="#ch5c" data-target="ch5c">整机、安装船与赛道判断</a>
+    <a class="toc-link lv1" href="#ch6" data-target="ch6">六、中国企业出海</a>
+    <a class="toc-link lv1" href="#ch7" data-target="ch7">七、贸易政策与壁垒</a>
+    <a class="toc-link lv1" href="#ch8" data-target="ch8">八、中欧对标</a>
+    <a class="toc-link lv1" href="#ch9" data-target="ch9">九、投资推演与风险</a>
+    <a class="toc-link lv1" href="#ch10" data-target="ch10">十、核心结论</a>
+    <a class="toc-link lv1" href="#ch11" data-target="ch11">十一、数据来源</a>
+    <a class="toc-link lv1" href="#glossary" data-target="glossary">附录：术语表（26个）</a>
+  </nav>
+</aside>
+<main>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span class="doc-title">欧洲海上风电行业深度研究报告 · 精读版HTML（2026-09-19）</span>
+      <button class="btn" id="btn-expand">全部展开</button>
+      <button class="btn" id="btn-collapse">全部折叠</button>
+      <button class="btn" onclick="window.print()">打印 / 存 PDF</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <h1>欧洲海上风电行业深度研究报告：拍卖放量后的FID断层与交付验证</h1>
+    <p class="footnote">报告日期 2026-09-19 · 数据截至 2026-09-19 · 源报告 <span class="mono">investigation/industry/欧洲海上风电行业深度研究报告_2026年9月19日.md</span>（918行/74标题/45表/代码块2个/PlantUML 0个） · 本页为针对性编辑改写版：结论可视化 + 长难句重写（R1–R7），事实零丢失以F01–F38验收 · 改写总纲见 <span class="mono">workspace/industry_html/wind_offshore_eu/00_总纲.md</span></p>
+<section id="cockpit">
+<h2>驾驶舱（5分钟读完）</h2>
+
+<h3>① 核心判断5卡</h3>
+<div class="conclusion-cards">
+<div><h4><a href="#ch1">需求断层而非产能不足</a></h4><p>累计拍卖约57GW，约42GW未FID</p><p>Sif每周4–5根但预警2027–2028偏低 <span class="tier-badge t1">核心</span></p></div>
+<div><h4><a href="#ch10">长期缺口与短期空档并存</a></h4><p>单桩本土仅满足56%，海缆排至2030年</p><p>当期以FID与排期为准 <span class="tier-badge t1">核心</span></p></div>
+<div><h4><a href="#ch5-7">赛道分化明确</a></h4><p>单桩/海缆/安装确定性最高，整机壁垒最高</p><p>明阳本地化路径实质搁置 <span class="tier-badge t2">分化</span></p></div>
+<div><h4><a href="#ch7">贸易政策是最大变量</a></h4><p>NZIA 2025-12-30生效，IAA 2026-03-04提案</p><p>≥75%风机禁中国 <span class="tier-badge t2">风险</span></p></div>
+<div><h4><a href="#ch9">2026是验证年非放量年</a></h4><p>AR7 8.4GW + 丹麦1.8GW改善储备</p><p>生产窗口后移至2029年前后 <span class="tier-badge t1">研判</span></p></div>
+</div>
+
+<h3>② 节拍三灯（拍卖 / FID / 并网）</h3>
+<div class="sig-board">
+<div><span class="sig-light green" title="拍卖：2026 YTD 10.2GW（AR7 8.4 + 丹麦1.8），机制修复改善长期储备"></span><strong>拍卖 ↗</strong> 2026 YTD <span class="num">10.2GW</span>（AR7 8.4 + 丹麦1.8） <span class="tier-badge t1">改善</span></div>
+<div><span class="sig-light yellow" title="FID：2026年1月Nordlicht 1.6GW全面FID；Vanguard East/West原定夏季FID截至9.19未公告；德国17.5GW已授未FID"></span><strong>FID ◌待验证</strong> 2026年约<span class="num">1.6GW</span>+待观察，约42GW未FID <span class="tier-badge t2">断层</span></div>
+<div><span class="sig-light green" title="并网：2026H1 2.3GW（182台9个风场），累计40.9GW；He Dreiht 960MW 9月17日投运仪式"></span><strong>并网 ↗</strong> H1 <span class="num">2.3GW</span>，累计<span class="num">40.9GW</span> <span class="tier-badge t1">兑现</span></div>
+</div>
+<p>三灯读数：拍卖改善 / FID断层待验证 / 并网兑现。主矛盾是拍卖→FID转化慢，而非制造能力不足。</p>
+
+<h3>③ 缺口6环节矩阵</h3>
+<div class="config-matrix">
+<div><h4>单桩基础</h4><p><span class="badge bad">严重</span></p><p>本土仅满足56%，&gt;12m法兰独供；中国机遇 ⭐⭐⭐⭐⭐</p></div>
+<div><h4>海底电缆</h4><p><span class="badge bad">严重</span></p><p>排产至2029+，HVDC极紧；中国机遇 ⭐⭐⭐⭐</p></div>
+<div><h4>安装船WTIV</h4><p><span class="badge bad">严重</span></p><p>2025起短缺，2030缺口~15GW/年；中国机遇 ⭐⭐⭐</p></div>
+<div><h4>大兆瓦风机</h4><p><span class="badge mid">中等</span></p><p>欧洲15MW级，中国16–20MW；NZIA最高壁垒 ⭐</p></div>
+<div><h4>塔筒</h4><p><span class="badge mid">中等</span></p><p>欧洲约60%自给；中国机遇 ⭐⭐⭐⭐</p></div>
+<div><h4>叶片</h4><p><span class="badge mid">中等</span></p><p>建厂后缓解，运输制约出口；中国机遇 ⭐⭐</p></div>
+</div>
+
+<h3>④ 拍卖→FID→并网推演条</h3>
+<div class="scenario-bar">
+<a class="p60" href="#ch6-4" style="width:26%">已FID约15GW</a>
+<a class="p25" href="#ch6-4" style="width:58%;background:#7d9bf0;color:#1a1d21;">未FID约42GW</a>
+<a class="p15" href="#ch6-4">2029后窗口</a>
+</div>
+<p class="footnote">三段可点击下钻到6.4节对应栏。口径：累计拍卖约57GW（摘要/6.4）与约58–59GW（4.1/十章）两种表述并存，差值来自AR7计入年份；此处按57GW=15+42拆分。<a href="#ch6-4">6.4分层跟踪</a>。</p>
+
+<h3>⑤ 核心KPI带（12个锚点数字）</h3>
+<div class="kpi-strip">
+<div class="kpi-card"><p>57GW</p><p>累计拍卖（约42GW未FID）</p></div>
+<div class="kpi-card"><p>40.9GW</p><p>欧洲累计装机（2026H1）</p></div>
+<div class="kpi-card"><p>2.3GW</p><p>2026H1并网（182台9场）</p></div>
+<div class="kpi-card"><p>8.4GW</p><p>英国AR7（2026-01授予）</p></div>
+<div class="kpi-card"><p>1.8GW</p><p>丹麦8-04授予Vattenfall</p></div>
+<div class="kpi-card"><p>€72.5/€67.4</p><p>丹麦两向CfD执行价/MWh</p></div>
+<div class="kpi-card"><p>960MW</p><p>He Dreiht（9-17投运仪式）</p></div>
+<div class="kpi-card"><p>约10GW</p><p>法国AO10（10-12截标）</p></div>
+<div class="kpi-card"><p>4–5根/周</p><p>Sif MV2计划产出</p></div>
+<div class="kpi-card"><p>190kt</p><p>Sif独家谈判待FID</p></div>
+<div class="kpi-card"><p>100+100</p><p>Bałtyk单桩+过渡段发运</p></div>
+<div class="kpi-card"><p>53根</p><p>OranjeWind首批发运</p></div>
+</div>
+
+<h3>⑥ 需求断层警示引用框</h3>
+<div class="callout quote">
+<p><strong>结论：当前主矛盾是需求/FID节拍断层，而非制造能力不足。</strong></p>
+<ul>
+<li>Sif于2026年7月31日披露MV2已实现每周4–5根单桩计划产出，但因近年到达FID项目偏少，明确判断2027–2028年单桩生产需求偏低。</li>
+<li>其190kt独家谈判项目仍待开发商FID，目标生产窗口2027年5–8月；截至2026年9月19日仍无转为正式订单的公告。</li>
+<li>交付端8–9月连续兑现：8月20日完成Bałtyk 2&amp;3共100根单桩+100个过渡段最终发运，9月1日实现OranjeWind 53根首批发运。</li>
+<li>"累计拍卖约57GW、约42GW未FID"不能直接等同未来两三年订单密集释放，项目池应视为中长期可选订单。</li>
+</ul>
+<p class="footnote">状态词保留：待FID / 仍无…公告 / 尚未授标（荷兰1GW、法国AO10）/ 截至9.19未公告（Vanguard East/West）。下一验证窗：Sif 190kt转正式订单、Vanguard融资关闭与FID、AO10授标（2026年末–2027年2月）。</p>
+</div>
+</section>
+<section id="ch1">
+<h2>一、摘要</h2>
+<p class="footnote">数据截至2026-09-19：装机截至2026年6月末/H1；公司经营截至2026-06-30，部分券商解读截至2026-08-21；拍卖/FID/项目事件截至2026-09-19（He Dreiht 960MW于2026-09-17投运仪式分阶段并网、Morgan/Morecambe输电资产于2026-09-14获开发许可）。研究覆盖2018–2035年装机、拍卖与FID节拍、供应链缺口、中国出海路径及贸易壁垒。</p>
+
+<section id="ch1-core">
+<h3>核心判断（修订）</h3>
+<div class="callout quote">
+<p><strong>结论：长期供给缺口成立，但42GW未FID不等于近期订单密集释放。</strong></p>
+<ul>
+<li>累计拍卖约57GW、约42GW未FID，项目池是中长期可选订单而非短期确定收入。</li>
+<li>Sif MV2已达每周4–5根计划产出（2026-07-31披露），但预警2027–2028年单桩生产需求偏低；190kt独家谈判待FID，目标窗口2027年5–8月，截至2026-09-19无转正式订单公告。</li>
+<li>8–9月交付兑现：Bałtyk 2&amp;3（100根单桩+100个过渡段，8-20最终发运）、OranjeWind（53根，9-01首批发运）。主矛盾是需求/FID断层。</li>
+<li>丹麦2026-08-04以两向CfD授予Vattenfall 1.8GW（Hesselø 800MW €72.5/MWh、Nordsøen Midt 1GW €67.4/MWh），验证机制修复；德国2026年无拍卖、2027年起两阶段模式，节奏仍不均。</li>
+<li>He Dreiht 960MW于2026-09-17投运仪式分阶段并网；Morgan 1.5GW/Morecambe 480MW输电资产于2026-09-14获开发许可；AR7 8.4GW与丹麦1.8GW改善2029年后能见度；AO10约10GW投标截止2026-10-12、授标待2026年末至2027年初。</li>
+<li>短周期中国机会仍为"已获订单交付替代+认证参与2028–2029年招标"，并面对NZIA/IAA壁垒。</li>
+</ul>
+</div>
+</section>
+
+<section id="ch1-install">
+<h3>装机现状</h3>
+<p><strong>结论：2026年H1显著反弹，但2025年为8年最低。</strong></p>
+<ul>
+<li>截至2026H1累计约40.9GW（WindEurope年中统计），较2025底39GW新增约1.9GW。</li>
+<li>2025年新增仅2.0GW（2016年以来最低），主因施工延误；2026H1并网2.3GW（182台、9个风场，为H1 2025约3倍）。</li>
+<li>德国H1新增1.08GW（84台，Borkum Riffgrund 3与He Dreiht合计1.92GW中的已并网部分）；德国截至6月末在运10.8GW（1764台）。</li>
+<li>2026全年预期约6GW并网；2026–2030年新增约34–41GW，2030年累计73GW；北海九国《汉堡宣言》2050年跨境100GW、区域300GW。</li>
+</ul>
+</section>
+
+<section id="ch1-tempo">
+<h3>开发节拍（核心量化框架）</h3>
+<p><strong>结论：拍卖领先4–7年、FID领先2–3年，是订单窗口的核心依据。</strong></p>
+<ul>
+<li>欧洲全周期约7–10年（中国4–7年）；供应链订单释放窗口在FID后（此时供应链已基本锁定）。</li>
+<li>2022–2025年累计拍卖约57GW（含AR7）；但拍卖到FID及到生产的传导慢于预期，项目池视为中长期可选订单。</li>
+<li>2026年8月丹麦1.8GW授予与德国暂停拍卖并存："拍卖→CfD可融资性"是转化效率关键变量。</li>
+</ul>
+<div class="chart"><p class="chart-title">开发节拍总览（GW，T01可视化，ec-01亦含三线）</p><div class="echart" id="ec-01" role="img" aria-label="开发节拍总览：拍卖、FID、并网三线，单位GW"></div><p class="footnote">单位：GW。脚注¹：2025年拍卖5.8GW（多轮流标），AR7于2026年1月授予8.4GW计入2025轮次，合计约14.2GW。德国2026年无拍卖（2026-01-28内阁批准WindSeeG修正，N-10.1/N-10.2共2.5GW移入2027；BMWE草案2026-08-11细化两阶段）。</p></div>
+<details><summary>T01原表折叠备查（拍卖/FID/并网/累计×7年）</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>指标</th><th class="num">2020</th><th class="num">2021</th><th class="num">2022</th><th class="num">2023</th><th class="num">2024</th><th class="num">2025</th><th>2026 YTD（截至2026-09-19）</th></tr></thead><tbody>
+<tr><td>拍卖(GW)</td><td class="num">0.8</td><td class="num">~1.5</td><td class="num">9.5</td><td class="num">13.6</td><td class="num">19.9</td><td class="num">5.8(+8.4)</td><td><strong>10.2</strong>（AR7 8.4+丹麦1.8；荷兰1GW待9月开标、法国AO10约10GW待10月截标，均未授标）</td></tr>
+<tr><td>FID(GW)</td><td class="num">7.1</td><td class="num">~4</td><td class="num">≈0</td><td class="num">~8-10</td><td class="num">~3-4</td><td class="num">5.4</td><td>约1.6+待观察（Nordlicht 1.6GW于2026-01-13全面FID；德国在运10.8GW中2.6GW已FID、17.5GW已授未FID；Vanguard East/West原定2026年夏季FID截至9.19未公告）</td></tr>
+<tr><td>并网(GW)</td><td class="num">2.9</td><td class="num">3.3</td><td class="num">2.5</td><td class="num">3.7</td><td class="num">2.6</td><td class="num">2.0</td><td><strong>H1 2.3</strong>（总量40.9GW；He Dreiht 960MW于2026-09-17投运仪式分阶段并网）</td></tr>
+<tr><td>累计(GW)</td><td class="num">25</td><td class="num">28</td><td class="num">30</td><td class="num">34</td><td class="num">37</td><td class="num">39</td><td><strong>40.9</strong>（WindEurope H1 2026）</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch1-trans">
+<h3>2022年转型意义</h3>
+<p><strong>结论：能源安全叙事下拍卖放量，但转化慢于预期。</strong></p>
+<ul>
+<li>2022年俄乌冲突后由"碳中和叙事"切换为"能源安全叙事"，2022–2025年累计拍卖约57GW（含AR7）。</li>
+<li>Sif H1 2026表明拍卖→FID→生产传导慢于预期，项目池是中长期可选订单而非短期确定收入。</li>
+<li>丹麦1.8GW授予与德国暂停并存，显示"CfD可融资性"是转化关键变量。</li>
+</ul>
+</section>
+
+<section id="ch1-gap">
+<h3>核心产能缺口</h3>
+<p><strong>结论：长期缺口成立，但不能外推为当期满产。</strong></p>
+<ul>
+<li>单桩：本土仅满足2030目标56%，大型单桩（&gt;12m）欧洲仅Euskal能供法兰；但2027–2028年实际生产需求取决于FID。</li>
+<li>海缆：排产至2030年，供需缺口极大（东方电缆表述）。</li>
+<li>WTIV：2025年起短缺，2029–2030年缺口达14.9GW/年。</li>
+<li>风机：欧洲15MW级，中国16–20MW已量产，认证与业主信任是壁垒。</li>
+<li>塔筒/叶片：Vestas波兰叶片厂、SGRE丹麦机舱厂取消扩产，缺口扩大。</li>
+</ul>
+</section>
+
+<section id="ch1-cn">
+<h3>中国企业参与现状（截至2026-09-19）</h3>
+<div class="conclusion-cards">
+<div><h4>大金重工</h4><p>唯一批量交付欧洲的亚太单桩商</p><p>H1出口26.75亿+毛利率39.36%新高 <span class="tier-badge t1">标杆</span></p></div>
+<div><h4>东方电缆</h4><p>H1营收58.0亿，在手179.34亿</p><p>荷兰/英国子公司，认证推进 <span class="tier-badge t2">突破中</span></p></div>
+<div><h4>天顺风能</h4><p>H1归母-75%，海工-3.94%</p><p>德国基地10月前无法投产 <span class="tier-badge t3">阵痛</span></p></div>
+<div><h4>金风/明阳</h4><p>金风早期；明阳苏格兰实质搁置</p><p>英2026-03-26不支持声明 <span class="tier-badge t3">受阻</span></p></div>
+</div>
+<ul>
+<li><strong>大金重工（002487，A+H 01081.HK）：</strong>2025年海外收入45.97亿（+165%），海外毛利占比81%；2026H1出口海工交付近12万吨（同期新高）、出口收入26.75亿（+19.3%）、出口毛利率39.36%（+8.7pct新高）、占营收82.25%；Q2外租船期延长致单季回落（营收13.46亿，-20.9%）。H股6月5日募资约56.6亿，资产负债率33.49%。在手口径分化：2025年末超100亿 vs 券商2026年8月约70亿+；船舶24艘约120亿（2027–2030交付）。德/西/丹4处母港，KING ONE两航次、KING TWO/THREE于2026年9月前后投运。</li>
+<li><strong>东方电缆（603606）：</strong>2024年海外收入7.33亿（+480%）；2026H1营收58.0亿（+30.85%）、归母5.65亿（+19.41%）、海缆及高压23.65亿（+20.9%）、毛利率26.13%；Q2综合毛利率15.36%环比回落，存货51.21亿（发出商品15.97亿）。截至2026-08-03在手179.34亿（海缆91.28/陆缆48.5/海洋装备39.56），较3月末193.12亿有所消化。</li>
+<li><strong>天顺风能（002531）：</strong>2026H1营收21.89亿（-3.08%）、归母5380万（-75.08%），风力装备毛利率-2%（海工-3.94%），海外仅3.4%；Q3交付称显著提升，德国基地核心设备已FAT/签约但10月前无法投产。</li>
+<li><strong>金风科技：</strong>Luxcara德国项目进入后被替代转SGRE，出海仍早期。</li>
+<li><strong>明阳智能（601615）：</strong>2025年10月宣布苏格兰15亿英镑工厂（2028年投产）；2026-03-26英政府以国家安全为由声明不支持在英项目使用明阳风机、商务部04-14坚决反对，明阳03-27公告尚未收到正式回复且尚未投入资金，实质搁置、存在终止风险。</li>
+</ul>
+</section>
+
+<section id="ch1-risk">
+<h3>核心风险</h3>
+<ul>
+<li>贸易壁垒升级：NZIA已生效（2025-12-30），≥75%风机禁中国、传动链禁中国；IAA要求欧洲制造比例。</li>
+<li>拍卖流标：2025年丹麦3GW+荷兰1GW+德国2.5GW无人投标，负补贴被CfD替代但过渡不确定。</li>
+<li>认证周期长：DNV/GL通常2–3年，业主验厂门槛高。</li>
+<li>地缘政治：对华投资审查趋严（明阳苏格兰政治博弈）。</li>
+<li>FID到并网转化不足：拍卖→FID→并网折损率高。</li>
+</ul>
+</section>
+</section>
+<section id="ch2">
+<h2>二、背景与行业定义</h2>
+
+<section id="ch2-1">
+<h3>2.1 欧洲海上风电的全球定位</h3>
+<p><strong>结论：欧洲是起源地与第二大市场，占全球约42%。</strong></p>
+<ul>
+<li>2025年底全球累计92.3GW：中国约52%（~48GW）、欧洲约42%（~39GW）、亚太其他约6%。</li>
+<li>欧洲特征：<dfn class="term" data-term="AR" title="英国CfD分配轮次（AR4/AR6/AR7）">市场化拍卖</dfn>主导、<dfn class="term" data-term="两向CfD" title="双向补差的差价合同，执行价上下均结算">CfD</dfn>为核心收益工具、各国独立监管但EU协调目标；区别于中国"政府主导+大型基地"。</li>
+</ul>
+</section>
+
+<section id="ch2-2">
+<h3>2.2 欧洲海风开发全流程（与中国对照）</h3>
+<p><strong>结论：欧洲"拍卖/CfD合二为一"，最关键开工信号是FID。</strong></p>
+<details open><summary>流程对照原文折叠保留（fenced代码块原样）</summary><div class="fold-body"><pre class="fenced-tree">欧洲： [场地租赁] → [许可审批] → [CfD拍卖] → [FID] → [建设施工] → [并网COD]
+       Leasing     Permitting    Auction     FID     Construction  Commissioning
+       3-5年        2-4年        核心节点    关键决策    2-3年          ≈0
+
+中国： [核准] → [招标] → [定标] → [建设施工] → [并网]
+       核准+路条   EPC+风机   中标+开工   2-3年        并网确认
+       4-7年（总周期）</pre></div></details>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>维度</th><th>中国</th><th>欧洲</th></tr></thead><tbody>
+<tr><td>总周期</td><td>4–7年</td><td>7–10年</td></tr>
+<tr><td>开发权+电价确定</td><td>分步：核准→招标</td><td><strong>合二为一</strong>：Auction/CfD</td></tr>
+<tr><td>最关键的开工信号</td><td>招标完成/定标</td><td><strong><dfn class="term" data-term="FID" title="最终投资决策，融资关闭+管理层批准，订单释放点，领先并网2–3年">FID</dfn></strong>（融资关闭+管理层批准）</td></tr>
+<tr><td>前瞻指标领先时间</td><td>核准/招标→并网：2–4年</td><td>Auction→并网：4–7年；FID→并网：2–3年</td></tr>
+<tr><td>供应链订单释放窗口</td><td>招标定标后</td><td><strong>FID后</strong>（此时供应链已基本锁定）</td></tr>
+<tr><td>政府角色</td><td>主导规划、分配指标</td><td>监管拍卖规则、提供CfD框架</td></tr>
+</tbody></table></div>
+<p class="footnote">T02归宿：原表保留+本节双栏语义（表即双栏）。关键差异：欧洲电价与开发权一次确定，订单以下游FID为准。</p>
+</section>
+
+<section id="ch2-3">
+<h3>2.3 发展阶段划分</h3>
+<p><strong>结论：2026–2030年为加速交付期，年均6–10GW。</strong></p>
+<div class="timeline-h">
+<div class="tl-step"><strong>1991–2010起步</strong><br>丹麦/英国示范，Vindeby(1991)<br><span class="num">&lt;0.5GW/年</span></div>
+<div class="tl-step"><strong>2011–2018规模化起步</strong><br>5国主导，固定电价<br><span class="num">1–3GW/年</span></div>
+<div class="tl-step"><strong>2019–2021市场化转型</strong><br>CfD主导，零补贴出现<br><span class="num">3–4GW/年</span></div>
+<div class="tl-step"><strong>2022–2025能源安全驱动</strong><br>目标上调，拍卖放量建设滞后<br><span class="num">2–4GW/年</span></div>
+<div class="tl-step"><strong>2026–2030加速交付</strong><br>已拍集中FID→建设，中国参与<br><span class="num">6–10GW/年</span></div>
+<div class="tl-step"><strong>2030–2035深远海</strong><br>漂浮式商业化，300GW愿景<br><span class="num">10–15GW/年</span></div>
+</div>
+<details><summary>T03原表折叠备查（6阶段）</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>阶段</th><th>时期</th><th>核心特征</th><th>年均新增</th></tr></thead><tbody>
+<tr><td>起步期</td><td>1991–2010</td><td>丹麦/英国率先示范，首个风场Vindeby(1991)</td><td class="num">&lt;0.5GW</td></tr>
+<tr><td>规模化起步</td><td>2011–2018</td><td>5国主导(UK/DE/DK/NL/BE)，固定电价补贴</td><td class="num">1–3GW</td></tr>
+<tr><td>市场化转型</td><td>2019–2021</td><td>CfD主导，零补贴出现，Hollandse Kust Zuid</td><td class="num">3–4GW</td></tr>
+<tr><td>能源安全驱动</td><td>2022–2025</td><td>俄乌冲突后目标上调，拍卖放量但建设滞后</td><td class="num">2–4GW</td></tr>
+<tr><td>加速交付期</td><td>2026–2030</td><td>存量已拍集中FID→建设释放，中国供应链深度参与</td><td class="num">6–10GW</td></tr>
+<tr><td>深远海时代</td><td>2030–2035</td><td>漂浮式商业化，北海能源中心，300GW愿景</td><td class="num">10–15GW</td></tr>
+</tbody></table></div></div></details>
+</section>
+</section>
+<section id="ch3">
+<h2>三、装机规模、目标与开发节奏</h2>
+
+<section id="ch3-1">
+<h3>3.1 年度装机量（并网口径）</h3>
+<p><strong>结论：装机高度波动，2026年H1反弹、全年是交付拐点。</strong></p>
+<ul>
+<li>欧洲装机受单个大项目节奏影响大，年度新增在2.0–3.7GW波动；中国2025年单年新增6.6GW。</li>
+<li>2025年仅2.0GW（2016年以来最低），主因施工延误而非需求不足，大量已FID项目在建。</li>
+<li>2026H1新增2.3GW（182台、9个风场，为H1 2025约3倍），总量达40.9GW，在建/一年内开工近24GW。</li>
+<li>德国H1新增84台1077MW（Borkum Riffgrund 3与He Dreiht各约960MW，主力安装集中H1）；6月末在运10.8GW（1764台），另22台323MW已装未并。</li>
+<li>2026全年预期约6GW（约2025年3倍）；2026–2030年累计39GW→73GW（新增约34GW，WindEurope 2025年报口径），加速情景最高41GW。</li>
+</ul>
+<div class="chart"><p class="chart-title">年度新增并网与累计（GW，T04可视化）</p><div class="echart" id="ec-02" role="img" aria-label="年度新增并网柱与累计折线，单位GW"></div><p class="footnote">单位：GW。2025年2.0GW为2016年以来最低；2026E约6.0GW为WindEurope预测（赶工效应）。来源：WindEurope 2020–2025年报、2026年中统计（2026.8）、Deutsche WindGuard H1 2026、GWEC 2026。</p></div>
+<p><strong>最新项目验证：</strong>AR7（2026年1月，8.4GW、12个项目）；Outer Dowsing 1.5GW于2026年4月获开发许可（最早2027年建设、2030年首电）；He Dreiht 960MW（64台V236-15MW）2026-08-12完成全部安装、2026-09-17投运仪式（首批已供电、其余分阶段并网）；Borkum Riffgrund 3（913MW）同期投运；Morgan 1.5GW/Morecambe 480MW输电资产2026-09-14获许可。但CfD获授、输电许可均不等于FID，收入确认以融资关闭、正式采购和开工为准。</p>
+<details><summary>T04原表折叠备查（2018–2026E）</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>年份</th><th class="num">新增并网(GW)</th><th class="num">累计(GW)</th><th>同比增长</th><th>主要装机国</th></tr></thead><tbody>
+<tr><td>2018</td><td class="num">2.7</td><td class="num">18</td><td>—</td><td>UK/DE/BE/DK</td></tr>
+<tr><td>2019</td><td class="num">3.6</td><td class="num">22</td><td>+33%</td><td>UK领跑</td></tr>
+<tr><td>2020</td><td class="num">2.9</td><td class="num">25</td><td>-19%</td><td>NL 1.5, BE 0.7, UK 0.5</td></tr>
+<tr><td>2021</td><td class="num">3.3</td><td class="num">28</td><td>+14%</td><td>UK ~2.0, NL/DK/FR</td></tr>
+<tr><td>2022</td><td class="num">2.5</td><td class="num">30</td><td>-24%</td><td>UK为主</td></tr>
+<tr><td>2023</td><td class="num"><strong>3.7</strong></td><td class="num">34</td><td>+48%</td><td>创当时记录</td></tr>
+<tr><td>2024</td><td class="num">2.6</td><td class="num">37</td><td>-30%</td><td>UK 1.8, DE 0.7, FR 0.1</td></tr>
+<tr><td>2025</td><td class="num"><strong>2.0</strong></td><td class="num">39</td><td>-23%</td><td>UK 1.05, DE 0.50, FR 0.41</td></tr>
+<tr><td>2026 H1</td><td class="num"><strong>2.3</strong></td><td class="num"><strong>40.9</strong></td><td>—</td><td>DE 1.08, UK/FR等</td></tr>
+<tr><td>2026E</td><td class="num">~6.0</td><td class="num">~45</td><td>+200%</td><td>WindEurope预测（赶工效应）</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch3-2">
+<h3>3.2 国别累计装机格局</h3>
+<p><strong>结论：前5国占99%以上，新兴市场正在崛起。</strong></p>
+<div class="chart"><p class="chart-title">国别累计装机（GW，2025底，T05可视化）</p><div class="echart" id="ec-03" role="img" aria-label="国别累计装机横向条，单位GW"></div><p class="footnote">单位：GW。英国~16（41%）、德国~8.5（22%）、荷兰~5（13%）、丹麦~3（8%）、比利时~2.3（6%）、法国~1.5（4%）、其他~2.7（7%）。</p></div>
+<details><summary>T05原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>排名</th><th>国家</th><th class="num">累计(GW, 2025底)</th><th>占欧洲比</th></tr></thead><tbody>
+<tr><td>1</td><td>英国</td><td class="num">~16</td><td>41%</td></tr>
+<tr><td>2</td><td>德国</td><td class="num">~8.5</td><td>22%</td></tr>
+<tr><td>3</td><td>荷兰</td><td class="num">~5</td><td>13%</td></tr>
+<tr><td>4</td><td>丹麦</td><td class="num">~3</td><td>8%</td></tr>
+<tr><td>5</td><td>比利时</td><td class="num">~2.3</td><td>6%</td></tr>
+<tr><td>6</td><td>法国</td><td class="num">~1.5</td><td>4%</td></tr>
+<tr><td>7–12</td><td>瑞典/芬兰/波兰等</td><td class="num">~2.7</td><td>7%</td></tr>
+</tbody></table></div><p class="footnote">波兰首个项目在建、法国加速追赶、爱尔兰等正在崛起。</p></div></details>
+</section>
+
+<section id="ch3-3">
+<h3>3.3 各国2030/2050目标</h3>
+<p><strong>结论：目标与现实轨迹缺口约85GW，缺口即中国供应链窗口。</strong></p>
+<ul>
+<li>目标2030年约158GW（GWEC）vs 现实轨迹约73GW（WindEurope预测），缺口约85GW。</li>
+<li>欧洲大概率无法2030年前完成全部目标；正因"目标远大、产能不足"，催生中国供应链刚性需求窗口。</li>
+<li>来源：WindEurope、GWEC、UK能源安全战略、德国WindSeeG、汉堡宣言（2026.1）。</li>
+</ul>
+<div class="chart"><p class="chart-title">目标 vs 现实 vs 当前（GW，T06可视化）</p><div class="echart" id="ec-04" role="img" aria-label="目标、现实轨迹与当前容量对比，单位GW"></div><p class="footnote">单位：GW。欧洲合计目标~158（GWEC）/ 2050年300+（汉堡宣言）/ 当前39 / 缺口≈119（5年内）；现实轨迹73（WindEurope）。英国50/德国30/荷兰21/丹麦13/法国18/波兰11等分国目标见原表。</p></div>
+<details><summary>T06原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>国家</th><th class="num">2030目标(GW)</th><th>2050目标(GW)</th><th>当前累计(2025)</th><th>差距</th></tr></thead><tbody>
+<tr><td>英国</td><td class="num">50</td><td>—</td><td>~16</td><td>需年均新增~7GW</td></tr>
+<tr><td>德国</td><td class="num">30</td><td>70</td><td>~8.5</td><td>需年均新增~4.3GW</td></tr>
+<tr><td>荷兰</td><td class="num">21</td><td>—</td><td>~5</td><td>需年均新增~3.2GW</td></tr>
+<tr><td>丹麦</td><td class="num">13</td><td>35</td><td>~3</td><td>需年均新增~2GW</td></tr>
+<tr><td>法国</td><td class="num">18</td><td>45</td><td>~1.5</td><td>需年均新增~3.3GW</td></tr>
+<tr><td>波兰</td><td class="num">11</td><td>28</td><td>~0.1</td><td>几乎从零起步</td></tr>
+<tr><td>比利时</td><td class="num">6</td><td>8</td><td>~2.3</td><td></td></tr>
+<tr><td>爱尔兰</td><td class="num">7</td><td>37</td><td>~0.1</td><td></td></tr>
+<tr><td>挪威</td><td class="num">30(Sørlige Nordsjø II)</td><td>—</td><td>~0.1</td><td></td></tr>
+<tr><td><strong>欧洲合计</strong></td><td class="num"><strong>~158(GWEC)</strong></td><td><strong>300+(北海九国汉堡宣言)</strong></td><td><strong>39</strong></td><td><strong>缺口≈119GW(5年内)</strong></td></tr>
+</tbody></table></div></div></details>
+</section>
+</section>
+<section id="ch4">
+<h2>四、拍卖机制与CfD经济性</h2>
+
+<section id="ch4-1">
+<h3>4.1 年度拍卖规模</h3>
+<p><strong>结论：2022年放量，2025年流标，2026年节奏分化。</strong></p>
+<ul>
+<li>2022年为放量元年：2020年仅0.76GW；冲突后2022年9.5GW，2023–2024年13.6–19.9GW。</li>
+<li>2025年"小年"：8国计划17.3GW但仅成交5.8GW——丹麦3GW、荷兰1GW、德国2.5GW流标/无人投标，根因是<dfn class="term" data-term="负补贴" title="开发商付费竞开发权，2025年多轮流标后被CfD替代">负补贴</dfn>/零补贴设计缺陷；改革随之而来。</li>
+<li>2026年已确认10.2GW但分化：AR7已授予8.44GW（纪录）；丹麦8月再增1.8GW，CfD修复有效。</li>
+<li>德国：2025年N-10.1/N-10.2零投标后，2026-01-28内阁批准WindSeeG修正取消2026年剩余拍卖并移入2027；2026-08-11草案：2027年起2–4.8GW弹性区间、<dfn class="term" data-term="两向CfD" title="双向补差的差价合同，执行价上下均结算">两阶段</dfn>模式（含NZIA标准）、运营期35年、保留70GW（2045/2050年）目标。</li>
+<li>荷兰：2026年缩至1GW（IJmuiden Ver Gamma-A单个项目，SDE++框架、最高€104/MWh），拟2026年9月经六周公众咨询并待欧盟委员会国家援助批准后开启；年内第二个1GW招标意向截至9.19尚未开启。</li>
+<li>法国AO10约10GW（实际11个项目略超10GW，5GW固定+5GW漂浮，合并AO9/AO10）已于2026-06-11启动、投标截止2026-10-12、授标待2026年末至2027年2月；葡萄牙首拍、挪威等构成H2–2027年潜在增量。</li>
+<li>2022–2026累计拍卖约58–59GW，其中约42GW尚未FID，是2029年后订单重要项目池；但Sif排程提示2027–2028年已签生产需求不足，拍卖须以FID、基础合同和排期验证。</li>
+</ul>
+<div class="chart"><p class="chart-title">年度拍卖规模（GW，T07可视化）</p><div class="echart" id="ec-05" role="img" aria-label="年度拍卖规模柱，单位GW"></div><p class="footnote">单位：GW。2024年19.9为峰值；2025年5.8（+8.4脚注：AR7计2025轮次，合计约14.2）；2026 YTD 10.2（AR7 8.4+丹麦1.8；荷兰1GW与法国AO10约10GW均尚未授标）。来源：WindEurope、BNetzA、DESNZ AR7、丹麦能源署2026-08-04、BMWE草案2026-08-11。</p></div>
+<details><summary>T07原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>年份</th><th class="num">拍卖量(GW)</th><th>主要市场及规模</th></tr></thead><tbody>
+<tr><td>2020</td><td class="num">0.76</td><td>NL Hollandse Kust Noord</td></tr>
+<tr><td>2021</td><td class="num">~1.5(估)</td><td>DE过渡拍卖958MW + 少量</td></tr>
+<tr><td>2022</td><td class="num"><strong>9.5</strong></td><td>UK AR4 7.0, DE 1.0, NL 1.5</td></tr>
+<tr><td>2023</td><td class="num"><strong>13.6</strong></td><td>DE 8.8(零补贴+负补贴), IE ORESS1 3.1, FR 1.0, LT 0.7</td></tr>
+<tr><td>2024</td><td class="num"><strong>19.9</strong></td><td>DE 12.3, NL 4.0, UK 3.4, NO 1.5, FR 0.75, 其他</td></tr>
+<tr><td>2025</td><td class="num">5.8(+8.4)</td><td>PL 3.4, FR 1.5, IE 0.9, DE 1.0(负补贴). DK 3GW/NL 1GW/DE 2.5GW流标</td></tr>
+<tr><td>2026 YTD（截至2026-09-19）</td><td class="num"><strong>10.2</strong></td><td>UK AR7 8.4（2026年1月授予，创单轮纪录）+ DK 1.8（2026-08-04，Vattenfall包揽，20年CfD）；荷兰Gamma-A 1GW拟2026年9月SDE++招标（待欧盟批准）、法国AO10约10GW截标2026-10-12，均尚未授标</td></tr>
+</tbody></table></div><p class="footnote">AR7于2026年1月公布但属2025年分配轮次，为一致性单独标注。</p></div></details>
+</section>
+
+<section id="ch4-2">
+<h3>4.2 CfD机制详解</h3>
+<p><strong>结论：执行价双向补差是欧洲海风核心收益工具，期限向20年延长。</strong></p>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>要素</th><th>内容</th></tr></thead><tbody>
+<tr><td>机制</td><td>约定<strong>执行价</strong>，市场电价低于补差、高于返还</td></tr>
+<tr><td>类型</td><td>两向CfD为主流，部分曾用单向CfD或FiT</td></tr>
+<tr><td>期限</td><td>英国AR7起延长至<strong>20年</strong>（此前15年），波兰/法国类似</td></tr>
+<tr><td>通胀调整</td><td>英国执行价与CPI挂钩（自AR4起），波兰/法国引入指数化</td></tr>
+<tr><td>授予方式</td><td>竞标——最低执行价/最高负补贴金额</td></tr>
+</tbody></table></div>
+<p class="footnote">T08归宿：原表保留+结论条。</p>
+<h4>代表性中标电价（2024–2026年）</h4>
+<div class="chart"><p class="chart-title">中标执行价（€/MWh，T09可视化）</p><div class="echart" id="ec-06" role="img" aria-label="代表性中标执行价横向条，单位€/MWh"></div><p class="footnote">单位：€/MWh。德国零补贴项目为负值（开发商付费€124亿竞得8.8GW），图中单独标注不进轴。UK AR7约€107–109（£89.49–91.20）；丹麦Hesselø 72.5（DKK542）、Nordsøen Midt 67.4（DKK504），20年CfD，2032年投运。</p></div>
+<details><summary>T09原表折叠备查（11行）</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>拍卖</th><th>国家</th><th class="num">中标电价(€/MWh)</th><th>备注</th></tr></thead><tbody>
+<tr><td>UK AR4</td><td>英国</td><td class="num">~44（2024价）</td><td>2022年历史最低（£37.35/2012价）</td></tr>
+<tr><td>UK AR7</td><td>英国</td><td class="num">~107–109（£89.49–91.20）</td><td>2026年，20年CfD，大幅上调应对成本</td></tr>
+<tr><td>丹麦Hesselø</td><td>丹麦</td><td class="num"><strong>72.5</strong>（DKK542）</td><td>2026-08-04，Vattenfall，20年CfD，2032年投运</td></tr>
+<tr><td>丹麦Nordsøen Midt</td><td>丹麦</td><td class="num"><strong>67.4</strong>（DKK504）</td><td>2026-08-04，Vattenfall，20年CfD</td></tr>
+<tr><td>ORESS 1</td><td>爱尔兰</td><td class="num">86</td><td>2023年首拍，含CAPEX/OPEX调整</td></tr>
+<tr><td>ORESS 2.1</td><td>爱尔兰</td><td class="num">99</td><td>2025年</td></tr>
+<tr><td>Baltic East</td><td>波兰</td><td class="num">113</td><td>2025年</td></tr>
+<tr><td>Baltica 9</td><td>波兰</td><td class="num">116</td><td>2025年</td></tr>
+<tr><td>Baltyk I</td><td>波兰</td><td class="num">117</td><td>2025年</td></tr>
+<tr><td>Sørlige Nordsjø II</td><td>挪威</td><td class="num">99</td><td>2024年</td></tr>
+<tr><td>德国零补贴项目</td><td>德国</td><td class="num"><strong>负</strong></td><td>2023年开发商付费€124亿竞得8.8GW开发权</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch4-3">
+<h3>4.3 负补贴缺陷与CfD转型</h3>
+<p><strong>结论：负补贴致2025年流标，CfD回归增强可预测性但德国备选设计仍存争议。</strong></p>
+<ul>
+<li>丹麦：3GW零出价→转向CfD→2026-08-04以两向CfD重启，Vattenfall以€67–73/MWh包揽1.8GW（Nordsøen Midt 2家、Hesselø 5家竞价），20年期、2032年并网、补贴上限DKK157亿/219亿，机制修复有效。</li>
+<li>荷兰：IJmuiden Ver/Nederwiek 2GW零补贴流标→2026年拟改革。</li>
+<li>德国：2026-01-28内阁批准WindSeeG修正取消2026年拍卖并移入2027；2026-08-11草案：维持70GW（2045年）目标、2–4.8GW弹性区间、运营期35年、<strong>两阶段拍卖</strong>（第一阶段检验无补贴意愿并动态升价定付款；无人愿建时进入第二阶段、最低"适用值"竞价两向CfD，经EEG市场溢价+再融资贡献执行，CfD仅备选非默认、不含指数化），落实NZIA对2GW/年预勘区块非价格标准。RWE与Masdar于2026-09-11签MoU（谅解备忘录）拟联合竞标2027年拍卖（意向超€30亿，以中标与FID为前提，非约束承诺）。</li>
+<li>影响链：CfD回归→收益率可预测→FID意愿提升→订单更可预期；此前"先交钱再赚钱"致拍卖后延迟FID。德国"CfD备选"被BWO等批评融资确定性不足（主张默认+指数化），若维持备选，2027年后FID转化斜率仍不确定。</li>
+</ul>
+</section>
+
+<section id="ch4-4">
+<h3>4.4 FID——订单释放的终极信号</h3>
+<p><strong>结论：FID→并网2–3年，2026年密集FID决定2028–2030年并网。</strong></p>
+<ul>
+<li>2023年FID→2025–2027年并网（Borkum Riffgrund 3与He Dreiht属此列）；2025年5.4GW→2027–2028年并网。</li>
+<li>丹麦2026年8月1.8GW目标2032年投运→FID预计2026–2028年窗口；2026年密集FID→2028–2030年并网（若CfD修复顺利）。</li>
+<li>来源：WindEurope、Deutsche WindGuard H1 2026、丹麦能源署、Ørsted、Ocean Winds、GWEC。</li>
+</ul>
+<div class="timeline-v">
+<div><strong>2020：7.1GW</strong> — Dogger Bank A&amp;B 2.4、Hollandse Kust Zuid 1.5、Seagreen 1.1</div>
+<div><strong>2021：约4GW</strong></div>
+<div><strong>2022：≈0</strong> — 无大型FID，通胀+电价干预摧毁信心</div>
+<div><strong>2023：约8–10GW（估）</strong> — Hornsea 3（2.9）、Moray West（0.9）、Baltic Power（1.1）等；投资€300亿创纪录</div>
+<div><strong>2024：约3–4GW（估）</strong> — 投资€79亿</div>
+<div><strong>2025：5.4GW</strong> — 波兰4个（Baltica 2 1.5、Baltyk II+III各0.72等）+德国1个+英国1个；投资€225亿</div>
+<div><strong>2026年1月：1.6GW</strong> — Nordlicht 1&amp;2全面FID（2026-01-13，980+630MW，2026年开工、2028年投运，112台V236-15MW，EEW Rostock单桩、DEME运输安装）</div>
+<div><strong>2026H1：</strong>德国2.6GW已FID、17.5GW已授未FID；Green Volt 560MW仍处FID前（目标2026年内，截至2026-09-19未公告FID）</div>
+<div><strong>2026E重点关注：</strong>Green Volt仍待FID；Vanguard East/West原定2026年夏季FID+KKR入股交割+项目融资截至9.19未公告；He Dreiht/Borkum已转投运；丹麦1.8GW需环评/设计/许可后才进FID</div>
+</div>
+<details><summary>T10原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>年份</th><th>FID(GW)</th><th>关键项目</th></tr></thead><tbody>
+<tr><td>2020</td><td><strong>7.1</strong></td><td>Dogger Bank A&amp;B 2.4, Hollandse Kust Zuid 1.5, Seagreen 1.1</td></tr>
+<tr><td>2021</td><td>~4</td><td>—</td></tr>
+<tr><td>2022</td><td><strong>≈0</strong></td><td>无大型海风项目FID</td></tr>
+<tr><td>2023</td><td>~8–10(估)</td><td>Hornsea 3(2.9GW), Moray West(0.9), Baltic Power(1.1)等；€300亿创纪录</td></tr>
+<tr><td>2024</td><td>~3–4(估)</td><td>€79亿</td></tr>
+<tr><td>2025</td><td><strong>5.4</strong></td><td>波兰4个+德国1个+英国1个；€225亿</td></tr>
+<tr><td>H1 2025</td><td>5.6</td><td>6个项目FID，€221亿（含波兰3个首批）</td></tr>
+<tr><td>2026.1</td><td><strong>1.6</strong></td><td>Nordlicht 1&amp;2全面FID（2026-01-13）</td></tr>
+<tr><td>2026 H1</td><td>—</td><td>德国2.6GW已FID、17.5GW已授未FID；Green Volt仍待FID（截至2026-09-19未公告）</td></tr>
+<tr><td>2026E</td><td>—</td><td>Green Volt、Vanguard East/West（截至9.19未公告）、丹麦1.8GW需许可后进FID</td></tr>
+</tbody></table></div></div></details>
+</section>
+</section>
+<section id="ch5">
+<h2>五、关键产品产能与供应商分析（核心章节）</h2>
+<p class="footnote">本章以公司为粒度，逐产品拆解欧洲本土、中国及新兴供应商的现有产能、扩产计划与竞争力对比。</p>
+
+<section id="ch5-1">
+<h3>5.1 总览：供需缺口全景</h3>
+<p><strong>结论：系统性缺口成立，2026–2030年年均6.8–8.2GW vs 历史2–3GW。</strong></p>
+<ul>
+<li>2030年目标约73–80GW（当前39GW），2026–2030年新增34–41GW。</li>
+</ul>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>环节</th><th>缺口程度</th><th>缺口本质</th><th>中国机遇判断</th></tr></thead><tbody>
+<tr><td>单桩基础</td><td>⚠️⚠️⚠️ <strong>严重</strong></td><td>仅满足56%需求，&gt;12m法兰独供</td><td>⭐⭐⭐⭐⭐ 已验证主赛道</td></tr>
+<tr><td>海底电缆</td><td>⚠️⚠️⚠️ <strong>严重</strong></td><td>排产至2029+，HVDC极紧缺</td><td>⭐⭐⭐⭐ 东方电缆突破中</td></tr>
+<tr><td>安装船(WTIV)</td><td>⚠️⚠️⚠️ <strong>严重</strong></td><td>2025起短缺，2030缺口~15GW/年</td><td>⭐⭐⭐ 中国船队+大金自建</td></tr>
+<tr><td>大兆瓦风机</td><td>⚠️⚠️ <strong>中等</strong></td><td>欧洲15MW级，扩产谨慎</td><td>⭐⭐ NZIA壁垒极高</td></tr>
+<tr><td>塔筒</td><td>⚠️⚠️ <strong>中等</strong></td><td>欧洲约60%自给，大型化缺口</td><td>⭐⭐⭐ 大金/天顺供应</td></tr>
+<tr><td>叶片</td><td>⚠️⚠️ <strong>中等</strong></td><td>选址建厂后逐步缓解</td><td>⭐⭐ 运输成本制约出口</td></tr>
+</tbody></table></div>
+<p class="footnote">T11归宿：原表保留（驾驶舱矩阵复用其结论）。</p>
+</section>
+
+<section id="ch5-2">
+<h3>5.2 单桩/导管架基础制造商</h3>
+<p><strong>结论：单桩占基础约80%、占风机成本约15%，直径向15m+演进。</strong></p>
+<ul>
+<li>风机15MW→20MW+，单桩直径8m→11m→15m+，重量2000–3500吨；欧洲现有产能仅满足2030年目标56%（Implement Consulting, 2025）。</li>
+</ul>
+
+<div class="company-card" id="ch5-2-1"><header><span class="nm">Sif Group（荷兰）</span><span class="code">SIFG · MV2全球最大单桩厂之一</span><span class="badge good">运行稳定</span></header><div class="body">
+<p><strong>结论：技术标杆已达计划产出，瓶颈转为FID与排期。</strong></p>
+<ul>
+<li>工厂：Maasvlakte 2（鹿特丹港）+ Roermond（过渡段）；设计200根参考单桩/年（2500吨/根，约500 <dfn class="term" data-term="kton/kt" title="千吨，Sif已签225+谈判197口径">kton</dfn>/年）。</li>
+<li>产量：2025年176 kton（97根单桩+101根过渡段，约1153MW）；H1 2026达141 kton（101根单桩+14个过渡段主钢材，约1405MW；H1 2025为80 kton、44根+34个）。</li>
+<li>订单簿（2026-07-31）：已签225 kton；<dfn class="term" data-term="独家谈判" title="优先谈判量，不等于FID或正式订单">独家谈判</dfn>（含海上升压站）197 kton；合计422 kton。<strong>独家谈判不等于FID或正式订单；190kt截至2026-09-19无转正式订单公告。</strong></li>
+<li>2026年预期：新厂达每周4–5根计划产出；为避停产再爬坡成本，将约€4000万调整后EBITDA及对应收入由2026年移至2027年，全年指引由至少€1.35亿下调至€0.95亿。</li>
+<li>节奏：MV2 2023年开建→2024基建完成→2025年5月开幕→爬坡延后6–9个月→2026H1达计划产出；瓶颈从爬坡转为FID与排期。</li>
+<li>尺寸：直径12m+、长120m、重2500t+；自有640m深水码头24/7运营。</li>
+<li>客户：Empire Wind 1（美国）完成；Ecowende完成；Bałtyk 2&amp;3于2026-08-20最终发运（100根+100个过渡段）；OranjeWind（53根无过渡段）于2026-09-01首批发运；East Anglia按计划生产。</li>
+<li>财务：Euronext上市；截至2026-06-30现金€710万、未动用循环信贷€5000万；偿债率35.6%、杠杆1.98倍，符合契约；正与大股东和贷款方讨论流动性方案。</li>
+<li><strong>风险：公司明确指向2027–2028年到FID项目较少、单桩生产需求偏低；190kt目标窗口2027年5–8月尚待FID；亦自述受中国进口单桩"激进"竞争影响。</strong></li>
+</ul>
+<p class="footnote">核心评价（修订）：原"未满产爬坡"判断不再成立；2030目标下大型单桩长期有效产能仍紧，但FID延后时短期现空档。大金相对优势是成熟产能与交付，但不能假设2027–2028年普遍紧缺；订单弹性依赖已签合同、业主认可和2028–2029年前置布局。</p>
+</div></div>
+
+<div class="company-card" id="ch5-2-2"><header><span class="nm">EEW Group（德国）</span><span class="code">Rostock · 交付总量第一</span><span class="badge mid">规格待升级</span></header><div class="body">
+<p><strong>结论：交付第一但现有规格过时、新产能审批困难。</strong></p>
+<ul>
+<li>总部Erndtebrück；核心厂EEW SPC Rostock（2008年起运营）；当前&gt;100根/年（250 kton），直径最大12m。</li>
+<li>利用率满至2027年中（Nordlicht 1&amp;2订单112根/141 kton）；Rostock约1000人（+间接10000人）。</li>
+<li>扩产：Rostock港新增第二条线（直径≥15m <dfn class="term" data-term="XXL/XXXL单桩" title="超大直径（≥12m/15m+），法兰为瓶颈">XXL</dfn>），新增50–70根/年；建设至2028年、目标2030年前投产。</li>
+<li>用地：新增约40公顷（含14公顷百年森林Swienskuhlen，环保争议）；2026年3月市议会通过前期审批，BUND与绿党反对，正式许可复杂。</li>
+<li>所有权：2024.8住友商事注资参与运营，新实体2025.1成立；另有美国/韩国/马来西亚工厂。</li>
+<li>客户：Vattenfall（Nordlicht 112根）、RWE（Sofia 100根）、Ørsted（Hornsea 3部分），历史&gt;2200根。</li>
+<li><strong>最大风险：12m上限2027年后面临淘汰（业主已要求15m+）；扩产审批周期不确定。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-2-3"><header><span class="nm">Steelwind Nordenham（德国）</span><span class="code">Dillinger子公司 · 垂直整合</span><span class="badge good">运营中</span></header><div class="body">
+<p><strong>结论：垂直整合是独特优势，但产能偏小。</strong></p>
+<ul>
+<li>Nordenham（Weser河口直通北海），2014年投产；120–150根/年；直径11.5m（计划2027年扩至更大）、长120m、重2800t。</li>
+<li>钢板100%来自母公司Dillinger（欧洲重钢板龙头，独立于中国供应链）；员工约275人。</li>
+<li>2024.10与RWE产能预留：2027年起24个月200根（320 kton钢），可选延12个月+100根；Dillinger 2021年批准€5650万扩产。</li>
+<li>客户：RWE框架、EnBW（He Dreiht 64根）、Parkwind（Arcadis Ost 1）等。</li>
+<li><strong>限制：11.5m上限需升级；120–150根/年远不能满足2030年年均约400–500根需求。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-2-4"><header><span class="nm">Haizea Wind Group（西班牙）</span><span class="code">Bilbao · 新贵满产</span><span class="badge good">满产</span></header><div class="body">
+<p><strong>结论：€2.5亿扩产跻身一线，"能交付"稀缺价值的受益者。</strong></p>
+<ul>
+<li>总部巴斯克；Bilbao厂（毕尔巴鄂港，自称"欧洲XXL领导工厂"）2024年完成€2.5亿扩产（3→6车间），已满负荷；厂区约21万㎡，2025.6再获批12.87万㎡→约34万㎡；累计投资&gt;€3亿。</li>
+<li>集团2024年营收€3.71亿（Bilbao+Breizh占63%）；2025年&gt;€4亿，5年CAGR 25%+；员工约1500人。</li>
+<li>最大直径适配&gt;15MW乃至&gt;20MW风机；另有Breizh（法国海上塔筒）等厂。</li>
+<li>在手：East Anglia 3→Hornsea 3（第一批6根2026.2运抵英国）→Norfolk Vanguard West（2026.6开始生产）；欧洲唯一同时在产3大XXL合同。</li>
+<li><strong>风险：产能已满，港口土地限制进一步扩张。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-2-5"><header><span class="nm">SeAH Wind（韩国/英国）——反面教材</span><span class="code">Teesworks · 零交付</span><span class="badge bad">危</span></header><div class="body">
+<p><strong>结论：£9亿零交付，说明"建厂≠有产能"。</strong></p>
+<ul>
+<li>母公司SeAH Steel（韩国）；Teesworks号称"全球最大XXXL单桩厂"；投资£4.5亿→£9亿；厂高40m×长810m×宽200m，90公顷。</li>
+<li>设计直径15.5m、长120m、重3500t；2025年2月英王开幕，7月商业生产；截至2025年底0根客户订单交付。</li>
+<li>合同损失：Hornsea 3（2026年2月Ørsted终止，"工厂就绪度"不达标）→Norfolk Vanguard West（2026年4月RWE取消）；仅剩Norfolk Vanguard East。</li>
+<li>人员153→约81人（-72），CEO更换（Chung Ryu接任）；2025年8–10月罢工威胁；到2026年底才预期"可持续现金流"。</li>
+<li><strong>现状：在"调试+爬坡"挣扎，宣称2027年后管道强劲但无兑现记录。</strong></li>
+</ul>
+</div></div>
+
+<h4>各公司产能对比总表</h4>
+<div class="chart"><p class="chart-title">单桩年产能（根/年，T17可视化）</p><div class="echart" id="ec-07" role="img" aria-label="单桩年产能对比，单位根/年"></div><p class="footnote">单位：根/年。Sif ~200（2026H1达计划产出，2027–2028排期风险）；EEW &gt;100（+50~70待2030年前）；Steelwind 120–150；Haizea ~100–120（估，满产）；SeAH 0（实际）；大金200+（估，交付中）。</p></div>
+<details><summary>T17原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>公司</th><th>国别</th><th class="num">当前产能(根/年)</th><th>最大直径</th><th>扩产后产能</th><th>扩产时间</th><th>状态</th></tr></thead><tbody>
+<tr><td><strong>Sif</strong></td><td>荷兰</td><td class="num">~200(2500t参考)</td><td>&gt;12m</td><td>~200</td><td>已于2026H1达计划产出</td><td>稳定运行；2027–2028需求/排期风险</td></tr>
+<tr><td><strong>EEW</strong></td><td>德国</td><td class="num">&gt;100</td><td>12m</td><td>+50~70</td><td><strong>2030年前</strong></td><td>审批中</td></tr>
+<tr><td><strong>Steelwind</strong></td><td>德国</td><td class="num">120–150</td><td>11.5m</td><td>升级中</td><td>2027</td><td>运营中</td></tr>
+<tr><td><strong>Haizea</strong></td><td>西班牙</td><td class="num">~100–120(估)</td><td>&gt;15m</td><td>满负荷</td><td>已完成</td><td><strong>满产</strong></td></tr>
+<tr><td><strong>SeAH Wind</strong></td><td>韩国/UK</td><td class="num">0(实际)</td><td>15.5m</td><td>未知</td><td>不确定</td><td><strong>危</strong></td></tr>
+<tr><td><strong>大金重工</strong></td><td>中国</td><td class="num"><strong>200+(估)</strong></td><td>&gt;15m</td><td>曹妃甸爬坡</td><td>2025–2026</td><td><strong>交付中</strong></td></tr>
+<tr><td><strong>Bladt</strong></td><td>丹麦</td><td>小量(导管架为主)</td><td>—</td><td>—</td><td>—</td><td>运营中</td></tr>
+<tr><td><strong>Navantia</strong></td><td>西班牙</td><td>单桩+导管架</td><td>—</td><td>—</td><td>—</td><td>运营中</td></tr>
+</tbody></table></div><p class="footnote">关键结论（修订）：本土5家合计约550–650根/年（含SeAH设计）；SeAH实际为零、EEW滞后压低有效供给，但Sif已达计划产出。产能缺口≠当期紧缺：FID延后时仍可阶段性闲置。</p></div></details>
+</section>
+</section>
+<section id="ch5b">
+<h2>五（续）· 塔筒与海缆</h2>
+
+<section id="ch5-3">
+<h3>5.3 塔筒制造商</h3>
+
+<div class="company-card" id="ch5-3-1"><header><span class="nm">Welcon（丹麦）</span><span class="code">Give · 丹麦唯一海上塔筒商</span><span class="badge good">核心供应</span></header><div class="body">
+<p><strong>结论：SGRE/Vestas核心供应商，随大型化持续投入。</strong></p>
+<ul>
+<li>多年大额投入应对8MW→11MW→14MW塔筒，利润2025年翻4倍。</li>
+<li>在手：Nordseecluster A（德国，44根，2025.8中标）、Thor(DK)、历史上HKZ 78根等。</li>
+<li>优势：本土制造+长期SGRE合作；<strong>限制：欧洲塔筒整体面临中国低价竞争压力。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-3-2"><header><span class="nm">GRI Renewable Industries（西班牙）</span><span class="code">Sevilla+Gdansk · &gt;1000段/年</span><span class="badge good">扩张中</span></header><div class="body">
+<p><strong>结论：南欧首个海上塔筒厂+波兰新厂，海运便利。</strong></p>
+<ul>
+<li>Sevilla（2017年投产）+ Gdansk（2025年投产，直通波罗的海）；两厂合计&gt;1000段/年（约3–5GW等效）。</li>
+<li>最大直径11m、单段500t；全球12个陆上厂，累计&gt;60000段。</li>
+<li><strong>风险：2025年波兰厂刚投产，爬坡尚需时间。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-3-3"><header><span class="nm">Windar Renovables（西班牙）</span><span class="code">布局最广之一</span><span class="badge info">扩产中</span></header><div class="body">
+<p><strong>结论：全球化布局叠加波兰扩产。</strong></p>
+<ul>
+<li>西班牙+印度+巴西+墨西哥+波兰；Legnica第二波兰厂（2026年Q4投产，年产200根陆上塔筒，&gt;1GW等效，主供波兰/德国）。</li>
+<li>海上亦造基础和塔筒，Szczecin港特许建海上塔筒厂（约450岗位）。</li>
+</ul>
+</div></div>
+
+<h4>塔筒公司对比</h4>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>公司</th><th>国别</th><th>海上塔筒产能(估)</th><th>扩产</th><th>中国竞争压力</th></tr></thead><tbody>
+<tr><td>Welcon</td><td>丹麦</td><td>~200–300段/年</td><td>持续</td><td>高</td></tr>
+<tr><td>GRI</td><td>西班牙</td><td>&gt;1000段/年</td><td>Gdansk 2025投产</td><td>中等</td></tr>
+<tr><td>Windar</td><td>西班牙</td><td>~300–500段/年</td><td>Legnica 2026Q4</td><td>中等</td></tr>
+<tr><td><strong>大金重工</strong></td><td>中国</td><td>塔筒+单桩均可</td><td>曹妃甸</td><td>成本优势</td></tr>
+<tr><td><strong>天顺风能</strong></td><td>中国</td><td>推进欧洲认证中</td><td>—</td><td>认证壁垒</td></tr>
+</tbody></table></div>
+<p class="footnote">T18/T19/T20公司卡 + T21原表保留归宿完毕。</p>
+</section>
+
+<section id="ch5-4">
+<h3>5.4 海底电缆制造商</h3>
+<p><strong>结论：Prysmian+Nexans+NKT约占全球60%产能，HVDC仅三家+少数亚洲可产。</strong></p>
+<ul>
+<li>来源：Mordor Intelligence, 2025。</li>
+</ul>
+
+<div class="company-card" id="ch5-4-1"><header><span class="nm">NKT（丹麦/德国/瑞典）</span><span class="code">Karlskrona · 积压€130亿</span><span class="badge bad">缺口度量器</span></header><div class="body">
+<p><strong>结论：积压+2027年新投产+单季可寻址€100亿=缺口至少到2029年。</strong></p>
+<ul>
+<li>总部Brøndby；Karlskrona（瑞典，在建世界最大高压海上电缆基地）；另有Cologne（高压）、Asnaes/Malmö（中压）、Esposende（中压）。</li>
+<li>HV积压€130亿（Q2 2026末，标准金属价€116亿），较Q1 €135亿因执行消化小幅回落；TenneT框架5个项目（超€25亿）已获授但未计入积压。</li>
+<li>组成约70%互联+约30%海风，&gt;95%客户为欧洲<dfn class="term" data-term="TSO" title="输电系统运营商，如TenneT/National Grid/SSEN">TSO</dfn>；执行至2029年后；Q2可寻址新授约€100亿。</li>
+<li>扩产€10亿（2023–2026）：第三挤出塔NKT Crown（200m，北欧第二高）、铺缆船NKT Eleonora、Cologne扩产；新产能2027年投产。</li>
+<li>EU NZIA首个"欧洲净零战略项目"（2025.4）；Q1 2026与SSEN签署两条苏格兰<dfn class="term" data-term="HVDC" title="高压直流，最紧缺海缆环节">HVDC</dfn>线（约€20亿），当季可寻址市场约€70亿。</li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-4-2"><header><span class="nm">Prysmian（意大利）</span><span class="code">全球最大电缆商 · 积压&gt;€170亿</span><span class="badge bad">紧缺</span></header><div class="body">
+<p><strong>结论：积压可见度至2028–2029年，HVDC 525kV能力。</strong></p>
+<ul>
+<li>订单&gt;€170亿（含EGL4），约€20亿已中标未入积压；可见度2028–2029年。</li>
+<li>扩产欧洲（意/法）+美国（South Carolina，HVDC 2028投产）；Leonardo da Vinci铺缆船（全球最大之一，工期-25%）。</li>
+<li>2025年代表合同TenneT LanWin1（2GW HVDC，€12亿，525kV）；FY2025传输收入约€30亿（EMEA 88%，HVDC 14%）。</li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-4-3"><header><span class="nm">Nexans（法国/挪威）</span><span class="code">Halden旗舰 · 积压€79亿</span><span class="badge mid">选择性增长</span></header><div class="body">
+<p><strong>结论：聚焦高附加值，可见度至2028年。</strong></p>
+<ul>
+<li>Halden（挪威）+Charleroi（比利时）；PWR-Transmission积压€79亿（Q1 2026，含Great Sea Interconnector €12亿）。</li>
+<li>Halden €3亿扩产（2024.6完成，新增525kV 600km）；Charleroi扩产中；新铺缆船Electra 2026年中运营。</li>
+<li>战略2025–2028年"选择性增长"；关键项目Tyrrhenian Link（500kV，2150m世界最深HVDC纪录）、Empire Wind 2；FY2026指引调整后EBITDA €7.3–8.1亿。</li>
+</ul>
+</div></div>
+
+<h4>中国供应商</h4>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>公司</th><th>地位</th><th>数据</th></tr></thead><tbody>
+<tr><td><strong>东方电缆</strong></td><td>中国龙头出海先锋</td><td>2024年海外收入7.33亿(+480%)；荷兰/英国子公司；欧洲认证推进中</td></tr>
+<tr><td><strong>中天科技</strong></td><td>中国第二大</td><td>HVDC制造能力但尚未进欧洲大型项目；缺TenneT等TSO电网码认证</td></tr>
+<tr><td><strong>亨通光电</strong></td><td>中国第三大</td><td>早期阶段</td></tr>
+<tr><td><strong>核心壁垒</strong></td><td>认证</td><td>TSO电网码认证需数年+项目经验；融资方对非欧美供应商风险溢价</td></tr>
+</tbody></table></div>
+<p class="footnote">T25归宿：原表保留，认证行标黄。</p>
+
+<h4>海缆公司对比总表</h4>
+<div class="chart"><p class="chart-title">HV积压（€，T26可视化）</p><div class="echart" id="ec-08" role="img" aria-label="海缆HV积压对比，单位€亿"></div><p class="footnote">单位：€。Prysmian &gt;170亿 / NKT 135亿（Q1口径；Q2末130亿，TenneT框架超25亿未计入则超155亿）/ Nexans 79亿 / 东方&lt;5亿（估）/ 中天&lt;3亿（估）。新产能：美国2028/瑞典2027/挪威2024+比利时扩产中。</p></div>
+<details><summary>T26原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>公司</th><th>国别</th><th class="num">HV积压(€)</th><th>新产能投产</th><th>HVDC能力</th><th>积压可见度</th></tr></thead><tbody>
+<tr><td><strong>Prysmian</strong></td><td>意大利</td><td class="num">&gt;€170亿</td><td>美国2028</td><td>✅ 525kV</td><td>2029</td></tr>
+<tr><td><strong>NKT</strong></td><td>丹麦</td><td class="num">€135亿</td><td>瑞典2027</td><td>✅ 640kV</td><td>2029+</td></tr>
+<tr><td><strong>Nexans</strong></td><td>法国/挪威</td><td class="num">€79亿</td><td>挪威2024+Belgium</td><td>✅ 500kV(最深纪录)</td><td>2028</td></tr>
+<tr><td><strong>东方电缆</strong></td><td>中国</td><td class="num">&lt;€5亿(估)</td><td>—</td><td>推进认证中</td><td>认证后开放</td></tr>
+<tr><td><strong>中天科技</strong></td><td>中国</td><td class="num">&lt;€3亿(估)</td><td>—</td><td>技术可行</td><td>认证后开放</td></tr>
+</tbody></table></div><p class="footnote">关键结论：三大合计&gt;€370亿，交货36–48个月；2027–2028年新投产消化至2029–2030年。这是东方电缆最大时间窗口，但TSO认证是门槛；HVDC新厂3–5年、€3–5亿，当下建厂仅服务2031年后。</p></div></details>
+</section>
+</section>
+<section id="ch5c">
+<h2>五（续）· 整机、安装船与赛道判断</h2>
+
+<section id="ch5-5">
+<h3>5.5 风电整机商(OEM)产能</h3>
+<p><strong>结论：Vestas-SGRE-GE三足鼎立，中国整机短期难直接出口。</strong></p>
+<ul>
+<li>NZIA壁垒下中国整机短期难直接出口，需本地化建厂或JV。</li>
+</ul>
+
+<div class="company-card" id="ch5-5-1"><header><span class="nm">Vestas（丹麦）</span><span class="code">V236-15.0MW · 全球装机第一</span><span class="badge good">集群布局</span></header><div class="body">
+<p><strong>结论：波兰Szczecin机舱+叶片集群化布局。</strong></p>
+<ul>
+<li>旗舰V236-15.0MW；机舱Szczecin（波兰，2025投产，约700岗位）+Lindø（丹麦）；叶片Szczecin（2026年投产，1000岗位，V236-115m）。</li>
+<li>首单：Baltic Power（波兰1.2GW，76台，2025.11首批波兰产机舱安装）；核心订单Baltic Power、Nordseecluster 1.6GW（德国RWE）、多个AR7项目；全球装机&gt;173GW。</li>
+<li><strong>财务压力：2023–2024年通胀致利润率承压，被迫削减非核心产能。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-5-2"><header><span class="nm">Siemens Gamesa（西班牙/德国/丹麦）</span><span class="code">SG14-236 · 海上累计第一</span><span class="badge mid">扩产谨慎</span></header><div class="body">
+<p><strong>结论：制造网络最完整，但扩张极端谨慎。</strong></p>
+<ul>
+<li>旗舰SG 14-236 DD（14.7MW，可升15MW）；机舱Cuxhaven（德国，约250台/年，600人）；叶片Hull（英国1300人，108m/B108）、Aalborg（丹麦）、Le Havre（法国，€2亿扩产B115/115m，2026完成）。</li>
+<li><strong>2025.10搁置Esbjerg（丹麦）新机舱厂</strong>（"市场条件需更多清晰度"），Cuxhaven仍为唯一海风机舱厂。</li>
+<li>订单：Moray West（882MW）、Thor（1.1GW）、法国2.5GW管线；Le Havre €2亿投资对应16GW+确认订单，2026年逐步完成；全球海上累计&gt;11GW。</li>
+<li><strong>风险：母公司Siemens Energy财务压力；Esbjerg搁置=扩张谨慎。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-5-3"><header><span class="nm">GE Vernova（美国）</span><span class="code">Haliade-X 12–14MW</span><span class="badge info">法国布局</span></header><div class="body">
+<p><strong>结论：欧洲份额较小，法国有战略布局。</strong></p>
+<ul>
+<li>产能Saint-Nazaire+Cherbourg（法国）、Teesside叶片（英国）；关键订单Dogger Bank A/B/C（英国3.6GW，全球最大之一）。</li>
+</ul>
+</div></div>
+
+<h4>中国整机商 vs 欧洲整机商</h4>
+<div class="compare-dual">
+<div class="compare-col"><h4>欧洲（Vestas/SGRE/GE）</h4><ul class="tight"><li>主力14–15MW</li><li>认证DNV/GL完备</li><li>20年+业绩记录</li><li>NZIA天然合规</li><li>现有产能扩张缓慢</li></ul></div>
+<div class="compare-col"><h4>中国（金风/明阳/电气等）</h4><ul class="tight"><li>16–20MW已量产，26MW样机</li><li>价格低30–50%（业界估算）</li><li>认证2–3年，多数刚开始</li><li>欧洲零业绩</li><li><strong>NZIA：≥75%风机禁中国</strong></li><li>可行路径：本地化建厂或JV</li></ul></div>
+</div>
+<details><summary>T30原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>维度</th><th>欧洲(Vestas/SGRE/GE)</th><th>中国(金风/明阳/电气等)</th></tr></thead><tbody>
+<tr><td><strong>主力机型</strong></td><td>14–15MW</td><td>16–20MW(已量产), 26MW(样机)</td></tr>
+<tr><td><strong>价格竞争力</strong></td><td>基准</td><td>低30–50%(业界估算)</td></tr>
+<tr><td><strong>认证</strong></td><td>DNV/GL完备</td><td>认证周期2–3年，多数刚开始</td></tr>
+<tr><td><strong>业主信任</strong></td><td>20年+业绩记录</td><td>欧洲零业绩</td></tr>
+<tr><td><strong>NZIA合规</strong></td><td>天然合规</td><td><strong>≥75%风机不能源自中国</strong></td></tr>
+<tr><td><strong>可行路径</strong></td><td>现有产能扩张缓慢</td><td>本地化建厂(明阳苏格兰模式)或JV(金风)</td></tr>
+</tbody></table></div><p class="footnote">关键结论：SGRE搁置Esbjerg、Vestas波兰厂刚投产（2025年），非无需求而是产线投资大（€3–5亿）、回收长、避险；15MW以上有效缺口形成，强项在中国制造，关键在NZIA。</p></div></details>
+</section>
+
+<section id="ch5-6">
+<h3>5.6 风电安装船(WTIV)与铺缆船</h3>
+<p><strong>结论：第三代→第四代切换，2027–2030年适配&gt;15MW的船极有限。</strong></p>
+<ul>
+<li>来源：H-BLIX 2023；2030年全球WTIV短缺或损失14.9GW/年安装能力（不含中国）。</li>
+<li>铺缆船（CIV）更紧：全球仅约12艘能处理525kV HVDC（Mordor 2025），日租金2023年$18万→2025年$29万；Ørsted Walney Extension因船短缺延迟6周、损失$1800万。</li>
+</ul>
+
+<div class="company-card" id="ch5-6-1"><header><span class="nm">Cadeler（丹麦/挪威）</span><span class="code">全球最大纯海风安装船队</span><span class="badge good">龙头</span></header><div class="body">
+<p><strong>结论：11艘在运营，积压近€25亿，H1利用率回升至66%。</strong></p>
+<ul>
+<li>现役11艘：A级×2（Wind Ally+Wind Ace，Ace于2026-08-25前后交付）、P级×2、M级×2、O级×2+Scylla/Zaratan/Keeper；在执行East Anglia THREE（95台，2026年初至年底）、Inch Cape（72台V236-15MW，2026年Q4起约249天）、Hornsea 3基础（2026年起）、Aflandshage（26台11MW，2026年起）。</li>
+<li>待交付Wind Apex（2027H1）及T级2艘（2030年）→12–14艘；起重A级&gt;3300t、P/M级&gt;2600t，适配20MW+。</li>
+<li>积压€27亿（Q1 2026）→近€25亿（2026-08-25），82%来自已FID客户；H1利用率47.6%（Q1单季，新船整合）→66%（H1全期）。</li>
+<li>H1营收€4.08亿（+€1.09亿，剔除终止费后较2025H1 €1.88亿翻倍+），EBITDA €2.08亿（亦翻倍），利润€0.88亿；2026年EV/EBITDA指引€8.54–9.44亿/€4.2–5.1亿（维持，Menck收购后待更新）。</li>
+<li><strong>最新进展：2026.1签PSA（欧洲大型基础安装，2028H1起，待客户FID）；2026-08-11收购Menck（打桩设备）补强基础安装。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-6-2"><header><span class="nm">DEME（比利时）</span><span class="code">疏浚+海工巨头 · Orion 5000t</span><span class="badge good">在役</span></header><div class="body">
+<p><strong>结论：旗舰全在役，海工能源H1营收€12.07亿。</strong></p>
+<ul>
+<li>船队8+艘；Orion（5000t，全球在运营最大）、Norse Wind/Norse Energi（最新XTIV，3200t，混动+4.2MWh电池）；Norse Energi 2026年5月命名、6月投运。</li>
+<li>H1海工营收€12.07亿（+6%）、EBITDA €3.22亿（利润率26.7%，上年同期31.4%含一次性终止费），在手€37亿（2025H1 €41亿因强转化回落），利用率70%。</li>
+<li>核心项目Windanker（Iberdrola，德国波罗的海，2026.6起）、Hornsea 3（2026年Q3起）、美国Vineyard Wind/CVOW等。</li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-6-3"><header><span class="nm">Jan De Nul（比利时）</span><span class="code">Voltaire最高自升式</span><span class="badge good">在役</span></header><div class="body">
+<ul>
+<li>Voltaire（全球最高自升式）、Les Alizés（重吊）；多艘基础/电缆安装船（FIV/CIV）；<strong>优势：Voltaire吊高+吊重适配下一代大兆瓦。</strong></li>
+</ul>
+</div></div>
+
+<div class="company-card" id="ch5-6-4"><header><span class="nm">Van Oord（荷兰）</span><span class="code">EPC一体化 · Boreas新一代</span><span class="badge info">在建新船</span></header><div class="body">
+<ul>
+<li>EPC一体化（疏浚+基础+电缆+风机+港口）；船队Aeolus、MPI Resolution/Adventure、Boreas；<strong>新订单：烟台中集来福士建造新WTIV，可处理20MW风机。</strong></li>
+</ul>
+</div></div>
+
+<h4>安装船供需缺口总表</h4>
+<div class="chart"><p class="chart-title">第四代WTIV数量（T35可视化）</p><div class="echart" id="ec-09" role="img" aria-label="第四代WTIV数量对比，单位艘"></div><p class="footnote">Cadeler 7（A/P/M级，10现役+2在建）/ DEME 3 / Jan De Nul 2 / Van Oord 1+1在建 / Fred Olsen 0（第三代1600t）/ Havfram多艘新造（2025–2027交付）。</p></div>
+<details><summary>T35原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>船东</th><th>第四代WTIV数量</th><th>最大起重能力</th><th>状态</th></tr></thead><tbody>
+<tr><td>Cadeler</td><td>7(A/P/M-class)</td><td>&gt;3300t</td><td>10现役+2在建</td></tr>
+<tr><td>DEME</td><td>3(Orion+Norse×2)</td><td>5000t</td><td>全部在役</td></tr>
+<tr><td>Jan De Nul</td><td>2(Voltaire+Les Alizés)</td><td>3200t</td><td>在役</td></tr>
+<tr><td>Van Oord</td><td>1(Boreas)+1(在建)</td><td>—</td><td>中集来福士建造</td></tr>
+<tr><td>Fred Olsen</td><td>0(第三代1600t)</td><td>1600t</td><td>在役</td></tr>
+<tr><td>Havfram</td><td>多艘新造船</td><td>—</td><td>2025–2027交付</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch5-7">
+<h3>5.7 综合判断：中国在哪几个赛道最有戏</h3>
+<div class="tier-cards">
+<div class="tier-card"><h4>单桩基础 ⭐⭐⭐/⭐⭐⭐⭐</h4><p>缺口：56%自给，大直径进口依赖；2027–2028受FID制约。壁垒低。</p></div>
+<div class="tier-card"><h4>塔筒 ⭐⭐⭐⭐</h4><p>缺口：60%自给，大型化缺口；成本-30%+。壁垒低。</p></div>
+<div class="tier-card"><h4>海缆 ⭐⭐⭐</h4><p>缺口：排产至2029+；认证是壁垒。壁垒中。</p></div>
+<div class="tier-card"><h4>安装船 ⭐⭐⭐</h4><p>缺口：第四代紧缺；中国船队+大金自建。壁垒中–高。</p></div>
+<div class="tier-card"><h4>铸件/法兰 ⭐⭐⭐⭐</h4><p>缺口：Euskal独家大法兰；中国供全球70%+。壁垒低。</p></div>
+<div class="tier-card"><h4>大兆瓦整机 ⭐</h4><p>欧洲扩产谨慎，中国16–20MW；≥75%禁中国。壁垒最高。</p></div>
+</div>
+<details><summary>T36原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>品类</th><th>欧洲产能缺口</th><th>中国产能优势</th><th>NZIA/IAA壁垒</th><th>确定性评级</th></tr></thead><tbody>
+<tr><td><strong>单桩基础</strong></td><td>2030目标下56%自给率，大直径/大法兰进口依赖；2027–2028年受FID节拍制约</td><td>全球第一梯队(大金)，成熟交付</td><td><strong>低</strong>（未列为高度依赖）</td><td>⭐⭐⭐（短期）/⭐⭐⭐⭐（长期）</td></tr>
+<tr><td><strong>塔筒</strong></td><td>60%自给，大型化缺口</td><td>成本-30%+</td><td><strong>低</strong></td><td>⭐⭐⭐⭐</td></tr>
+<tr><td><strong>海缆</strong></td><td>排产至2029+</td><td>技术可行(东方/中天)，认证是壁垒</td><td><strong>中</strong></td><td>⭐⭐⭐</td></tr>
+<tr><td><strong>安装船</strong></td><td>第四代WTIV紧缺</td><td>全球最大施工船队，大金自建运输船</td><td><strong>中–高</strong></td><td>⭐⭐⭐</td></tr>
+<tr><td><strong>铸件/法兰</strong></td><td>Euskal独家大法兰</td><td>中国供应全球70%+铸件</td><td><strong>低</strong></td><td>⭐⭐⭐⭐</td></tr>
+<tr><td><strong>大兆瓦整机</strong></td><td>欧洲OEM谨慎扩产</td><td>中国已量产16–20MW</td><td><strong>最高</strong>（≥75%非中国、传动链禁中国）</td><td>⭐</td></tr>
+</tbody></table></div></div></details>
+</section>
+</section>
+<section id="ch6">
+<h2>六、中国企业出海：参与路径与获利追踪</h2>
+
+<section id="ch6-1">
+<h3>6.1 核心玩家图谱</h3>
+<p><strong>结论：大金批量交付领先，东方突破中，天顺阵痛，金风早期，明阳搁置。</strong></p>
+<div class="tier-cards">
+<div class="tier-card"><h4>大金重工 ⭐⭐⭐⭐⭐</h4><p>单桩/导管架/塔筒/过渡段，批量交付。H1出口26.75亿（占比82.25%）。DAP+船队+4母港。</p></div>
+<div class="tier-card"><h4>东方电缆 ⭐⭐⭐⭐</h4><p>海缆，国内订单消化期。H1营收58.0亿，在手179.34亿。荷兰/英国子公司+认证。</p></div>
+<div class="tier-card"><h4>天顺风能 ⭐⭐⭐</h4><p>塔筒/基础，转型阵痛。H1归母-75%，海外3.4%。阳江+德国双基地。</p></div>
+<div class="tier-card"><h4>金风科技 ⭐⭐</h4><p>整机早期尝试，Luxcara被替代。等待合同落地。</p></div>
+<div class="tier-card"><h4>明阳智能 ⭐</h4><p>已公告但实质搁置。苏格兰15亿英镑工厂遭不支持声明。</p></div>
+<div class="tier-card"><h4>海力风电 ⭐</h4><p>验厂阶段，尚未批量出口。有望启动欧洲业主验厂。</p></div>
+</div>
+<details><summary>T37原表折叠备查（含截至2026-09-19状态）</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>公司</th><th>产品</th><th>出海阶段</th><th>最新经营/海外数据（截至2026-09-19）</th><th>策略</th></tr></thead><tbody>
+<tr><td><strong>大金重工</strong> (002487)</td><td>单桩/导管架/塔筒/过渡段</td><td>⭐⭐⭐⭐⭐ 批量交付</td><td>H1出口26.75亿(+19.3%)占比82.25%贡献近九成毛利，毛利率39.36%新高；交付近12万吨。H股募资56.6亿。海外海工约70亿+、船舶24艘约120亿。截至9.19未检索到9月新签欧洲订单公告；8月Nordseecluster A阶段45根完成运输逐步确收、TWO轮特种运输船9月首个任务</td><td>DAP交付，自有船队+4处欧洲母港</td></tr>
+<tr><td><strong>东方电缆</strong> (603606)</td><td>海底电缆/海光缆</td><td>⭐⭐⭐⭐ 国内订单消化期</td><td>H1营收58.0亿(+30.85%)归母5.65亿(+19.41%)海缆23.65亿(+20.9%)在手179.34亿。截至9.19未检索到9月海外中标专项公告；6月11日52.31亿中标明细均为国内</td><td>荷兰/英国子公司，认证推进，存货51.21亿待确收</td></tr>
+<tr><td><strong>天顺风能</strong> (002531)</td><td>塔筒/海工基础</td><td>⭐⭐⭐ 转型阵痛期</td><td>H1营收21.89亿(-3.08%)归母5380万(-75.08%)海工-3.94%海外3.4%德国基地10月前无法投产</td><td>阳江+德国双基地，认证+验厂</td></tr>
+<tr><td><strong>金风科技</strong> (002202)</td><td>整机</td><td>⭐⭐ 早期尝试</td><td>Luxcara项目被替代</td><td>已被认证，等待合同落地</td></tr>
+<tr><td><strong>明阳智能</strong> (601615)</td><td>整机</td><td>⭐ 已公告但实质搁置</td><td>苏格兰15亿英镑工厂遭不支持声明（2026-03-26），商务部04-14反对，截至03-27未投入资金；截至9.19无新进展，维持实质搁置判断</td><td>本地化建厂受阻，全球化仍推进</td></tr>
+<tr><td><strong>海力风电</strong> (301155)</td><td>塔筒/基础</td><td>⭐ 验厂阶段</td><td>尚未批量出口</td><td>有望启动欧洲业主验厂</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch6-2">
+<h3>6.2 大金重工——出海标杆深度拆解</h3>
+<p><strong>结论：交付量与毛利率验证已签订单，但新签仍受FID制约。</strong></p>
+<div class="chart"><p class="chart-title">大金营收与出口结构（亿元，T38可视化）</p><div class="echart" id="ec-10" role="img" aria-label="大金营收与出口结构双轴图，单位亿元与%"></div><p class="footnote">单位：亿元。总营收37.8/61.74/32.53（H1）；海外收入17.34/45.97/26.75；海外毛利率33.95%→39.36%（+8.67pct）。口径差异：在手2025年末超100亿 vs 券商2026-08约70亿+，系交付消化与统计时点所致。</p></div>
+<ul>
+<li>2026年Q1营收19.07亿（+67%）、净利4.35亿（+88%）；Q2营收13.46亿（-20.9% YoY/-29.4% QoQ）、净利1.66亿（-47.4%/-61.8%），主因外租重件船期延长致交付延后。</li>
+<li>H1出口海工交付近12万吨（同期新高）；合同负债较年初+34.07%；资产负债率由42.86%降至33.49%；经营现金流15.33亿（+544%）；应收周转121天缩至89天；汇兑损益-0.90亿拖累（剔除后净利+57.3%）。</li>
+</ul>
+<h4>关键里程碑</h4>
+<div class="timeline-v">
+<div><strong>2019：</strong>进入欧洲海风市场</div>
+<div><strong>2022：</strong>首个批量订单（Moray West 882MW塔筒，英国）</div>
+<div><strong>2023：</strong>Thor单桩（丹麦RWE），批量交付能力获验证</div>
+<div><strong>2024：</strong>FOB升级DAP，产品扩至全品类基础结构</div>
+<div><strong>2025：</strong>Hornsea 3单桩承接（接替SeAH）、曹妃甸基地投产、40万吨长期锁产协议（含€1400万锁产费）</div>
+<div><strong>2026年2月：</strong>King One首航</div>
+<div><strong>2026年3月：</strong>与波兰Wulkan船厂合作Nordseecluster B组件</div>
+<div><strong>2026年4–5月：</strong>与挪威/希腊船东签8艘散货船（约61亿），与荷兰Jumbo签2艘重吊船（约10.69亿），切入特种船</div>
+<div><strong>2026年5月：</strong>King One第二航次到港；KING TWO待首航、KING THREE拟9月交付；德/西/丹4处母港，单桩全部DAP</div>
+<div><strong>2026-06-05：</strong>H股挂牌（01081.HK），募资约56.6亿，A+H双平台</div>
+<div><strong>2026-08-05：</strong>再与挪威船东签2艘21.1万DWT散货船约10亿；年内船舶合同21艘约108亿（计选择权超113亿），累计24艘约120亿</div>
+</div>
+<p><strong>核心竞争优势：</strong>交付确定性（唯一大规模交付履历亚太商）/ 产能规模（蓬莱+曹妃甸+盘锦，曹妃甸专攻深远海超大单桩）/ 物流一体化（自有船队+枢纽，建造运输交付闭环）/ 产品全覆盖（一站式）/ 客户关系（RWE、Ørsted长期战略合作）。</p>
+<div class="callout warn"><p><strong>Sif H1 2026的跟踪修正：</strong>Sif判断不改变大金已签订单与交付能力，但削弱以长期缺口直推2027–2028年新签的逻辑。H1"近12万吨+39.36%"验证高价订单与自有船增厚；Q2回落与Sif预警一致，新签仍受FIT→CfD切换与FID延迟制约。关键验证项应加签约时间、客户FID状态及排产，而非只看拍卖容量。</p></div>
+<details><summary>T38原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>指标</th><th class="num">2024</th><th class="num">2025</th><th>2026年H1（已披露）</th><th>变化</th></tr></thead><tbody>
+<tr><td>总营收</td><td class="num">37.8亿</td><td class="num">61.74亿</td><td><strong>32.53亿</strong>（+14.48%）</td><td>H1同期新高</td></tr>
+<tr><td>归母净利润</td><td class="num">4.74亿</td><td class="num">11.03亿</td><td><strong>6.01亿</strong>（+9.89%）</td><td>汇兑-0.90亿拖累，剔除后+57.3%</td></tr>
+<tr><td>海外/出口收入</td><td class="num">17.34亿</td><td class="num">45.97亿（占比74.46%）</td><td><strong>26.75亿</strong>（+19.3%, 占比82.25%）</td><td>贡献近九成毛利</td></tr>
+<tr><td>海外毛利率</td><td>—</td><td class="num">33.95%</td><td><strong>39.36%</strong>（+8.67pct）</td><td>新高，DAP+自有船增厚</td></tr>
+<tr><td>海外毛利占比</td><td class="num">59.2%</td><td class="num">81.06%</td><td>约<strong>89%</strong>（交流口径）</td><td>持续提升</td></tr>
+<tr><td>在手海外海工订单</td><td>—</td><td><strong>&gt;100亿</strong>（2025年末，未来两年交付）</td><td>券商统计<strong>约70亿+</strong>（2026年8月）</td><td>口径差异因交付消化与时点</td></tr>
+<tr><td>在手船舶订单</td><td>—</td><td>—</td><td><strong>24艘约120亿</strong>（2027–2030交付）</td><td>第二增长极</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch6-3">
+<h3>6.3 出海模式对比</h3>
+<div class="compare-dual">
+<div class="compare-col"><h4>直接出口（大金/东方）</h4><p>优势：成本快；劣势：壁垒与运费。适用：单桩/塔筒/海缆。</p></div>
+<div class="compare-col"><h4>欧洲建厂（明阳）</h4><p>优势：规避本地化壁垒；劣势：投资大、周期长、地缘风险。适用：风机/叶片。</p></div>
+</div>
+<div class="compare-dual">
+<div class="compare-col"><h4>JV/合作（金风）</h4><p>优势：降低门槛；劣势：技术控制与分成。适用：风机。</p></div>
+<div class="compare-col"><h4>认证前置（天顺/海力）</h4><p>优势：先获准入；劣势：周期2–3年。适用：塔筒/基础。</p></div>
+</div>
+<details><summary>T39原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>模式</th><th>代表公司</th><th>优势</th><th>劣势</th><th>适用品类</th></tr></thead><tbody>
+<tr><td><strong>直接出口</strong> (FOB/DAP)</td><td>大金重工, 东方电缆</td><td>成本优势, 快速进入</td><td>贸易壁垒风险, 运输成本</td><td>单桩/塔筒/海缆</td></tr>
+<tr><td><strong>欧洲建厂</strong></td><td>明阳智能</td><td>规避本地化壁垒, 品牌信任</td><td>投资大, 周期长, 地缘政治风险</td><td>风机/叶片</td></tr>
+<tr><td><strong>JV/合作</strong></td><td>金风科技</td><td>降低进入门槛</td><td>核心技术控制, 利润分成</td><td>风机</td></tr>
+<tr><td><strong>认证前置</strong></td><td>天顺风能/海力风电</td><td>先获得准入资格</td><td>认证周期长(2–3年)</td><td>塔筒/基础</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch6-4">
+<h3>6.4 订单释放时间窗口推演</h3>
+<p><strong>结论：已拍不自动转同期基础订单，较高确定性窗口在2029年后。</strong></p>
+<details open><summary>推演树原文折叠保留（fenced代码块原样）</summary><div class="fold-body"><pre class="fenced-tree">2022-2026年累计拍卖约57GW
+  ├── ~15GW 已FID（2023-2025年）
+  │   └── 供应链已锁定，2025-2028年并网
+  └── ~42GW 未FID（大部分）
+      ├── 2026-2028年：项目收益、融资及许可继续影响FID；Sif观察到单桩生产需求偏低
+      │   └── 已拍卖项目并不自动转化为同期的基础订单
+      └── 2028-2029年招标项目逐步落实FID
+          └── 更可能对应2029年后供应链生产与并网节奏</pre></div></details>
+<div class="callout method"><p><strong>分层跟踪：</strong>独家谈判、获拍容量、FID后基础合同分层跟踪，不以单一口径替代收入判断。Sif 190kt仅FID后进正式制造，目标2027年5–8月；公司将现有订单生产延至2027年以避缩产重启。</p></div>
+<p><strong>关键FID催化节点（2026–2027年）：</strong></p>
+<ul>
+<li>AR7中标8.4GW（Norfolk Vanguard West/East、Berwick Bank、Mona、Morgan等）→看融资关闭和基础合同，而非仅CfD获授；Vanguard East/West原定2026年夏季KKR入股交割+融资+FID（合计3.1GW、2029/2030年投运），截至2026-09-19未公告；Morgan 1.5GW/Morecambe 480MW输电资产2026-09-14获许可（不等于FID）。</li>
+<li>波兰已拍3.4GW→部分已FID、更多在2026年（Cadeler与Ocean Winds BC-Wind 390MW基础安装合同已签、2028年起执行，属兑现样本）。</li>
+<li>法国2024–2025年拍卖项目→2026–2027年FID；AO10约10GW（11个项目）截标2026-10-12、授标待2026年末至2027年2月。</li>
+<li>Green Volt漂浮式（560MW）→仍待FID（目标2026年内，截至9.19未公告；400MW获AR6 CfD £139.93/MWh），若落地为欧洲首个商业化漂浮式订单。</li>
+</ul>
+</section>
+</section>
+<section id="ch7">
+<h2>七、贸易政策、认证壁垒与风险</h2>
+
+<section id="ch7-1">
+<h3>7.1 Net-Zero Industry Act（2025年12月30日生效）</h3>
+<p><strong>结论：整机出口难度急剧增大，部件影响相对温和。</strong></p>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>条款</th><th>内容</th><th>生效时间</th></tr></thead><tbody>
+<tr><td>非价格标准(NPC)</td><td>可再生能源拍卖须纳入"韧性/可持续性"等评审</td><td>2025-12-30</td></tr>
+<tr><td>最低应用比例</td><td>各成员国每年至少30%拍卖容量（或6GW）须应用NPC</td><td>2025-12-30</td></tr>
+<tr><td>中国特定限制</td><td>≥<strong>75%</strong>风机不得源自中国；对另外25%，关键部件不得超4件来自中国；<strong>传动链不得来自中国</strong></td><td>2025-12-30</td></tr>
+<tr><td>永磁体限制</td><td>风机永磁体来自中国比例不得超<strong>85%</strong></td><td>2025-12-30</td></tr>
+<tr><td>评审权重</td><td>韧性与可持续性合计须占评分<strong>15%–30%</strong>（其中韧性≥5%）</td><td>2025-12-30</td></tr>
+</tbody></table></div>
+<ul>
+<li>整机：NZIA直接锁死中国整机路径（除非本地化建厂）；2026-03-26英国声明不支持明阳风机即极端体现。</li>
+<li>部件：单桩/塔筒/海缆未被列为"高度依赖中国"部件（欧盟风电相对自给），影响温和。</li>
+<li>案例：比利时PEZ1（700MW）为首个全面受NZIA约束拍卖；德国2026年WindSeeG草案已落实NZIA对2GW/年预勘区块非价格标准（去碳、能源安全、降噪、法兰技术与技能贡献等）。</li>
+</ul>
+<p class="footnote">T40归宿：原表保留，≥75%/传动链行标红。</p>
+</section>
+
+<section id="ch7-2">
+<h3>7.2 Industrial Accelerator Act（2026年3月提案、立法程序中）</h3>
+<p><strong>结论：风电已明确在适用范围，非价格覆盖拟提至40%或8GW。</strong></p>
+<div class="tbl-wrap"><table class="data-table"><thead><tr><th>条款</th><th>内容</th><th>当前状态（截至2026-09-19）</th></tr></thead><tbody>
+<tr><td><strong>欧盟原产地/低碳要求</strong></td><td>公共采购和可再生能源拍卖要求"Made in EU"和/或低碳比例，适用风电（含固定与漂浮）、光伏、电池等</td><td>立法程序中，拟将覆盖由"30%或6GW/年/成员国"提至<strong>40%或8GW/年</strong>，并扩大成本豁免阈值</td></tr>
+<tr><td><strong>风电拍卖新增要求</strong></td><td>对全部年拍卖量（而非30%）适用网络安全/数据安全预审，并引入"欧盟原产地"预审或授标标准</td><td>同上，部分行业（WindEurope 2026.3立场）呼吁简化而非复杂化</td></tr>
+<tr><td><strong>FDY/加速区</strong></td><td>成员国至少划定一个工业制造加速区，简化高耗能/净零项目许可，对"战略项目"加速环评</td><td>同上，公众反馈截至2026-05-06</td></tr>
+<tr><td><strong>风电适用判断</strong></td><td>早期研判尚未纳入首批适用行业</td><td>已过时——IAA文本已明确将<strong>海上风电</strong>列入适用范围（与光伏/电池/电动车/关键原材料并列），生效后1年至少1个主要部件须源自欧盟、3年后至少2个</td></tr>
+</tbody></table></div>
+<p class="footnote">T41归宿：原表保留；提案COM(2026)100发布于2026-03-04。"已过时"为原文自我修正，如实保留。</p>
+</section>
+
+<section id="ch7-3">
+<h3>7.3 各国本地化政策</h3>
+<ul>
+<li><strong>英国：</strong>CfD纳入供应链计划评审，鼓励本地就业制造；AR7放宽准入门槛；但2026年3月对明阳"不支持使用"声明显示整机国安审查实质收紧。</li>
+<li><strong>德国：</strong>WindSeeG评审"可持续性"与"供应链韧性"；2026年草案将NZIA非价格标准制度化于集中式预勘区块，并提TSO成本疏导与海工/渔业分成。</li>
+<li><strong>法国：</strong>本地化倾向（风机在法国港口组装）；AO10约10GW（5GW固定+5GW漂浮，最高限价€100/MWh、25年CfD），漂浮部分为全球最大单次承诺。</li>
+<li><strong>波兰：</strong>本土化含波兰港口船厂（大金已与Wulkan合作应对）。</li>
+</ul>
+</section>
+
+<section id="ch7-4">
+<h3>7.4 认证壁垒</h3>
+<ul>
+<li><dfn class="term" data-term="DNV/GL认证" title="欧洲型式认证，通常2–3年">DNV/GL认证</dfn>：型式认证通常2–3年。</li>
+<li>业主验厂：Ørsted/RWE/Vattenfall/SSE独立审核，周期6–18个月。</li>
+<li>业绩记录：欧洲极重视"成功交付履历"——大金2022年以来批量交付是持续拿单关键。</li>
+</ul>
+</section>
+
+<section id="ch7-5">
+<h3>7.5 关税与贸易</h3>
+<ul>
+<li>欧盟对中国风电产品平均关税仅约1.3%（Ghent大学研究），低于中国对EU的6–10%。</li>
+<li>欧盟2025年对钢铁加征（CBAM+保障措施），对单桩/塔筒等钢材密集部件有边际影响。</li>
+<li>反倾销风险：目前尚无针对中国风电结构调查，但光伏前车之鉴值得警惕。</li>
+</ul>
+</section>
+
+<section id="ch7-6">
+<h3>7.6 地缘政治审查</h3>
+<ul>
+<li>明阳苏格兰15亿英镑投资：审查由"进行中"转<strong>实质不支持</strong>（2026-03-26议会声明不支持使用明阳风机；明阳03-27公告尚未收到正式回复、尚未投入资金，存在终止风险）。</li>
+<li>欧盟FDI审查日益严格，2025年约80%申报被审查；IAA拟加强"新兴战略领域"条件性审查。</li>
+<li>数据安全：德国《能源行业IT安全法》禁止"威胁国家安全的国家"远程管理新能源设施。</li>
+</ul>
+</section>
+</section>
+<section id="ch8">
+<h2>八、中欧海风格局对标</h2>
+<p><strong>结论：中国强制造与速度，欧洲强技术原创与金融机制；成本差30–50%是出口根本竞争力。</strong></p>
+<div class="compare-dual">
+<div class="compare-col"><h4>中国</h4><ul class="tight"><li>累计~47GW+（2025末，52%全球）</li><li>2025年新增6.59GW（NEA并网）</li><li>最大26MW（东方电气样机），主力10–18MW</li><li>周期4–7年，十五五规划政府主导</li><li>LCOE 0.34–0.38元/kWh</li><li>利用约3000–4000h</li><li>全链条自给，融资约3–4%</li><li>漂浮式16MW样机（三峡领航号）</li></ul></div>
+<div class="compare-col"><h4>欧洲</h4><ul class="tight"><li>累计~40.9GW（2026H1，WindEurope）</li><li>2025年2.0GW / H1 2.3GW</li><li>量产15–16MW，主力11–15MW</li><li>周期7–10年，能源安全+CfD驱动</li><li>LCOE €45–100/MWh（约0.35–0.78元/kWh）</li><li>利用约3500–4500h</li><li>关键环节缺口，融资2022后5–7%</li><li>漂浮式多个小型示范（&lt;100MW）</li></ul></div>
+</div>
+<ul>
+<li>中国产能过剩溢出 vs 欧洲产能不足缺口→双向贸易驱动力。</li>
+<li>中国LCOE已低于欧洲（成本优势约30–50%），是出口根本竞争力。</li>
+<li>欧洲利用小时更高（北海/波罗的海风资源优于中国近海）→项目IRR有优势。</li>
+<li>海风占风电总新增：中国5.5% vs 欧洲10%。</li>
+</ul>
+<details><summary>T42原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>维度</th><th>中国</th><th>欧洲</th></tr></thead><tbody>
+<tr><td><strong>累计装机(2026年H1)</strong></td><td>~47GW+(2025末，52%全球)</td><td><strong>~40.9GW</strong>(2026年H1，WindEurope)</td></tr>
+<tr><td><strong>2025–2026年新增</strong></td><td>6.59GW(2025 NEA并网)</td><td>2.0GW(2025) / H1 2.3GW(2026)</td></tr>
+<tr><td><strong>最大单机容量</strong></td><td>26MW(东方电气试验样机)</td><td>15–16MW(Vestas/SGRE量产)</td></tr>
+<tr><td><strong>主力机型</strong></td><td>10–18MW</td><td>11–15MW</td></tr>
+<tr><td><strong>开发周期</strong></td><td>4–7年</td><td>7–10年</td></tr>
+<tr><td><strong>核心驱动</strong></td><td>十五五规划、政府主导</td><td>能源安全、CfD拍卖机制</td></tr>
+<tr><td><strong>成本(LCOE)</strong></td><td>0.34–0.38元/kWh</td><td>€45–100/MWh(~0.35–0.78元/kWh)</td></tr>
+<tr><td><strong>年利用小时</strong></td><td>~3000–4000h</td><td>~3500–4500h</td></tr>
+<tr><td><strong>海风占比</strong></td><td>5.5%(占风电总新增)</td><td>10%(占风电总新增)</td></tr>
+<tr><td><strong>供应链</strong></td><td>全链条自给自足</td><td>关键环节缺口</td></tr>
+<tr><td><strong>融资成本</strong></td><td>~3–4%</td><td>2022后上升至5–7%</td></tr>
+<tr><td><strong>漂浮式</strong></td><td>16MW样机安装("三峡领航号")</td><td>多个小型示范(&lt;100MW)</td></tr>
+</tbody></table></div></div></details>
+</section>
+<section id="ch9">
+<h2>九、投资推演与风险提示</h2>
+
+<section id="ch9-1">
+<h3>9.1 核心受益标的（中国企业）</h3>
+<div class="tier-cards">
+<div class="tier-card"><h4>大金重工 ⭐⭐⭐</h4><p>欧洲单桩/基础龙头；已签具交付优势，2027–2028新签受FID制约；H1出口毛利率39.36%验证高价+自有船。跟踪：季度海外收入、基础订单签约与客户FID、Q3交付与船队利用率、船舶执行。</p></div>
+<div class="tier-card"><h4>东方电缆 ⭐⭐⭐</h4><p>海缆紧缺最大受益者；但H1存货高企、确收慢于预期。跟踪：海缆确收与毛利率、在手消化、欧洲子公司。</p></div>
+<div class="tier-card"><h4>天顺风能 ⭐⭐⭐⭐</h4><p>认证通过后放量；H1海工仍亏损、德国基地延期。跟踪：认证、验厂、首单、投产时点。</p></div>
+<div class="tier-card"><h4>海力风电 ⭐⭐⭐⭐</h4><p>验厂顺利则有望2027年进入。跟踪：业主验厂进展。</p></div>
+<div class="tier-card"><h4>明阳智能 ⭐⭐⭐⭐⭐</h4><p>苏格兰工厂实质不支持，本地化受阻，试金石负面。跟踪：最终批复、替代市场进展。</p></div>
+<div class="tier-card"><h4>金风科技 ⭐⭐⭐⭐⭐</h4><p>Luxcara替代后需重新证明。跟踪：欧洲新签整机合同。</p></div>
+</div>
+<details><summary>T43原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>公司</th><th>核心逻辑</th><th>关键跟踪指标</th><th>风险权重</th></tr></thead><tbody>
+<tr><td><strong>大金重工</strong> (002487)</td><td>欧洲单桩/基础龙头供应商；已签订单具交付优势，但2027–2028年新签受FID节拍制约；2026年H1出口毛利率39.36%验证高价订单+自有船模式</td><td>季度海外收入、<strong>海外基础订单签约与客户FID、Q3交付与船队利用率</strong>、船舶订单执行</td><td>⭐⭐⭐</td></tr>
+<tr><td><strong>东方电缆</strong> (603606)</td><td>欧洲海缆极度紧缺的最大受益者；但2026年H1存货高企、确收节奏慢于预期</td><td>海缆确收与毛利率、在手订单消化、欧洲子公司进展</td><td>⭐⭐⭐</td></tr>
+<tr><td><strong>天顺风能</strong> (002531)</td><td>欧洲塔筒/基础认证通过后的放量；2026年H1海工仍亏损、德国基地延期</td><td>认证进度、验厂结果、首单时间、德国基地投产时点</td><td>⭐⭐⭐⭐</td></tr>
+<tr><td><strong>海力风电</strong> (301155)</td><td>欧洲验厂顺利则有望2027年进入</td><td>业主验厂进展</td><td>⭐⭐⭐⭐</td></tr>
+<tr><td><strong>明阳智能</strong> (601615)</td><td>苏格兰工厂遭英政府实质不支持，欧洲整机本地化路径受阻；试金石已现负面信号</td><td>工厂投资最终批复、替代市场（中东非/亚太）进展</td><td>⭐⭐⭐⭐⭐</td></tr>
+<tr><td><strong>金风科技</strong> (002202)</td><td>Luxcara项目替代后需重新证明</td><td>欧洲新签整机合同</td><td>⭐⭐⭐⭐⭐</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch9-2">
+<h3>9.2 关键催化剂时间线</h3>
+<div class="timeline-v">
+<div><strong>2026H2：AR7融资关闭与基础合同；Sif 190kt能否转正式订单</strong> <span class="badge mid">↑/待验证</span> — 190kt截至9.19仍待FID（目标2027年5–8月生产），但8–9月交付兑现（Bałtyk最终发运、OranjeWind首批发运）；Vanguard East/West原定夏季FID截至9.19未公告；Morgan/Morecambe输电资产9.14获许可</div>
+<div><strong>2026年8–9月：丹麦1.8GW授予+He Dreiht 960MW投运</strong> <span class="badge good">↑已落地</span> — 丹麦2026-08-04、He Dreiht 2026-09-17投运仪式分阶段并网，验证CfD修复与存量FID兑现</div>
+<div><strong>2026年：德国WindSeeG改革与拍卖</strong> <span class="badge mid">↑/待验证</span> — 2026-01-28取消2026年拍卖、草案2026-08-11细化，2027年两阶段模式；RWE-Masdar 9.11签MoU（谅解备忘录）拟联合竞标2027年拍卖</div>
+<div><strong>2026年6–10月：法国AO10约10GW</strong> <span class="badge mid">↑</span> — 已启动（2026-06-11，11个项目），截标2026-10-12，授标待2026年末–2027年2月</div>
+<div><strong>2026H2：Green Volt漂浮式FID</strong> <span class="badge mid">↑</span> — 仍待FID（目标2026年内，截至2026-09-19未公告）</div>
+<div><strong>2026年3–4月：明阳苏格兰审批</strong> <span class="badge bad">双向</span> — 英政府03-26声明不支持使用明阳风机、项目实质搁置；截至9.19无新进展</div>
+<div><strong>2027年：Sif 190kt的FID及5–8月开工窗口；其余厂商排期与利用率</strong> <span class="badge mid">↑/待验证</span> — 待观察</div>
+<div><strong>2027年：IAA最终文本</strong> <span class="badge bad">↓</span> — 提案2026-03-04已发布，立法程序中，风电已在适用范围</div>
+<div><strong>2027–2028年：是否出现Sif预警的单桩需求空档</strong> <span class="badge mid">↓/待验证</span> — 大金Q2交付回落已现阶段性空档信号，不能预设密集释放</div>
+<div><strong>2028–2029年：已招标FID、供应链合同和新招标转化</strong> <span class="badge info">↑</span> — 待观察，决定2029年后生产节奏</div>
+</div>
+<details><summary>T44原表折叠备查</summary><div class="fold-body"><div class="tbl-wrap"><table class="data-table"><thead><tr><th>时间</th><th>事件</th><th>影响方向</th><th>最新进展（截至2026-09-19）</th></tr></thead><tbody>
+<tr><td>2026年H2</td><td>UK AR7项目的融资关闭与基础合同；Sif 190kt独家谈判项目能否转为正式订单</td><td>↑/待验证</td><td>Sif 190kt截至9.19仍待FID、目标2027年5–8月生产，但8–9月交付端连续兑现（Bałtyk 2&amp;3最终发运、OranjeWind首批发运）；Vanguard East/West原定夏季FID截至9.19未公告；Morgan/Morecambe输电资产9.14获许可</td></tr>
+<tr><td>2026年8–9月</td><td>丹麦Hesselø+Nordsøen Midt 1.8GW CfD授予（Vattenfall）+德国He Dreiht 960MW投运</td><td>↑</td><td><strong>已落地</strong>（丹麦2026-08-04；He Dreiht 2026-09-17举行投运仪式、分阶段并网），验证CfD修复与存量FID兑现</td></tr>
+<tr><td>2026年</td><td>德国WindSeeG改革与拍卖</td><td>↑/待验证</td><td><strong>联邦内阁2026-01-28取消2026年拍卖、草案2026-08-11细化</strong>，2027年进入两阶段模式；RWE-Masdar 9.11签MoU（谅解备忘录）拟联合竞标2027年拍卖</td></tr>
+<tr><td>2026年6–10月</td><td>法国AO10约10GW招标</td><td>↑</td><td>已启动（2026-06-11，11个项目），投标截止2026-10-12，授标待2026年末–2027年2月</td></tr>
+<tr><td>2026年H2</td><td>Green Volt漂浮式FID（首个商业化漂浮式订单）</td><td>↑</td><td>仍待FID（目标2026年内，截至2026-09-19未公告）</td></tr>
+<tr><td>2026年3–4月</td><td>明阳苏格兰工厂审批结果</td><td>双向</td><td><strong>英政府3.26声明不支持使用明阳风机、项目实质搁置</strong>；截至9.19无新进展</td></tr>
+<tr><td>2027年</td><td>Sif 190kt项目的FID及2027年5–8月目标开工窗口；其余厂商2027–2028年排期与实际产能利用率</td><td>↑/待验证</td><td>待观察</td></tr>
+<tr><td>2027年</td><td>IAA最终文本</td><td>↓</td><td><strong>提案已于2026-03-04发布</strong>，立法程序中，风电已在适用范围</td></tr>
+<tr><td>2027–2028年</td><td>监测是否出现Sif所预警的单桩需求空档；不能预设订单密集释放</td><td>↓/待验证</td><td>大金Q2交付回落已现阶段性空档信号</td></tr>
+<tr><td>2028–2029年</td><td>已招标项目的FID、供应链合同和新一轮招标转化，决定2029年后生产节奏</td><td>↑</td><td>待观察</td></tr>
+</tbody></table></div></div></details>
+</section>
+
+<section id="ch9-3">
+<h3>9.3 牛/熊情景</h3>
+<div class="scenario-cards">
+<div><h3>牛情景（30%）</h3><ul class="tight"><li>2026H2起英及北海加速FID，2027–2028空档被新签明显缩短</li><li>本土扩产继续滞后</li><li>NZIA/IAA仅影响整机不波及基础电缆→出货持续高增</li><li>大金2027年海外收入破100亿，东方海外订单破50亿</li><li>明阳苏格兰投产，开辟第二曲线</li></ul></div>
+<div><h3>基准情景（50%）</h3><ul class="tight"><li>2026–2028年FID放量偏慢，单桩阶段性空档，2028–2029年后改善</li><li>基础/海缆凭已签持续受益，但新签与确收斜率趋缓</li><li>IAA逐步扩至部件，2028年后出口份额增长受限</li><li>大金海外收入CAGR约30–40%，2027年约80–100亿</li></ul></div>
+<div><h3>熊情景（20%）</h3><ul class="tight"><li>地缘急剧恶化：全面禁令或高额反倾销</li><li>NZIA+IAA全面堵截</li><li>利率回升、并网收益问题致FID继续冻结，空档扩大</li><li>大金被迫退出或转合资</li></ul></div>
+</div>
+<p class="footnote">概率和=100%（30/50/20）。F33勾选。</p>
+</section>
+
+<section id="ch9-4">
+<h3>9.4 核心风险</h3>
+<ul>
+<li><strong>政策风险（最高权重）：</strong>NZIA已生效，IAA推进，保护主义明确；光伏在欧遭遇（反倾销+反补贴+强迫劳动审查）是前车之鉴。</li>
+<li><strong>需求节奏风险：</strong>拍卖→FID→并网转化率非100%；2025年流标潮（6.5GW无人投标）显示高成本/高利率下开发商极度谨慎。</li>
+<li><strong>竞争风险：</strong>韩国（SeAH）、印度、越南扩产，3–5年后或改变格局。</li>
+<li><strong>欧洲经济风险：</strong>利率、汇率、通胀直接影响FID。</li>
+<li><strong>地缘政治风险：</strong>台海/南海升级或急剧恶化在欧经营环境。</li>
+</ul>
+</section>
+</section>
+<section id="ch10">
+<h2>十、核心结论</h2>
+<div class="ladder">
+<div class="ladder-step"><strong>1. 非线性"订单释放前夜"：</strong>2022–2026年累计约58–59GW、约42GW未FID构成中长期项目池；但Sif H1 2026显示头部厂达产后仍因FID少而预期2027–2028年需求偏低。丹麦1.8GW授予与德国无拍卖并存，He Dreiht 960MW投运与Morgan/Morecambe输电许可验证存量兑现推进。拍卖→CfD可融资性→FID断层使2026–2028年成验证期，较高确定性窗口后移至2029年前后，前提是融资和合同兑现。</div>
+<div class="ladder-step"><strong>2. 长期缺口与短期空档并存：</strong>单桩仅满足56%、海缆排至2030年、安装船2029年起严重短缺；但长期缺口不能替代项目级验证。中国供应商竞争力从"便宜"升级为"能交付"，订单判断以FID、正式基础合同和排期为准。大金H1"近12万吨、39.36%"与Q2回落的背离即当期矛盾镜像。</div>
+<div class="ladder-step"><strong>3. 赛道分化：</strong>单桩/海缆/安装确定性最高（壁垒相对低、缺口最大），整机壁垒极高（NZIA直接限制），明阳本地化建厂在英国已遭实质否定（2026年3月不支持声明），整机短期难有路径。</div>
+<div class="ladder-step"><strong>4. 贸易政策最大变量：</strong>NZIA已生效（2025-12-30），IAA已于2026年3月提案并明确将风电纳入、计划非价格覆盖提至40%或8GW且对全量拍卖引入网络安全/原产地预审，风电重复光伏路径风险显性化。规避靠欧洲建厂/合资/认证前置，但建厂亦面临FDI与国安审查（如明阳）。</div>
+<div class="ladder-step"><strong>5. 2026年验证而非单向放量：</strong>AR7 8.4GW与丹麦1.8GW改善储备，AO10约10GW（截标2026-10-12）与WindSeeG改革（2026年无拍卖、2027年两阶段）显示分化，荷兰1GW拟9月补贴招标。Sif预警要求跟踪重心前移至FID、基础合同和利用率，但9月He Dreiht投运、Sif连续发运与输电许可获批显示兑现未冻结。Sif 190kt的FID、Vanguard等AR7项目融资关闭与夏季FID兑现、2028–2029年招标转化，是订单斜率上行的关键验证点。</div>
+</div>
+</section>
+
+
+<section id="ch11">
+<h2>十一、数据来源与参考文献</h2>
+<section id="ch11-1">
+<h3>一级来源</h3>
+<ul class="tight">
+<li><a href="https://windeurope.org/data/products/wind-energy-in-europe-2025-statistics-and-the-outlook-for-2026-2030/" target="_blank" rel="noopener">WindEurope 2025统计与2026–2030展望</a></li>
+<li><a href="https://windeurope.org/data/reports/" target="_blank" rel="noopener">WindEurope 2020–2025关键趋势统计</a></li>
+<li><a href="https://windeurope.org/data/reports/" target="_blank" rel="noopener">WindEurope 2026年中统计（2026.8）</a></li>
+<li><a href="https://www.windguard.de/veroeffentlichungen.html" target="_blank" rel="noopener">Deutsche WindGuard H1 2026（2026.7）</a></li>
+<li><a href="https://www.gwec.net/reports/globalwindreport" target="_blank" rel="noopener">GWEC Global Offshore Wind Report 2026</a> / <a href="https://www.gwec.net/reports/globalwindreport" target="_blank" rel="noopener">Global Wind Report 2026</a></li>
+<li><a href="https://www.gov.uk/government/collections/contracts-for-difference" target="_blank" rel="noopener">UK DESNZ AR7结果（2026）</a></li>
+<li><a href="https://ens.dk/en/press/press-releases" target="_blank" rel="noopener">丹麦能源署 Vattenfall授标（2026-08-04）</a></li>
+<li><a href="https://www.bundeswirtschaftsministerium.de/Redaktion/DE/Downloads/Gesetz/2026/20260811-refentwurf-absicherung-ausbau-windenergie.pdf" target="_blank" rel="noopener">BMWE WindSeeG草案与对照（2026-08-11）</a></li>
+<li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202401735" target="_blank" rel="noopener">EU NZIA（Regulation 2024/1735）</a></li>
+<li><a href="https://single-market-economy.ec.europa.eu/publications/industrial-accelerator-act_en" target="_blank" rel="noopener">欧盟委员会 IAA COM(2026)100（2026-03-04）</a></li>
+<li><a href="https://ecfr.eu/publication/last-gasp-securing-europes-wind-industry-from-dependence-on-china/" target="_blank" rel="noopener">ECFR 欧洲风电对华依赖（2025.7）</a></li>
+<li><a href="https://www.oxfordenergy.org/wpcms/wp-content/uploads/2025/10/CE17-Chinese-participation-in-Europes-offshore-wind-sector.pdf" target="_blank" rel="noopener">牛津能源研究所 中国参与欧洲海风（2025.10）</a></li>
+</ul>
+<p class="footnote">一级来源13条链接URL以源报告第十一章原文为准；二级来源7条与三级来源9条见源报告原文链接，本页仅列文本清单。</p>
+</section>
+<section id="ch11-2">
+<h3>二级来源（行业研究与咨询）</h3>
+<ul class="tight">
+<li>Implement Consulting — No wind shield required（2025）</li>
+<li>Aegir Insights — 单桩供应链能否交付（2025.2）</li>
+<li>Baringa — 英国供应链 readiness</li>
+<li>Rabobank — EU供应链瓶颈（2023.3）</li>
+<li>Rystad — 欧洲风电供应链（2023）</li>
+<li>Ghent大学 — 海风国际竞争力</li>
+<li>Westwood — 中国重塑基础市场（2026.4）</li>
+</ul>
+</section>
+<section id="ch11-3">
+<h3>三级来源（公司公告与券商研报）</h3>
+<ul class="tight">
+<li>大金重工2026半年报（2026-08-21）、Q1季报及IR记录（2026-08-22）、H股公告（2026-06-05）、船舶系列公告（2026.4–8）</li>
+<li>东方电缆2026半年报（2026-08-05）、2025年报及中标公告；天顺2026半年报解读（2026-08-27）及2025年报</li>
+<li>明阳进展公告（2026-03-27）、英政府声明（2026-03-26）、商务部答问（2026-04-14）</li>
+<li>Sif 2026中报（2026-07-31）、190kt进展（2026-06-23）</li>
+<li>Vattenfall授标（2026-08-04）、Reuters同日报道</li>
+<li>Cadeler H1（2026-08-25）、DEME H1（2026-08-26）</li>
+<li>EnBW/Vestas He Dreiht安装完成（2026-08-12）</li>
+<li>Windtech/BWO/Orrick德国草案分析（2026-08-11/12）</li>
+<li>格隆汇/东吴/国联民生半年报点评（2026-08-21–25）</li>
+<li>中信建投（2025.12）、国盛证券（2025.6）</li>
+</ul>
+</section>
+</section>
+
+
+<section id="glossary">
+<h2>附录：术语对照表（26个）</h2>
+<div class="glossary">
+<div><strong>FID</strong>：最终投资决策，融资关闭+管理层批准，订单释放点，领先并网2–3年</div>
+<div><strong>两向CfD</strong>：双向补差的差价合同，执行价上下均结算</div>
+<div><strong>负补贴</strong>：开发商付费竞开发权，2025年多轮流标后被CfD替代</div>
+<div><strong>单桩</strong>：主流基础（约80%），直径8→15m+、重2000–3500吨</div>
+<div><strong>过渡段</strong>：连接单桩与塔筒的结构件</div>
+<div><strong>输电资产</strong>：海上外送缆+登陆设施+陆上变电站及并网缆</div>
+<div><strong>NZIA</strong>：净零工业法案，2025-12-30生效，≥75%风机禁中国</div>
+<div><strong>IAA</strong>：工业加速法案，2026-03-04提案，立法程序中</div>
+<div><strong>AR</strong>：英国CfD分配轮次（AR4/AR6/AR7）</div>
+<div><strong>SDE++</strong>：荷兰补贴招标框架，最高€104/MWh</div>
+<div><strong>WindSeeG</strong>：德国海风法，2026无拍卖、2027两阶段</div>
+<div><strong>TSO</strong>：输电系统运营商，如TenneT/National Grid/SSEN</div>
+<div><strong>HVDC</strong>：高压直流，最紧缺海缆环节</div>
+<div><strong>WTIV</strong>：风机安装船，第四代适配20MW+</div>
+<div><strong>OEM</strong>：整机商，Vestas/SGRE/GE三足鼎立</div>
+<div><strong>DAP</strong>：目的地交货，大金FOB升级DAP+自有船</div>
+<div><strong>kton/kt</strong>：千吨，Sif已签225+谈判197口径</div>
+<div><strong>独家谈判</strong>：优先谈判量，不等于FID或正式订单</div>
+<div><strong>FOB</strong>：装运港船上交货，与DAP对照</div>
+<div><strong>XXL/XXXL单桩</strong>：超大直径（≥12m/15m+），法兰为瓶颈</div>
+<div><strong>漂浮式</strong>：深远海浮式基础，Green Volt为验证点</div>
+<div><strong>LCOE</strong>：平准化度电成本，中0.34–0.38元 vs 欧€45–100/MWh</div>
+<div><strong>流标</strong>：无人投标（2025年丹麦3GW+荷兰1GW+德国2.5GW）</div>
+<div><strong>FID前/已授未FID</strong>：已获拍卖未终投的中间态（如德国17.5GW）</div>
+<div><strong>COD/并网</strong>：商业运营/并网投运，FID后2–3年</div>
+<div><strong>DNV/GL认证</strong>：欧洲型式认证，通常2–3年</div>
+</div>
+</section>
+    <section class="integrity">
+      <strong>完整性说明与验收</strong><br>
+      本页由 13 个改写片段组装，正文事实以 F01–F38 锚点清单验收，各片段末尾 HTML 注释含自检勾选（组装已剥离）。
+      状态关键词（未授标 / 未公告 / 待FID / 流标 / 待观察 / 仍待 / 未计入 / 待欧盟批准 / 口径 / 估 / 约）原位保留，频次≥原文基线。
+      原文 45 张表每张有归宿（可视化/公司卡/原表折叠备查），fenced代码块 2 处原样折叠保留，PlantUML原文为0块。
+      术语 26 个：正文以虚线 hover 定义，本节附录集中复核。
+    </section>
+  </div>
+</main>
+<button class="btn" id="backtop">↑ 顶部</button>
+<script>
+(function(){
+  "use strict";
+  var bar = document.getElementById("progress");
+  var backtop = document.getElementById("backtop");
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max * 100) : 0) + "%";
+    backtop.style.display = h.scrollTop > 600 ? "block" : "none";
+  }
+  document.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+  backtop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  /* 目录高亮 */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute("data-target")] = a; });
+  if("IntersectionObserver" in window){
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          links.forEach(function(a){ a.classList.remove("active"); });
+          var a = map[e.target.id];
+          if(a){ a.classList.add("active"); }
+        }
+      });
+    }, {rootMargin:"-20% 0px -70% 0px"});
+    document.querySelectorAll("main section[id]").forEach(function(s){ obs.observe(s); });
+  }
+  /* 折叠：data-default=collapsed 的 foldable 在 JS 下默认收起（无 JS 时展开，不丢信息） */
+  document.querySelectorAll("section.foldable").forEach(function(sec){
+    var body = [];
+    Array.prototype.forEach.call(sec.childNodes, function(n){ body.push(n); });
+    var summary = sec.querySelector(".fold-summary");
+    var det = document.createElement("details");
+    if(sec.getAttribute("data-default") !== "collapsed"){ det.open = true; }
+    var sum = document.createElement("summary");
+    var h = sec.querySelector("h2,h3,h4");
+    sum.textContent = h ? ("展开 / 折叠 · " + h.textContent) : "展开 / 折叠";
+    det.appendChild(sum);
+    var wrap = document.createElement("div");
+    wrap.className = "fold-body";
+    body.forEach(function(n){ wrap.appendChild(n); });
+    det.appendChild(wrap);
+    sec.appendChild(det);
+  });
+  function setAll(open){
+    document.querySelectorAll("main details").forEach(function(d){ d.open = open; });
+  }
+  document.getElementById("btn-expand").addEventListener("click", function(){ setAll(true); });
+  document.getElementById("btn-collapse").addEventListener("click", function(){ setAll(false); });
+  /* 表格包滚动容器 */
+  document.querySelectorAll("table.data-table").forEach(function(t){
+    if(t.parentElement && t.parentElement.classList.contains("tbl-wrap")) return;
+    var w = document.createElement("div");
+    w.className = "tbl-wrap";
+    t.parentNode.insertBefore(w, t);
+    w.appendChild(t);
+  });
+
+/* ECharts初始化(ec-01..ec-10). 契约: tooltip必备; 轴名带单位; 契约色蓝#1d4ed8/绿#15803d/红#dc2626/黄#d97706/灰#6b7280/紫#7c3aed; grid containLabel; 暗色切换监听. */
+(function(){
+  "use strict";
+  if(!window.echarts){ return; }
+  var charts = [];
+  var darkMQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  var ink = function(){ return (darkMQ && darkMQ.matches) ? "#e6e8eb" : "#1a1d21"; };
+  var BLUE = "#1d4ed8", GREEN = "#15803d", RED = "#dc2626", YELLOW = "#d97706", GRAY = "#6b7280", PURP = "#7c3aed";
+  function baseText(){ return {color: ink(), fontSize: 11}; }
+  function catAxes(xName, extra){
+    var o = {xAxis: {type: "category", name: xName, nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: baseText()},
+      yAxis: {type: "value", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true}, textStyle: {fontSize: 11}};
+    if(extra){ for(var k in extra){ o[k] = extra[k]; } }
+    return o;
+  }
+  function mount(id, option){ var el = document.getElementById(id); if(!el || typeof option !== "object" || !option){ return; } var c = window.echarts.init(el); c.setOption(option); charts.push(c); }
+  function refreshTheme(){ charts.forEach(function(c){ c.setOption({textStyle: {color: ink()}, xAxis: {axisLabel: {color: ink()}}, yAxis: {axisLabel: {color: ink()}}}); }); }
+  if(darkMQ && darkMQ.addEventListener){ darkMQ.addEventListener("change", refreshTheme); }
+
+  /* ec-01 T01: 拍卖/并网柱 +累计线不做,三线: 拍卖(蓝)/FID(黄)/并网(绿),GW */
+  mount("ec-01", (function(){ var o = catAxes("年份", {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis"}});
+    o.yAxis.name = "容量(GW)"; o.xAxis.data = ["2020","2021","2022","2023","2024","2025","2026YTD"];
+    o.series = [
+      {name: "拍卖(GW)", type: "line", data: [0.8,1.5,9.5,13.6,19.9,5.8,10.2], itemStyle: {color: BLUE}, lineStyle: {width: 3}, label: {show: true, fontSize: 11, formatter: "{c}"}},
+      {name: "FID(GW)", type: "line", data: [7.1,4,0,9,3.5,5.4,1.6], itemStyle: {color: YELLOW}, lineStyle: {width: 3, type: "dashed"}, label: {show: true, fontSize: 11, position: "bottom", distance: 6, formatter: function(p){ return p.value === 0 ? "" : p.value; }}},
+      {name: "并网(GW)", type: "line", data: [2.9,3.3,2.5,3.7,2.6,2.0,2.3], itemStyle: {color: GREEN}, lineStyle: {width: 3}, label: {show: true, fontSize: 11, position: "top", distance: 14, formatter: "{c}"}}];
+    return o; })());
+  /* ec-02 T04: 新增柱(蓝,2025标红最低)+累计线(灰) */
+  mount("ec-02", (function(){ var o = catAxes("年份", {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis"},
+      yAxis: [{type: "value", name: "新增(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}, {type: "value", name: "累计(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}]});
+    o.xAxis.data = ["2018","2019","2020","2021","2022","2023","2024","2025","2026H1","2026E"];
+    o.series = [{name: "新增并网(GW)", type: "bar", data: [{value:2.7,itemStyle:{color:BLUE}},{value:3.6,itemStyle:{color:BLUE}},{value:2.9,itemStyle:{color:BLUE}},{value:3.3,itemStyle:{color:BLUE}},{value:2.5,itemStyle:{color:BLUE}},{value:3.7,itemStyle:{color:BLUE}},{value:2.6,itemStyle:{color:BLUE}},{value:2.0,itemStyle:{color:RED}},{value:2.3,itemStyle:{color:GREEN}},{value:6.0,itemStyle:{color:GREEN}}], label: {show: true, fontSize: 10, formatter: "{c}"}},
+      {name: "累计(GW)", type: "line", yAxisIndex: 1, data: [18,22,25,28,30,34,37,39,40.9,45], itemStyle: {color: GRAY}, lineStyle: {width: 3}}];
+    return o; })());
+  /* ec-03 T05: 国别横向条 */
+  mount("ec-03", (function(){ var o = {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}, grid: {left: 20, right: 40, top: 60, bottom: 30, containLabel: true}, textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "累计(GW)", nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", data: ["英国","德国","荷兰","丹麦","比利时","法国","其他"], axisLabel: {fontSize: 11}}};
+    o.series = [{name: "累计(GW)", type: "bar", data: [{value:16,itemStyle:{color:BLUE}},{value:8.5,itemStyle:{color:BLUE}},{value:5,itemStyle:{color:BLUE}},{value:3,itemStyle:{color:GRAY}},{value:2.3,itemStyle:{color:GRAY}},{value:1.5,itemStyle:{color:GRAY}},{value:2.7,itemStyle:{color:GRAY}}], label: {show: true, fontSize: 11, position: "right", formatter: "{c}"}}];
+    return o; })());
+  /* ec-04 T06: 当前39/轨迹73/目标158 */
+  mount("ec-04", (function(){ var o = {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}, grid: {left: 20, right: 40, top: 60, bottom: 30, containLabel: true}, textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "容量(GW)", nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", data: ["当前(2025)", "现实轨迹(2030)", "目标(2030)"], axisLabel: {fontSize: 11}}};
+    o.series = [{name: "容量(GW)", type: "bar", data: [{value:39,itemStyle:{color:GRAY}},{value:73,itemStyle:{color:PURP}},{value:158,itemStyle:{color:BLUE}}], label: {show: true, fontSize: 11, position: "right", formatter: "{c}GW"}}];
+    return o; })());
+  /* ec-05 T07: 拍卖柱,2024峰值标色,2025流标注 */
+  mount("ec-05", (function(){ var o = catAxes("年份", {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis"}});
+    o.yAxis.name = "拍卖(GW)"; o.xAxis.data = ["2020","2021","2022","2023","2024","2025","2026YTD"];
+    o.series = [{name: "拍卖(GW)", type: "bar", data: [{value:0.76,itemStyle:{color:GRAY}},{value:1.5,itemStyle:{color:GRAY}},{value:9.5,itemStyle:{color:BLUE}},{value:13.6,itemStyle:{color:BLUE}},{value:19.9,itemStyle:{color:RED}},{value:5.8,itemStyle:{color:YELLOW}},{value:10.2,itemStyle:{color:GREEN}}], label: {show: true, fontSize: 11, formatter: "{c}"}}];
+    return o; })());
+  /* ec-06 T09: 中标电价横向条,德国负单列0示意 */
+  mount("ec-06", (function(){ var o = {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis", axisPointer: {type: "shadow"}, formatter: function(p){ var s=p[0]; if(s.name.indexOf("德国零补贴")===0){ return "德国零补贴项目: 负值(开发商付费€124亿竞得8.8GW), 图中X=0示意"; } return s.name + ": " + s.value + "€/MWh"; }}, grid: {left: 20, right: 50, top: 60, bottom: 30, containLabel: true}, textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "执行价(€/MWh)", nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", data: ["AR4","AR7","Hesselø","Nordsøen Midt","ORESS1","ORESS2.1","Baltic East","Baltica 9","Baltyk I","Sørlige Nordsjø II","德国零补贴(负)"], axisLabel: {fontSize: 11}}};
+    o.series = [{name: "执行价(€/MWh)", type: "bar", data: [44,108,72.5,67.4,86,99,113,116,117,99,{value:0,itemStyle:{color:RED}}], itemStyle: {color: BLUE}, label: {show: true, fontSize: 10, position: "right", formatter: function(p){ if(p.name.indexOf("德国零补贴")===0){ return "负(付费)"; } if(p.name==="AR7"){ return "约"+p.value; } return p.value; }}}];
+    return o; })());
+  /* ec-07 T17: 单桩产能横向条,SeAH 0标红 */
+  mount("ec-07", (function(){ var o = {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}, grid: {left: 20, right: 50, top: 60, bottom: 30, containLabel: true}, textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "产能(根/年)", nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", data: ["Sif","EEW","Steelwind","Haizea","SeAH(实际)","大金重工"], axisLabel: {fontSize: 11}}};
+    o.series = [{name: "产能(根/年)", type: "bar", data: [{value:200,itemStyle:{color:BLUE}},{value:100,itemStyle:{color:BLUE}},{value:135,itemStyle:{color:BLUE}},{value:110,itemStyle:{color:PURP}},{value:0,itemStyle:{color:RED}},{value:200,itemStyle:{color:GREEN}}], label: {show: true, fontSize: 11, position: "right", formatter: "{c}"}}];
+    return o; })());
+  /* ec-08 T26: 海缆积压横向条(€亿) */
+  mount("ec-08", (function(){ var o = {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}, grid: {left: 20, right: 50, top: 60, bottom: 30, containLabel: true}, textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "HV积压(€亿)", nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", data: ["Prysmian","NKT","Nexans","东方电缆(估)","中天科技(估)"], axisLabel: {fontSize: 11}}};
+    o.series = [{name: "HV积压(€亿)", type: "bar", data: [{value:170,itemStyle:{color:BLUE}},{value:135,itemStyle:{color:BLUE}},{value:79,itemStyle:{color:PURP}},{value:5,itemStyle:{color:GRAY}},{value:3,itemStyle:{color:GRAY}}], label: {show: true, fontSize: 11, position: "right", formatter: "{c}"}}];
+    return o; })());
+  /* ec-09 T35: 第四代WTIV数量 */
+  mount("ec-09", (function(){ var o = {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}, grid: {left: 20, right: 50, top: 60, bottom: 30, containLabel: true}, textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "第四代WTIV(艘)", nameLocation: "middle", nameGap: 32, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", data: ["Cadeler","DEME","Jan De Nul","Van Oord","Havfram(多艘)"], axisLabel: {fontSize: 11}}};
+    o.series = [{name: "数量(艘)", type: "bar", data: [{value:7,itemStyle:{color:BLUE}},{value:3,itemStyle:{color:BLUE}},{value:2,itemStyle:{color:PURP}},{value:1,itemStyle:{color:GRAY}},{value:3,itemStyle:{color:GRAY}}], label: {show: true, fontSize: 11, position: "right", formatter: "{c}"}}];
+    return o; })());
+  /* ec-10 T38: 大金营收分组柱(亿元)+毛利率线(%) */
+  mount("ec-10", (function(){ var o = catAxes("口径", {legend: {top: 0, textStyle: {fontSize: 11}}, tooltip: {trigger: "axis"},
+      yAxis: [{type: "value", name: "收入(亿元)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}, {type: "value", name: "毛利率(%)", min: 0, max: 50, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}]});
+    o.xAxis.data = ["2024","2025","2026H1"];
+    o.series = [{name: "总营收(亿元)", type: "bar", data: [37.8,61.74,32.53], itemStyle: {color: GRAY}, label: {show: true, fontSize: 11, formatter: "{c}"}},
+      {name: "海外/出口收入(亿元)", type: "bar", data: [17.34,45.97,26.75], itemStyle: {color: BLUE}, label: {show: true, fontSize: 11, formatter: "{c}"}},
+      {name: "海外毛利率(%)(2024无披露为null)", type: "line", yAxisIndex: 1, data: [null,{value:33.95,label:{show:true,fontSize:10,position:"left",distance:18,formatter:"{c}%",color:"#15803d"}} ,39.36], itemStyle: {color: GREEN}, lineStyle: {width: 3}, label: {show: true, fontSize: 11, position: "top", distance: 12, formatter: function(p){ return p.dataIndex === 1 ? "" : p.value + "%"; }}}];
+    return o; })());
+  function resizeAll(){ charts.forEach(function(c){ try{ c.resize(); }catch(e){} }); }
+  window.addEventListener("resize", resizeAll);
+  window.__printStates = null;
+  window.onbeforeprint = function(){ window.__printStates = []; document.querySelectorAll("main details").forEach(function(d){ window.__printStates.push(d.open); d.open = true; }); resizeAll(); };
+  window.onafterprint = function(){ if(window.__printStates){ var _ds = document.querySelectorAll("main details"); for(var _i=0; _i<_ds.length && _i<window.__printStates.length; _i++){ _ds[_i].open = window.__printStates[_i]; } window.__printStates = null; } };
+  function hookToggle(id){ var b = document.getElementById(id); if(b){ b.addEventListener("click", function(){ setTimeout(resizeAll, 60); }); } }
+  hookToggle("btn-expand"); hookToggle("btn-collapse");
+  window.__echartsList = charts;
+})();
+
+})();
+</script>
+</body>
+</html>

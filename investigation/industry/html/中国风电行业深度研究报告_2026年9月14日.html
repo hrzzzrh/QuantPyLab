@@ -1,0 +1,2492 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>中国风电行业深度研究报告_2026年9月14日 · 精读版HTML</title>
+<style>
+/* ===== 统一样式契约(总纲6.1/6.2,合并自各批次,前缀已归一) ===== */
+:root{--bg:#ffffff;--bg-soft:#f6f7f9;--ink:#1a1d21;--muted:#6b7280;--accent:#1d4ed8;--up:#15803d;--down:#dc2626;--warn:#d97706;--tier1:#1d4ed8;--tier2:#7c3aed;--tier3:#6b7280;--over:#1d4ed8;--std:#6b7280;--under:#d97706;--card-border:#e5e7eb;--radius:10px;--font:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;--mono:ui-monospace,"SF Mono",Consolas,monospace}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.75;font-size:15px}
+main section[id]{scroll-margin-top:72px}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:60}
+aside.toc{position:fixed;top:0;left:0;bottom:0;width:300px;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--card-border);padding:16px 10px 40px;z-index:40}
+.toc h2{font-size:13px;color:var(--muted);margin:4px 8px 8px;letter-spacing:.1em}
+.toc-link{display:block;font-size:13px;color:var(--ink);text-decoration:none;padding:4px 10px;border-radius:6px;line-height:1.5}
+.toc-link:hover{background:#e9effe}
+.toc-link.active{background:#e9effe;color:var(--accent);font-weight:700}
+.toc-link.lv1{font-weight:700;margin-top:6px}
+main{margin-left:300px;padding:0 0 90px}
+.wrap{max-width:1000px;margin:0 auto;padding:24px 28px 0}
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--card-border);padding:10px 0}
+.topbar-inner{max-width:1000px;margin:0 auto;padding:0 28px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.topbar .doc-title{font-weight:700;margin-right:auto;font-size:14px}
+.btn{border:1px solid var(--card-border);background:#fff;color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+h1{font-size:25px;line-height:1.4;border-bottom:2px solid var(--card-border);padding-bottom:10px}
+h2{font-size:20px;margin-top:40px;border-left:4px solid var(--accent);padding-left:12px}
+h3{font-size:16.5px;margin-top:28px}
+h4{font-size:15px}
+.lead{font-weight:700}
+ul.tight{margin:6px 0 6px 20px;padding:0}
+ul.tight li{margin:3px 0}
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* Tier徽章 */
+.tier-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;color:#fff;vertical-align:middle;margin-left:4px}
+.tier-badge.t1{background:var(--tier1)}.tier-badge.t2{background:var(--tier2)}.tier-badge.t3{background:var(--tier3)}
+/* 术语 */
+dfn.term{font-style:normal;border-bottom:1px dotted var(--accent);cursor:help;color:var(--accent)}
+/* 引用框 */
+.callout{border:1px solid var(--card-border);border-left-width:4px;border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--bg-soft)}
+.callout.quote{border-left-color:var(--accent);background:#eff4ff}
+.callout.warn{border-left-color:var(--warn);background:#fffbeb}
+.callout.method{border-left-color:var(--std);background:var(--bg-soft)}
+.footnote{font-size:12.5px;color:var(--muted);margin:6px 0}
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+.kpi-card{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:12.5px}
+.kpi-card p:first-child{font-family:var(--mono);font-size:21px;font-weight:800;margin:0 0 4px}
+.kpi-card p{margin:0;color:var(--muted)}
+/* 结论卡 */
+.conclusion-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:12px 0}
+.conclusion-cards>div{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff}
+.conclusion-cards h4{margin:0 0 6px;font-size:14px}
+.conclusion-cards p{margin:2px 0;font-size:13px}
+/* 信号灯 */
+.sig-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin:12px 0}
+.sig-board>div{border:1px solid var(--card-border);border-radius:8px;padding:8px 10px;font-size:13px;background:#fff}
+.sig-light{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.sig-light.red{background:var(--down)}.sig-light.yellow{background:var(--warn)}.sig-light.green{background:var(--up)}
+/* 配置矩阵 */
+.config-matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:12px 0}
+.config-matrix>div{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:13px}
+.config-matrix h4{margin:0 0 6px}
+/* 情景条 */
+.scenario-bar{display:flex;width:100%;min-height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);margin:10px 0;font-size:13px;font-weight:700}
+.scenario-bar a{display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;padding:4px}
+.scenario-bar .p60{width:60%;background:var(--accent)}
+.scenario-bar .p25{width:25%;background:#7d9bf0;color:var(--ink)}
+.scenario-bar .p15{width:15%;background:#9ca3af}
+.scenario-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:12px 0}
+.scenario-cards>div{border:1px solid var(--card-border);border-radius:var(--radius);padding:12px 14px;background:#fff;font-size:13px}
+.scenario-cards h3{margin-top:0}
+/* 100%堆积条 */
+.stack100{display:flex;width:100%;min-height:40px;border-radius:8px;overflow:hidden;border:1px solid var(--card-border);margin:8px 0}
+.stack100 div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;padding:2px 4px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin:4px 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:baseline}
+/* 条形 */
+.hbar-list{list-style:none;margin:8px 0;padding:0}
+.hbar-list li{display:grid;grid-template-columns:minmax(180px,1.2fr) 2fr auto;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.hbar{display:inline-block;background:linear-gradient(90deg,var(--accent),#7d9bf0);border-radius:6px;height:16px;color:#fff;font-size:11px;font-family:var(--mono);padding-left:6px;line-height:16px;min-width:44px}
+.hbar-row{display:grid;grid-template-columns:150px 1fr 64px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.hbar-track{background:#eef0f3;border-radius:6px;height:16px;position:relative;overflow:hidden}
+.hbar-fill{height:100%;border-radius:6px}
+.prog-row{display:grid;grid-template-columns:170px 1fr 52px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.prog-track{background:#eef0f3;border-radius:6px;height:14px;overflow:hidden}
+.prog-fill{height:100%}
+.ps-bars{margin:10px 0}
+.ps-row{display:grid;grid-template-columns:170px 1fr auto;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.ps-name{font-weight:600}
+.ps-track{background:#eef0f3;border-radius:6px;height:16px;overflow:hidden}
+.ps-fill{display:block;height:100%}
+.ps-val{font-size:12px;color:var(--muted)}
+/* 图表 */
+.chart{border:1px solid var(--card-border);border-radius:var(--radius);padding:12px;margin:12px 0;background:#fff}
+.chart-title{font-weight:700;font-size:13.5px;margin:0 0 8px}
+.bar-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.bar-group p:first-child{font-size:13px;font-weight:600;margin:0 0 6px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:130px;border-bottom:1px solid var(--card-border);padding-bottom:2px}
+.bars span{flex:1;background:linear-gradient(180deg,#7d9bf0,var(--accent));border-radius:3px 3px 0 0;color:#fff;font-size:10px;font-family:var(--mono);text-align:center;min-height:8px;padding-top:2px}
+.bars span.anchor{background:linear-gradient(180deg,var(--warn),#b45309)}
+.bars span.t3peak{background:linear-gradient(180deg,#b45309,var(--warn));outline:2px dashed var(--warn);outline-offset:-2px}
+.watermarked{position:relative}
+.watermarked::after{content:"Tier3峰值 · 未经本地验证";position:absolute;top:8px;right:10px;font-size:11px;color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:1px 8px;background:rgba(255,251,235,.9)}
+.chart svg{width:100%;height:auto}
+.chart svg text{font-family:var(--font)}
+.hbars .hbar-list{list-style:none;margin:8px 0;padding:0}
+.hbars .hbar-list li{display:grid;grid-template-columns:minmax(180px,1.2fr) 2fr auto;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.hbars .hbar{display:inline-block;background:linear-gradient(90deg,var(--accent),#7d9bf0);border-radius:6px;height:16px;color:#fff;font-size:11px;font-family:var(--mono);padding-left:6px;line-height:16px;min-width:44px}
+.matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin:12px 0}
+.matrix .company-card{margin:0}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:0;font-size:12px}
+.grid5>div{padding:8px 10px;border-right:1px solid var(--card-border)}
+.grid5>div:last-child{border-right:none}
+.grid5 .k{color:var(--muted);font-size:11px}
+th.n,td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num.up{color:var(--up);font-weight:700}
+.num.down{color:var(--down);font-weight:700}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:baseline}
+.dot.r{background:var(--down)}.dot.y{background:var(--warn)}.dot.g{background:var(--up)}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14171c;--bg-soft:#1b1f26;--ink:#e6e8eb;--muted:#9aa3af;--card-border:#2c333d}
+  .kpi-card,.conclusion-cards>div,.sig-board>div,.config-matrix>div,.compare-col,.ladder-step,.tier-card,.tl-step,.company-card,.chart,.tbl-wrap,.scenario-cards>div,.pyr-lvl,.glossary>div,details{background:#1b1f26}
+  .company-card header{background:#22272f}
+  .chart svg text{fill:#e6e8eb}
+  .chart svg line{stroke:#3a4250}
+  .hbar-track,.prog-track,.ps-track{background:#2c333d}
+  table.data-table tbody tr:nth-child(even){background:#181c22}
+  .callout.quote{background:#1c2942}
+  .callout.warn{background:#2c2417}
+  .watermarked::after{background:rgba(44,36,23,.95)}
+}
+/* 双栏/阶梯/Tier卡 */
+.compare-dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.compare-col{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:13px}
+.ladder{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.ladder-step{border:1px solid var(--card-border);border-left:6px solid var(--accent);border-radius:8px;padding:8px 12px;background:#fff;font-size:13px}
+.tier-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+.tier-card{border:1px solid var(--card-border);border-radius:var(--radius);padding:10px 12px;background:#fff;font-size:13px}
+/* 时间轴/金字塔 */
+.timeline-h{display:flex;gap:0;margin:12px 0;overflow-x:auto}
+.tl-step{flex:1;min-width:150px;border-top:3px solid var(--accent);padding:8px 10px 0;margin-right:8px;font-size:12.5px;background:#fff}
+.timeline-v{border-left:3px solid var(--card-border);margin:12px 0 12px 8px;padding-left:0}
+.timeline-v>div{position:relative;padding:6px 0 6px 18px;font-size:13px}
+.timeline-v>div::before{content:"";position:absolute;left:-7px;top:12px;width:11px;height:11px;border-radius:50%;background:var(--accent)}
+.pyramid{display:flex;flex-direction:column;align-items:center;gap:6px;margin:12px 0}
+.pyr-lvl{background:linear-gradient(180deg,#e9effe,#d3e0fd);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:13px;text-align:center}
+/* 公司卡 */
+.company-card{border:1px solid var(--card-border);border-radius:var(--radius);margin:12px 0;overflow:hidden;background:#fff}
+.company-card header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:var(--bg-soft);border-bottom:1px solid var(--card-border)}
+.company-card header .nm{font-weight:800;font-size:15px}
+.company-card header .code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.company-card .body{padding:10px 12px;font-size:13px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.badge.good{background:#e7f6ec;color:var(--up);border:1px solid var(--up)}
+.badge.bad{background:#fdecec;color:var(--down);border:1px solid var(--down)}
+.badge.mid{background:#fff7e6;color:var(--warn);border:1px solid var(--warn)}
+.badge.info{background:#e9effe;color:var(--accent);border:1px solid var(--accent)}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:0;font-size:12px}
+.grid6>div{padding:8px 10px;border-right:1px solid var(--card-border)}
+.grid6>div:last-child{border-right:none}
+.grid6 .k{color:var(--muted);font-size:11px}
+/* 表格 */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--card-border);border-radius:var(--radius);margin:12px 0;background:#fff}
+table.data-table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+table.data-table thead th{position:sticky;top:0;background:var(--bg-soft);z-index:2}
+table.data-table th,table.data-table td{border:1px solid var(--card-border);padding:7px 10px;text-align:left;vertical-align:top}
+table.data-table tbody tr:nth-child(even){background:#fafbfc}
+table.data-table td.num,table.data-table th.num{text-align:right;font-family:var(--mono)}
+/* 折叠 */
+details{border:1px dashed var(--card-border);border-radius:var(--radius);margin:10px 0;background:#fff}
+details summary{cursor:pointer;padding:9px 14px;font-size:13.5px;color:var(--muted)}
+details .fold-body{padding:0 14px 12px}
+details.puml summary{color:var(--accent)}
+.fold-summary{font-size:13px;color:var(--muted);background:var(--bg-soft);border-radius:8px;padding:8px 12px}
+/* 术语表 */
+.glossary{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin:12px 0}
+.glossary>div{border:1px solid var(--card-border);border-radius:8px;padding:8px 10px;font-size:12.5px;background:#fff}
+.integrity{margin-top:44px;border:1px solid var(--card-border);border-radius:var(--radius);background:var(--bg-soft);padding:14px 18px;font-size:13px;color:var(--muted)}
+#backtop{position:fixed;right:22px;bottom:22px;z-index:50;display:none}
+@media (max-width:1000px){aside.toc{position:static;width:auto;max-height:44vh;border-right:none;border-bottom:1px solid var(--card-border)}main{margin-left:0}.compare-dual{grid-template-columns:1fr}.grid6{grid-template-columns:repeat(2,1fr)}.grid5{grid-template-columns:repeat(2,1fr)}.hbar-list li{grid-template-columns:1fr}.hbars .hbar-list li{grid-template-columns:1fr}.ps-row,.hbar-row,.prog-row{grid-template-columns:1fr;gap:2px}}
+@media print{aside.toc,#progress,#backtop,.topbar .btn{display:none}main{margin:0}body{font-size:12px}main details{open:true}main details{display:block}main details>details{display:block}}
+
+/* ECharts容器(替代手写svg,数字与语义不变) */
+.echart{width:100%;height:320px;min-height:260px;margin:8px 0}
+#ec-07{height:360px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<script>window.__ECHARTS_CDN__=true;/* ECharts 5.6.0 via CDN (Apache 2.0); 离线阅读请用 .inline-bak 备份文件 */</script>
+</head>
+<body>
+<div id="progress"></div>
+<button class="btn" id="backtop" style="position:fixed;right:18px;bottom:18px;display:none;z-index:60">回顶部</button>
+<aside class="toc">
+  <h2>目录 · 全文导航</h2>
+  <nav id="tocnav">
+    <a class="toc-link lv1" href="#cockpit" data-target="cockpit">驾驶舱（5分钟读完）</a>
+    <a class="toc-link lv1" href="#ch1" data-target="ch1">一、摘要</a>
+    <a class="toc-link lv1" href="#ch2" data-target="ch2">二、背景与行业定义</a>
+    <a class="toc-link lv1" href="#ch31" data-target="ch31">三（一）装机量</a>
+    <a class="toc-link lv1" href="#ch32" data-target="ch32">三（二）招标量</a>
+    <a class="toc-link lv1" href="#ch33" data-target="ch33">三（三）风机价格</a>
+    <a class="toc-link lv1" href="#ch34" data-target="ch34">三（四）竞争格局</a>
+    <a class="toc-link lv1" href="#ch35" data-target="ch35">三（五）盈利与财务</a>
+    <a class="toc-link lv1" href="#ch36" data-target="ch36">三（六）消纳</a>
+    <a class="toc-link lv1" href="#ch37" data-target="ch37">三（七）风险全景</a>
+    <a class="toc-link lv1" href="#ch4" data-target="ch4">四、核心结论</a>
+    <a class="toc-link lv1" href="#ch5" data-target="ch5">五、持续跟踪框架</a>
+    <a class="toc-link lv1" href="#ch6" data-target="ch6">六、参考资料</a>
+    <a class="toc-link lv1" href="#glossary" data-target="glossary">术语表（24个）</a>
+  </nav>
+</aside>
+<main>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span class="doc-title">中国风电行业深度研究报告 · 精读版HTML（2026-09-14）</span>
+      <button class="btn" id="btn-expand">全部展开</button>
+      <button class="btn" id="btn-collapse">全部折叠</button>
+      <button class="btn" onclick="window.print()">打印 / 存 PDF</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <h1>中国风电行业深度研究报告：量升价稳转折中的消纳硬约束</h1>
+    <p class="footnote">报告日期 2026-09-14 · 数据截至 2026-09-14 · 源报告 <span class="mono">investigation/industry/中国风电行业深度研究报告_2026年9月14日.md</span>（1044行/66标题/52表/67条来源） · 本页为针对性编辑改写版：结论可视化 + 长难句重写（R1–R7），事实零丢失以F01–F36验收 · 改写总纲见 <span class="mono">workspace/industry_html/wind_onshore/00_总纲.md</span></p>
+<section id="cockpit">
+<h2>驾驶舱（5分钟读完）</h2>
+<p class="footnote">数据截至2026-09-14（装机及消纳截至2026-06-30，NEA 7-22/7-30发布；1–7月及7月单月装机截至2026-09-14尚未发布；招标定标及价格截至2026年7月，风电头条8-07发布，8月统计截至2026-09-14尚未发布；整机商H1业绩截至2026-08-25，金风正式半年报已披露，明阳仍为7-14业绩预告，正式半年报截至2026-09-14未检得，其余3家正式半年报截至2026-09-14未检得）。报告结构计数：标题66个 / 表格52张（T01–T52）/ 参考资料67条 / 风险8项。</p>
+
+<h3>① 结论6卡（§4.1，三重确定性+一约束+两新增发现）</h3>
+<div class="conclusion-cards">
+<div><h4><a href="#ch4-1">量有确定性·118GW中枢</a></h4><p>118GW（110–125GW区间）</p><p>H1 38.62GW超预期33% <span class="tier-badge t1">T1</span></p></div>
+<div><h4><a href="#ch4-1">价有支撑·两连降跟踪</a></h4><p>7月1,589.80元/kW</p><p>两月回落105元仍处中枢 <span class="tier-badge t2">T2</span></p></div>
+<div><h4><a href="#ch4-1">利修复确认但分化</a></h4><p>金风+24.67%</p><p>明阳预告-75%~-84% <span class="tier-badge t1">T1</span></p></div>
+<div><h4><a href="#ch4-1">消纳硬约束·逼近红线</a></h4><p>H1弃风率9.1%</p><p>距10%红线0.9pct <span class="tier-badge t1">T1</span></p></div>
+<div><h4><a href="#ch4-1">弃光追风·风电更韧</a></h4><p>超140项目废止&gt;10GW</p><p>风电废止远低于光伏 <span class="tier-badge t2">T2</span></p></div>
+<div><h4><a href="#ch4-1">十五五规划定路线</a></h4><p>2030年54亿kW·电网固投5万亿+</p><p>新增投产15回特高压 <span class="tier-badge t1">T1</span></p></div>
+</div>
+
+<h3>② 消纳预警灯（H1 90.9%，距10%红线0.9pct）</h3>
+<div class="sig-board">
+<div><span class="sig-light green" title="2023年：利用率97.3%，弃风率2.7%，历史最优水平"></span><strong>2023年 2.7% 🟢</strong> 利用率97.3%，历史最优 <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light yellow" title="2025年：利用率94.3%，弃风率5.7%，首次跌破95%，同比几乎翻倍"></span><strong>2025年 5.7% 🟡</strong> 利用率94.3%，首次跌破95% <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light red" title="2026H1（NEA口径）：利用率90.9%，弃风率9.1%，较Q1再恶化0.5pct，较2025H1降3.4pct，距10%红线仅0.9pct"></span><strong>2026H1 9.1% 🔴</strong> 利用率90.9%，距10%红线0.9pct <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light red" title="消纳恶化：弃风率2.7%→5.7%→9.1%加速上行，IRR击穿投资门槛；全国超140个风光项目被废止（>10GW），其中纯风电约5.7GW"></span><strong>消纳恶化 🔴极高</strong> <dfn class="term" data-term="弃风率" title="弃风电量占可发电量比；2026H1为9.1%，距10%红线0.9pct">弃风率</dfn>9.1%，<dfn class="term" data-term="IRR" title="项目全投资内部收益率；央企门槛6–7%，弃风&gt;15%区域跌破6%">IRR</dfn>击穿门槛 <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light yellow" title="价格内卷复燃：行业自律瓦解，不含塔筒跌破1400元/kW；当前7月1,589.80元/kW仍处中枢但连续两月回落105元"></span><strong>价格内卷复燃 🟡中等</strong> 7月1,589.80元/kW，两连降 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light green" title="远期装机缺口：1-7月定标95.84GW年化约164GW，陆风已锁定；仅海上缺口"></span><strong>远期缺口 🟢已缓解</strong> 定标年化164GW，仅海上缺口 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light yellow" title="电价市场化冲击：增量项目全量入市，现货市场价格下行压力；各地分化大，总体可控"></span><strong>电价市场化 🟡中等</strong> 增量全量入市，总体可控 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light red" title="海风建设低于预期：2026年海风吊装仅5.5-7.0GW（中位6.2GW）；H1海上定标仅3.88GW、1-7月3.90GW，7月仅17MW"></span><strong>海风建设 🔴较高</strong> 吊装5.5–7.0GW，定标双弱 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light green" title="供应链瓶颈：大型铸件、叶片树脂、塔筒钢材价格上涨；2025年高峰期间阶段性上涨"></span><strong>供应链 🟢较低</strong> 阶段性上涨 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light yellow" title="海外贸易壁垒：欧美反补贴调查、加征关税；风险上升但尚未实质落地"></span><strong>贸易壁垒 🟡中等</strong> 风险上升未落地 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light green" title="风资源异常：2026年3-5月风资源为十年来最差；气象条件，不改变中长期逻辑"></span><strong>风资源 🟢暂时</strong> 3–5月十年来最差 <span class="tier-badge t1">T1</span></div>
+</div>
+<p><strong>触发条件（4条判据，不可折叠）：</strong>①全国利用率连续两月低于90%触发预警；②重点省份利用率跌破85%；③<dfn class="term" data-term="不含塔筒" title="风机主机不含塔筒报价口径；2026年7月1,589.80元/kW">不含塔筒</dfn>均价连续两月低于1400元/kW判自律瓦解；④Q3弃风率若突破10%，西北并网审批可能行政性延迟。</p>
+<p class="footnote">利用率序列（NEA口径）：2023年97.3%/2.7% → 2024年95.9%/4.1% → 2025年94.3%/5.7% → 2026年1–2月91.5%/8.5% → Q1 91.4%/8.6%（消纳中心新口径91.9%/8.1%，口径差异约0.5pct）→ H1 90.9%/9.1%（较Q1恶化0.5pct，较2025H1降3.4pct）。H1分省利用率及7–8月利用率截至2026-09-14尚未发布；消纳中心H1口径截至2026-09-14尚未发布。 <span class="tier-badge t1">T1</span></p>
+
+<h3>③ 装机进度条（H1 38.62GW → 全年118GW中枢）</h3>
+<div class="scenario-bar"><span style="width:32.7%">H1已装38.62GW（32.7%）</span><span style="width:67.3%">H2待装79.38GW（67.3%）</span></div>
+<p>中枢118GW（区间110–125GW）：下沿110GW / 中枢118GW / 上沿125GW。6月单月约13.57GW为年内最强单月注记。H1拆分：陆上37.78GW / 海上0.84GW（H1累计同比-26.5%，主因2025H1抢装约52.6GW异常高基数）。累计678.75GW（NEA 7-22口径概数6.8亿kW；7-30发布会细化口径6.79亿kW，其中陆上6.3亿kW、海上4,841万kW，同比+18.5%，口径差异为四舍五入）。 <span class="tier-badge t1">T1</span></p>
+<p class="footnote">1–7月及7月单月装机截至2026-09-14尚未发布；<dfn class="term" data-term="并网口径" title="NEA统计已接入电网容量；与吊装差约10GW滞后（2025年130 vs 120GW）">并网口径</dfn>（NEA已接入电网容量）与<dfn class="term" data-term="吊装口径" title="CWEA统计制造端吊装容量；通常略高于同期并网，滞后1–3个月">吊装口径</dfn>（CWEA制造端吊装容量）差约10GW为并网滞后，不可直接比较。</p>
+
+<h3>④ 招标定标双轨条（定标强 vs 公开招标弱）</h3>
+<div class="scenario-bar"><span style="width:64.9%">定标轨：1–7月95.84GW，年化约164GW 🟢强</span><span style="width:35.1%">公开招标轨：H1 51.80GW（-28.0%）🟡弱</span></div>
+<p><dfn class="term" data-term="央国企定标" title="央企+国企开发商签约量口径；1–7月95.84GW，含框采">央国企定标</dfn>（央企+国企开发商签约量口径，含<dfn class="term" data-term="框采" title="框架采购：一次性签多年总量、分批提货；签约≠提货">框采</dfn>）：1–6月89.31GW（275项目）/ 1–7月95.84GW（334项目，年化约164GW历史最强）；7月单月4.77GW（47项目）。<dfn class="term" data-term="公开招标" title="不含框采的公开发标量；H1 51.80GW（-28.0%，金风IR口径）">公开招标</dfn>（不含框采，金风IR口径）：H1 51.80GW（-28.0%，陆上48.87GW/海上2.93GW），影响2027年远期交付而非2026年。海上缺口单列：H1定标3.88GW / 1–7月3.90GW（7月仅17MW华能<dfn class="term" data-term="漂浮式" title="深远海漂浮式基础；7月17MW华能漂浮式为单月海上全部定标">漂浮式</dfn>），完成度26% 🔴。 <span class="tier-badge t2">T2</span> <span class="tier-badge t1">T1</span></p>
+<p class="footnote">定标管近期执行（2026年装机），招标管远期趋势（2027年装机）；框采签约≠提货，192GW在手库存含部分虚单。8月定标/价格统计截至2026-09-14尚未发布。</p>
+
+<h3>⑤ 核心KPI带（12个锚点数字）</h3>
+<div class="kpi-strip">
+<div class="kpi-card"><p>120GW（+51%）</p><p>2025年新增并网创历史新高</p></div>
+<div class="kpi-card"><p>118GW（110–125）</p><p>2026年预测中枢，7-30确认、9-14复核维持</p></div>
+<div class="kpi-card"><p>38.62GW（-26.5%）</p><p>H1新增：陆上37.78GW/海上0.84GW</p></div>
+<div class="kpi-card"><p>13.57GW</p><p>6月单月，年内最强单月</p></div>
+<div class="kpi-card"><p>95.84GW（年化164GW）</p><p>1–7月央国企定标</p></div>
+<div class="kpi-card"><p>51.80GW（-28.0%）</p><p>H1国内公开招标（金风IR口径）</p></div>
+<div class="kpi-card"><p>1,589.80元/kW</p><p>7月陆上不含塔筒均价（-69.12）</p></div>
+<div class="kpi-card"><p>2,181.53元/kW</p><p>7月含塔筒均价（+78.43）</p></div>
+<div class="kpi-card"><p>9.1%</p><p>H1弃风率（较Q1恶化0.5pct）</p></div>
+<div class="kpi-card"><p>90.9%</p><p>H1利用率（距10%红线0.9pct）</p></div>
+<div class="kpi-card"><p>18.55亿（+24.67%）</p><p>金风H1归母，正式半年报确认</p></div>
+<div class="kpi-card"><p>1.0–1.5亿（-75%~-84%）</p><p>明阳H1预告，正式半年报未检得</p></div>
+</div>
+
+<h3>⑥ 118GW综合判断引用框（§3.1.5综合判断，全文保留）</h3>
+<div class="callout quote">
+<p><strong>结论：2026年综合判断118GW（110–125GW区间），海风平淡化被陆风超预期完全对冲。</strong></p>
+<ul>
+<li>季节模式法：H1=38.62GW（含海上0.84GW），按正常H1占比30–35%倒推，110–129GW。</li>
+<li>管线覆盖法：2025年末<dfn class="term" data-term="在手订单" title="已签未交付订单；金风54.14GW（含海外9.49GW），明阳海风45.6GW">在手订单</dfn>管线192GW（定标144GW+存量结转），按53–60%转化率，102–115GW。</li>
+<li>综合判断：H1 38.62GW已超此前预期（原估~29GW），6月13.57GW确认Q2末赶工效率。海风平淡化（5.5–7.0GW，H1仅0.84GW并网/H1定标3.88GW）被陆风超预期完全对冲。1–7月央国企定标95.84GW年化约164GW（历史最强）提供充裕支撑。但消纳恶化（H1弃风率9.1% vs Q1 8.6%）对H2西北并网节奏的边际约束不可忽视。<strong>118GW（110–125区间）</strong>（7月30日H1数据确认后维持，9月14日复核维持）。</li>
+</ul>
+<p class="footnote">1–7月及7月单月装机截至2026-09-14尚未发布，无新数据改变基准；H1公开招标-28%影响的是2027年远期交付而非2026年。</p>
+</div>
+</section>
+
+<section id="ch1">
+<h2>一、摘要</h2>
+<p class="footnote">本章为源报告§一4段改写（L11核心判断 / L12最新进度 / L13政策市场 / L14风险关注），数据截至2026-09-14。NEA 7-22概数（6.8亿kW）与7-30细化口径（6.79亿kW，其中陆上6.3亿kW、海上4,841万kW）差异为四舍五入；1–7月及7月单月装机截至2026-09-14尚未发布。 <span class="tier-badge t1">T1</span></p>
+
+<section id="ch1-1">
+<h3>摘要之一：核心判断——量升价稳转折确立</h3>
+<p><strong>结论：量升价稳转折确立，2026年118GW中枢（110–125GW区间）。</strong></p>
+<ul>
+<li>2025年新增并网120GW（+51% YoY）创历史新高，十五五目标年均120GW构成政策底。</li>
+<li>价格端经历2021–2024年超50%暴跌后，于2024Q4经行业自律与招标机制改革企稳反弹、走出内卷。</li>
+<li>2026年预计新增约118GW（110–125GW区间），7月30日H1消纳数据确认后维持，9月14日复核维持，较2025年回落约2%。</li>
+<li>6月单月新增约13.57GW，Q2末赶工效应超预期；海风平淡化（吊装5.5–7.0GW）的拖累被陆风超预期完全对冲。</li>
+<li>消纳恶化（H1弃风率9.1%、利用率90.9%）对西北并网节奏构成约束但尚未实质性阻滞。</li>
+<li>1–7月央国企定标95.84GW（年化约164GW）与192GW在手管线构成坚实底部。</li>
+</ul>
+<p class="footnote">口径：并网装机为NEA并网口径（Tier1）；海风吊装5.5–7.0GW为海风报告（2026-08-02版，分层管线概率法修正版）口径，与本报告口径一致。 <span class="tier-badge t1">T1</span></p>
+</section>
+
+<section id="ch1-2">
+<h3>摘要之二：2026年最新进度——H1超预期</h3>
+<p><strong>结论：H1 38.62GW超预期，6月13.57GW为年内最强单月。</strong></p>
+<ul>
+<li>累计节奏：Q1新增15.77GW（+7.87%）/ 1–4月21.26GW（+4.8%）/ 1–5月25.05GW / 1–6月38.62GW（陆上37.78GW、海上0.84GW，H1累计同比-26.5%）。</li>
+<li>累计总量：截至6月底累计678.75GW（NEA 7-22口径6.8亿kW；7-30细化口径6.79亿kW，其中陆上6.3亿kW、海上4,841万kW，同比+18.5%，差异为四舍五入）。</li>
+<li>单月峰值：6月单月新增约13.57GW，远超Q1月均5.26GW和4–5月5.49/3.79GW，Q2末赶工效应强劲。</li>
+<li>同比解读：H1累计-26.5%主因2025年H1为136号文抢装期（H1约52.6GW）形成异常高基数；剔除抢装效应的1–4月+4.8%更能反映当前景气节奏。</li>
+<li>H1发电量：风电发电量5,984亿kWh，平均利用率90.9%（弃风率9.1%）。</li>
+<li>招标定标：1–6月央国企定标89.31GW / 1–7月95.84GW（7月单月4.77GW、海上仅17MW），年化约164GW高位延续；海上定标H1仅3.88GW、1–7月3.90GW，持续印证海风平淡年。</li>
+<li>Q1多口径：全球中标32.13GW（-3.4%）/ 国内27.30GW（-14.8%）/ 国际4.82GW（+215%，远景2.56GW）/ 新核准35.24GW。</li>
+<li>价格端：陆上不含塔筒均价5月1,695元/kW → 6月1,658.92元/kW（-36.34）→ 7月1,589.80元/kW（-69.12）；含塔筒6月2,103.1元/kW（-1.77）→ 7月2,181.53元/kW（+78.43）；整体仍站稳1,500–1,700元/kW中枢，但连续两月环比回落需跟踪自律可持续性。</li>
+<li>海外订单：1–5月新增6.8GW（远景2.6GW、三一2.0GW领跑）；Q1海外+215%对冲国内-14.8%的逻辑在H1延续；2025年以来海外新签&gt;40GW。</li>
+<li>风资源与利用小时：3–5月全国风资源为十年来同期最差（发电量3月-17.3%/4月-5.0%/5月+0.5%）；H1全国发电设备平均利用1,392小时（-113小时）、风电917小时（-170小时），短期拖累业绩。</li>
+<li>海风口径一致：海风报告（2026-08-02版，已完成管线方法论修正，2026年海风吊装5.5–7.0GW中位6.2GW）口径一致——H1海上新增并网仅0.84GW，较Q1的0.21GW并未显著放量，产业链实物验证及H1海上定标3.88GW进一步印证平淡年判断，对总装机的影响被陆风超预期完全对冲。</li>
+</ul>
+<p class="footnote">价格为风电头条央国企口径（Tier2），不含塔筒口径与含塔筒口径不可直接比较；7月分商最高1,772.5元/kW（电气）、最低1,402元/kW（金风）。海外订单为企业口径（Tier2）。1–7月及7月单月装机截至2026-09-14尚未发布；8月定标/价格统计截至2026-09-14尚未发布。 <span class="tier-badge t1">T1</span> <span class="tier-badge t2">T2</span></p>
+</section>
+
+<section id="ch1-3">
+<h3>摘要之三：重大政策与市场——消纳制度落地</h3>
+<p><strong>结论：42号令施行确立消纳双轮驱动，绿电交易稳增。</strong></p>
+<ul>
+<li>国家发展改革委第42号令已于2026-08-01施行（6-22发布），构建"消费端最低比重目标+<dfn class="term" data-term="消纳责任权重" title="42号令制度：消费端最低比重+消纳端属地责任双轮驱动，2026-08-01施行">消纳责任权重</dfn>"双轮驱动格局。</li>
+<li>6月全国<dfn class="term" data-term="绿电交易" title="绿色电力市场化交易；2026年6月275亿kWh（+15.0%），H1累计1,641亿kWh（+6.6%）">绿电交易</dfn>电量275亿千瓦时（+15.0%）；1–6月累计1,641亿千瓦时（+6.6%）。</li>
+<li>上半年电力市场交易电量36,848亿kWh（+24.2%），新能源入市交易深化。</li>
+<li>1–6月全国新增发电装机1.6亿kW（中电联），风光合计1.1亿kW占70%；NEA口径可再生能源新增1.17亿kW、风电38.62GW占33%，交叉验证显示风电新增占比约三分之一。</li>
+</ul>
+<p class="footnote">42号令原文见国家发改委官网（Tier1）；绿电交易为国家能源局口径（Tier1）；1.6亿kW为中电联口径（Tier2），与NEA口径差异为统计边界不同，不可直接比较。十五五规划（2026-06-25，发改能源〔2026〕884号：2030年电力总装机54亿千瓦、风光比重&gt;50%、电网固投5万亿+、新增投产15回特高压、能源总投资超20万亿）与7月5日《"十五五"碳达峰行动方案》（金风半年报援引口径：风电太阳能总装机28亿千瓦以上、新增西电东送8000万千瓦以上、非化石能源消费比重25%左右，政策原文待核验）详见第四批。 <span class="tier-badge t1">T1</span> <span class="tier-badge t2">T2</span></p>
+</section>
+
+<section id="ch1-4">
+<h3>摘要之四：风险关注——消纳灰犀牛与盈利分化</h3>
+<p><strong>结论：消纳恶化是最大灰犀牛，盈利端分化待验证。</strong></p>
+<ul>
+<li>2025年弃风率翻倍至5.7%；2026年H1利用率90.9%（弃风率9.1%）较Q1的91.4%（弃风率8.6%）再恶化0.5pct，距10%红线仅0.9pct。</li>
+<li>CWEA测算弃风率&gt;15%的区域风电IRR将跌破6%央企投资门槛。</li>
+<li>2025H2以来全国超140个风光项目被废止（&gt;10GW），是2025年招标-26%、Q1 2026国内中标-14.8%、H1 2026国内公开招标-28.0%（金风科技IR口径）的根本原因之一；存量在建项目不受影响（沉没成本），新项目投资决策正被弃风重塑。</li>
+<li>金风科技2026H1正式半年报（8月25日）：归母18.55亿（+24.67%），营收337.39亿（+18.23%），扣非20.22亿（+47.79%），风机及零部件毛利率11.62%（+3.65pp），在手订单54.14GW（含海外9.49GW、+28.93%），确认盈利修复。</li>
+<li>明阳智能仍为2026H1业绩预告（归母1.0–1.5亿，同比-75.41%~-83.60%，<dfn class="term" data-term="扣非净利" title="扣非经常损益后归母净利；明阳H1预告0.05亿至-0.45亿，接近盈亏平衡">扣非净利</dfn>0.05亿至-0.45亿，98.97%~-109.27%，接近盈亏平衡），正式半年报截至2026-09-14未检得，印证电站转让节奏放缓对利润的拖累。</li>
+<li>其余3家（运达/三一/电气风电）正式半年报截至2026-09-14未检得，行业级盈利拐点尚待验证。</li>
+<li>电价市场化改革、海风建设不及预期、供应链成本波动也需持续跟踪；<dfn class="term" data-term="机制电价" title="136号文前保量保价存量电价；增量项目全量入市，无机制电价+有弃风则半数省IRR&lt;6%">机制电价</dfn>（136号文前保量保价存量电价）缺失叠加弃风将使半数省份IRR跌破6%。</li>
+</ul>
+<p class="footnote">盈利数据为公司公告口径（Tier1）；明阳正式半年报截至2026-09-14未检得、其余3家截至2026-09-14未检得，不得以券商预测替代；6月风电发电量为统计局7-15口径（Tier1）；下一验证窗：8月定标/价格统计、H1分省利用率、Q3利用率及明阳等3家半年报，截至2026-09-14尚未发布/未检得。 <span class="tier-badge t1">T1</span></p>
+</section>
+</section>
+<!-- 片段B：背景二 + 3.1装机(T01–T10) + 3.2招标(T11–T19) + 3.3价格(T20–T21) -->
+<!-- 契约：workspace/industry_html/wind_onshore/00_总纲.md 第2节T01–T21处置、第3节R1–R7、第4节F01–F19、第5节术语、第6节样式契约 -->
+<!-- ECharts占位：ec-01…ec-21（A无图，C用ec-22起）；组装JS挂载，片段内无style/script -->
+
+<section id="ch2" class="chapter">
+<h2>二、背景与行业定义 <span class="tier-badge t1">T1</span> <span class="tier-badge t2">T2</span></h2>
+<p><strong>结论：中国为全球最大风电市场，基本盘上行，先立口径再谈规模。</strong></p>
+<ul>
+<li>全球地位：2025年新增装机占全球约77%（WWEA数据）。</li>
+<li>产业链：整机制造→零部件供应→风电场开发运营，链条完整。</li>
+<li>阶段：平价上网+市场化交易新阶段，政策从补贴转向市场化机制。</li>
+<li>来源层级：Tier1为NEA并网统计与CWEA吊装统计；Tier2为BNEF/WoodMac/GWEC/WWEA与上市公司年报。</li>
+</ul>
+<p class="footnote">口径：背景节约77%（WWEA）与<a href="#ch31-3">3.1.3</a>全球表71%引用年份不同，不可直接比较。数据截至2026-09-14。</p>
+</section>
+
+<section id="ch31" class="chapter">
+<h2>3.1 装机量 <span class="tier-badge t1">T1</span></h2>
+<p><strong>结论：H1 38.62GW超预期兑现，全年118GW中枢上修，陆风对冲海风平淡。</strong></p>
+<p class="footnote">装机是需求终极标尺。本节整合NEA<dfn class="term" data-term="并网口径" title="NEA统计已接入电网容量；与吊装差约10GW滞后（2025年130 vs 120GW）">并网口径</dfn>（官方口径）、CWEA<dfn class="term" data-term="吊装口径" title="CWEA统计制造端吊装容量；通常略高于同期并网，滞后1–3个月">吊装口径</dfn>（制造交付口径）、全球占比及十五五展望。</p>
+
+<section id="ch31-1" class="foldable" data-default="collapsed">
+<h3>3.1.1 历史回顾（2019–2025）：NEA并网口径</h3>
+<p class="fold-summary"><strong>结论：2025年120GW创历史新高上行，抢装周期兑现为大基地放量。</strong></p>
+<ul>
+<li>总量：2025年新增并网120GW（+51%），其中陆风110GW、海上6.59GW。</li>
+<li>抢装印记：2020年陆风抢装约71GW；2021年海风抢装16.90GW（占当年35.5%）。</li>
+<li>低谷：2022年新增37.63GW（-21%），为抢装后低谷。</li>
+<li>放量：2023年75.90GW（+102%），大基地建设加速；2024年79.82GW（+6%）。</li>
+<li>爆发：2025年120GW，驱动为2024年164GW招标交付、<dfn class="term" data-term="以大代小" title="老旧小机组退役换大机组；1.5MW及以下存量约98GW，2030年前约200GW增量">以大代小</dfn>与136号文抢装。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-01" role="img" aria-label="2019–2025年新增并网柱状与累计折线（单位GW，NEA并网口径）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2019–2025年新增并网柱状+累计折线（单位：GW；口径：NEA并网口径，Tier1）。2020/2025抢装注记见原表关键事件列。</p>
+<details><summary>原表备查（T01）</summary>
+<table class="data-table"><thead><tr><th>年份</th><th>新增并网(GW)</th><th>同比增速</th><th>累计并网(GW)</th><th>陆风新增</th><th>海风新增</th><th>关键事件</th></tr></thead><tbody>
+<tr><td>2019</td><td>25.74</td><td>—</td><td>210</td><td>23.76</td><td>1.98</td><td>陆风补贴退坡预警</td></tr>
+<tr><td>2020</td><td>~71</td><td>~+176%</td><td>~281</td><td>~68</td><td>~3.06</td><td>陆风抢装潮（补贴末班车）</td></tr>
+<tr><td>2021</td><td>47.57</td><td>-33%</td><td>328</td><td>30.67</td><td>16.90</td><td>海风抢装潮</td></tr>
+<tr><td>2022</td><td>37.63</td><td>-21%</td><td>365.44</td><td>—</td><td>—</td><td>抢装后低谷</td></tr>
+<tr><td>2023</td><td>75.90</td><td>+102%</td><td>~441</td><td>—</td><td>—</td><td>大基地建设加速</td></tr>
+<tr><td>2024</td><td>79.82</td><td>+6%</td><td>521</td><td>75.79</td><td>4.04</td><td>招标量井喷（164GW）</td></tr>
+<tr><td>2025</td><td>120.00</td><td>+51%</td><td>640</td><td>110</td><td>6.59</td><td>历史新高，风光超火电</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：NEA并网运行情况（Tier1）；2022–2023年陆海拆分NEA未披露（原表以—计），不可补零。2020年约71GW中陆风约68GW，此后至2025年才再破该陆风单年水平。</p>
+</section>
+
+<section id="ch31-2" class="foldable" data-default="collapsed">
+<h3>3.1.2 制造交付口径：CWEA吊装数据</h3>
+<p class="fold-summary"><strong>结论：2025年吊装130GW上行，并网滞后差值约10GW。</strong></p>
+<ul>
+<li>总量：2025年新增吊装130GW（+49.9%），累计约687GW。</li>
+<li>滞后：CWEA吊装130GW vs NEA并网120GW，差值约10GW为并网滞后。</li>
+<li>节奏：2021年55.92GW（+2.7%）→2022年49.83GW（-11%）→2023年79.37GW（+59%）。</li>
+<li>集中度：TOP5份额2021年74%、2023年74%、2024年75%、2025年73.4%。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-02" role="img" aria-label="2021–2025年并网与吊装双柱对照（单位GW，差值约10GW为并网滞后）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2021–2025年并网vs吊装双柱（单位：GW；口径：NEA并网与CWEA吊装对照，两口径统计时点不同，不可直接相减，差值约10GW滞后注记见图）。</p>
+<details><summary>原表备查（T02）</summary>
+<table class="data-table"><thead><tr><th>年份</th><th>新增吊装(GW)</th><th>同比增速</th><th>累计吊装(GW)</th><th>TOP5份额</th></tr></thead><tbody>
+<tr><td>2021</td><td>55.92</td><td>+2.7%</td><td>~340</td><td>74%</td></tr>
+<tr><td>2022</td><td>49.83</td><td>-11%</td><td>~390</td><td>—</td></tr>
+<tr><td>2023</td><td>79.37</td><td>+59%</td><td>~470</td><td>74%</td></tr>
+<tr><td>2024</td><td>86.99</td><td>+9.6%</td><td>~557</td><td>75%</td></tr>
+<tr><td>2025</td><td>130.00</td><td>+49.9%</td><td>~687</td><td>73.4%</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：CWEA吊装简报（Tier1）；吊装→并网存在1–3个月滞后，与NEA口径差异见<a href="#ch31-1">3.1.1</a>，不可直接比较。2022年TOP5份额原表未披露（—）。</p>
+</section>
+
+<section id="ch31-3" class="foldable" data-default="collapsed">
+<h3>3.1.3 全球视角</h3>
+<p class="fold-summary"><strong>结论：中国占全球新增71%上行，累计占比过半。</strong></p>
+<ul>
+<li>全球：2023年约117GW→2024年约125GW→2025年约169GW。</li>
+<li>中国：75.9GW→79.8GW→120GW，占全球比例约65%→约64%→约71%。</li>
+<li>累计：中国累计占全球约44%→约48%→约51%，首次过半。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-03" role="img" aria-label="全球与中国新增双柱及中国占比折线（单位GW与百分比）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：中国占全球比例折线+全球/中国双柱（单位：GW；口径：WWEA/GWEC全球口径Tier2 vs NEA国内口径Tier1，交叉验证后引用）。</p>
+<details><summary>原表备查（T03）</summary>
+<table class="data-table"><thead><tr><th>指标</th><th>2023</th><th>2024</th><th>2025</th></tr></thead><tbody>
+<tr><td>全球新增风电(GW)</td><td>~117</td><td>~125</td><td>~169</td></tr>
+<tr><td>中国新增(GW, NEA)</td><td>75.9</td><td>79.8</td><td>120</td></tr>
+<tr><td>中国占全球比例</td><td>~65%</td><td>~64%</td><td>~71%</td></tr>
+<tr><td>中国累计占全球</td><td>~44%</td><td>~48%</td><td>~51%</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：WWEA年报2025与GWEC报告（Tier2），中国新增为NEA口径（Tier1）；全球口径含各国并网统计差异，约数为估算，仅作方向参考。</p>
+</section>
+
+<section id="ch31-4" class="foldable" data-default="expanded">
+<h3>3.1.4 2026年最新装机数据</h3>
+<p class="fold-summary"><strong>结论：H1 38.62GW超预期兑现，6月13.57GW为年内最强单月。</strong></p>
+<ul>
+<li>累计节奏：Q1 15.77GW（+7.87%）→1–4月21.26GW（+4.8%）→1–5月25.05GW→H1 38.62GW。</li>
+<li>拆分：H1陆上37.78GW、海上0.84GW；期末累计678.75GW（概数6.8亿kW/细化6.79亿kW）。</li>
+<li>单月峰值：6月约13.57GW，远超Q1月均5.26GW与4月5.49GW/5月3.79GW。</li>
+<li>同比解读：H1累计-26.5%，主因2025H1抢装约52.6GW异常高基数；对正常年份H1均值约24.4GW则为+58%。</li>
+<li>先行指标：风电投资完成额436亿元（+72.3%），在建项目蓄力H2集中并网。</li>
+<li>季节规律：正常年份H2占68–70%；2026H1占比30.9–35.1%，对应全年110–125GW。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-04" role="img" aria-label="2026年Q1至H1累计新增面积图（单位GW，6月13.57GW单月峰值）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：Q1/1–4/1–5/H1月度累计面积图（单位：GW；口径：NEA并网口径Tier1），6月13.57GW单月峰值注记见图；四节点累计口径，面积仅示累计抬升方向。</p>
+<details open><summary>原表备查（T04）</summary>
+<table class="data-table"><thead><tr><th>统计节点</th><th>新增并网(GW)</th><th>月均新增(GW)</th><th>期末累计(GW)</th><th>发电量(亿kWh)</th><th>利用率</th><th>投资额(亿元)</th></tr></thead><tbody>
+<tr><td>Q1</td><td>15.77</td><td>5.26</td><td>655</td><td>3,047(+0.4%)</td><td>91.4%</td><td>436(+72.3%)</td></tr>
+<tr><td>1-4月</td><td>21.26</td><td>5.32</td><td>660.62</td><td>3,834(-3.5%)</td><td>—</td><td>—</td></tr>
+<tr><td>1-5月</td><td>25.05</td><td>5.01</td><td>664.27</td><td>4,809(+0.5%)*</td><td>—</td><td>—</td></tr>
+<tr><td>1-6月（H1）</td><td>38.62</td><td>6.44</td><td>678.75 / 679.0*</td><td>5,984*</td><td>90.9%（弃风9.1%）</td><td>—</td></tr>
+</tbody></table>
+</details>
+<div class="chart"><div class="echart" id="ec-05" role="img" aria-label="2023–2026E年H1与H2占比百分之百堆积条（2025年42.8%为抢装异值）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2023/2024/2025/2026E四条H1/H2占比100%堆积条（单位：%；口径：NEA并网口径Tier1），2025年抢装42.8%异标注记见图。</p>
+<details><summary>原表备查（T05）</summary>
+<table class="data-table"><thead><tr><th>年份</th><th>Q1新增</th><th>H1新增</th><th>全年新增</th><th>H1占比</th><th>H2占比</th></tr></thead><tbody>
+<tr><td>2023</td><td>10.4 GW</td><td>22.99 GW</td><td>75.9 GW</td><td>30.3%</td><td>69.7%</td></tr>
+<tr><td>2024</td><td>15.5 GW</td><td>25.84 GW</td><td>79.82 GW</td><td>32.4%</td><td>67.6%</td></tr>
+<tr><td>2025</td><td>14.62 GW</td><td>51.39 GW</td><td>120 GW</td><td>42.8%*</td><td>57.2%*</td></tr>
+<tr><td>2026</td><td>15.77 GW</td><td>38.62 GW</td><td>110-125 GW（E）</td><td>30.9-35.1%</td><td>64.9-69.1%</td></tr>
+</tbody></table>
+</details>
+<div class="callout warn"><strong>异标：</strong>2025年H1占比42.8%系5月136号文抢装峰值（单月约27GW）的一次性事件，不可作为季节模式参考；正常年份H2占比68–70%才是推算锚。</div>
+<p class="footnote">口径：H1发电量5,984亿kWh与利用率90.9%为NEA 7-30发布会口径（新能源司潘慧敏，Tier1）；累计6.8亿kW为NEA 7-22概数、6.79亿kW（陆上6.3亿kW/海上4,841万kW，同比+18.5%）为7-30细化口径，差异为四舍五入。6月13.57GW为1–6月38.62GW减1–5月25.05GW的推算值。1–4月/1–5月利用率与投资额NEA未披露（原表—），截至2026-09-14未检得，不可补零。1–5月发电量累计同比约-3.6%为推算值。交叉验证：中电联7-30上半年供需报告确认新增发电装机1.6亿kW、风光合计1.1亿kW占70%，与NEA口径量级一致；金风H1半年报（8-25）援引H1新增3,862万kW同比-24.8%（隐含H1 2025约51.4GW），与本报告52.6GW估算接近，交叉验证通过。1–7月及7月单月装机截至9月14日尚未发布。风资源：3–5月为十年来同期最差（3月-17.3%/4月-5.0%/5月+0.5%），6月+15.8%边际恢复；H1设备平均利用1,392小时（-113小时）、风电917小时（-170小时）。海风：2026Q1仅0.21GW（-78.6%），明阳与起帆电缆Q1海风交付为零，产业链实物交叉验证指向可吊装储备不足。</p>
+</section>
+
+<section id="ch31-5" class="foldable" data-default="expanded">
+<h3>3.1.5 2026年装机预测与十五五展望</h3>
+<p class="fold-summary"><strong>结论：综合判断118GW上行，三方法收敛，陆风超预期对冲海风平淡。</strong></p>
+<ul>
+<li>季节法：H1 38.62GW按正常H1占比30–35%倒推，全年110–129GW。</li>
+<li>管线法：2025年末在手管线192GW按53–60%转化率，全年102–115GW。</li>
+<li>综合判断：118GW（110–125GW区间），7-30确认、9-14复核维持。</li>
+<li>上修驱动：中修版H1估29GW偏低33%，6月13.57GW确认Q2末赶工效率。</li>
+<li>上限约束：Q3雨季台风季、冬季施工窗口收窄，超130GW概率较低。</li>
+<li>风险情景：Q3<dfn class="term" data-term="弃风率" title="弃风电量占可发电量比；2026H1为9.1%，距10%红线0.9pct">弃风率</dfn>若破10%，运营商<dfn class="term" data-term="IRR" title="项目全投资内部收益率；央企门槛6–7%，弃风>15%区域跌破6%">IRR</dfn>大面积跌破6%门槛，大批量在建项目被暂缓→全年可能跌破100GW（概率15–20%）。</li>
+<li>宣言2.0：年均≥120GW（+140%）、海风年均≥15GW、2030累计≥1,300GW（+62.5%）。</li>
+<li>逐年推演：2026E 110–125（海风5.5–7.0）→2027E 120–130（海风10–14）→2030E 135–155（海风18–28）。</li>
+<li>情景三数：基准~115GW→~1,215GW；乐观~130GW→~1,290GW；保守~95GW→~1,115GW。</li>
+<li>海风专项：2024年4.04GW→2025年6.59GW→2026E 5.5–7.0GW→2030E 18–28GW。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-06" role="img" aria-label="三方法预测区间段：季节法110–129GW、管线法102–115GW、综合110–125GW" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：三方法预测区间条（单位：GW；口径：NEA并网口径推算，季节法与管线法假设不同，不可直接比较），综合判断118GW中枢注记见图。</p>
+<details><summary>原表备查（T06）</summary>
+<table class="data-table"><thead><tr><th>方法</th><th>推导</th><th>预测值</th></tr></thead><tbody>
+<tr><td>季节模式法</td><td>H1=38.62GW（含海上0.84GW），按正常H1占比30-35%倒推</td><td>110-129 GW</td></tr>
+<tr><td>管线覆盖法</td><td>2025年末在手管线192GW（定标144GW+存量结转），按53-60%转化率</td><td>102-115 GW</td></tr>
+<tr><td>综合判断</td><td>H1 38.62GW已超此前预期（原估~29GW），6月13.57GW确认Q2末赶工效率。海风平淡化（5.5-7.0GW，H1仅0.84GW并网/H1定标3.88GW）被陆风超预期完全对冲。1-7月央国企定标95.84GW年化约164GW（历史最强）提供充裕支撑。但消纳恶化（H1弃风率9.1% vs Q1 8.6%）对H2西北并网节奏的边际约束不可忽视</td><td>118 GW（110-125区间）</td></tr>
+</tbody></table>
+</details>
+<div class="scenario-cards" id="t07-decl">
+<div class="kpi-card"><p>≥120GW/年</p><p>十五五年均新增（1.0版≥50GW，+140%）</p></div>
+<div class="kpi-card"><p>≥15GW/年</p><p>海风年均新增（1.0版未单独设定，新增）</p></div>
+<div class="kpi-card"><p>≥1,300GW</p><p>2030年累计（1.0版≥800GW，+62.5%）</p></div>
+</div>
+<p class="footnote">图注：北京宣言1.0→2.0三指标对照卡（单位：GW；口径：宣言目标口径，非预测口径）。</p>
+<details><summary>原表备查（T07）</summary>
+<table class="data-table"><thead><tr><th>指标</th><th>1.0版本（2020年）</th><th>2.0版本（2025年）</th><th>上调幅度</th></tr></thead><tbody>
+<tr><td>年均新增</td><td>≥50GW（十四五）</td><td>≥120GW（十五五）</td><td>+140%</td></tr>
+<tr><td>海风年均新增</td><td>未单独设定</td><td>≥15GW</td><td>新增</td></tr>
+<tr><td>2030年累计</td><td>≥800GW</td><td>≥1,300GW</td><td>+62.5%</td></tr>
+</tbody></table>
+</details>
+<div class="chart"><div class="echart" id="ec-08" role="img" aria-label="2025–2030年陆风海风新增堆积柱与累计折线（海风取区间中点示意）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2025–2030年新增堆积柱（陆风/海风分色）+累计折线双轴（单位：GW；口径：NEA并网口径推算，Tier2综合估算）。</p>
+<details open><summary>原表备查（T08）</summary>
+<table class="data-table"><thead><tr><th>年份</th><th>预测新增并网(GW)</th><th>预测累计(GW)</th><th>陆风</th><th>海风</th><th>核心逻辑</th></tr></thead><tbody>
+<tr><td>2025(实)</td><td>120</td><td>640</td><td>110</td><td>6.6</td><td>抢装+招标交付</td></tr>
+<tr><td>2026E</td><td>110-125（中位118）</td><td>758</td><td>102-117</td><td>5.5-7.0</td><td>管线充裕+6月放量超预期，陆风弥补海风平淡；H1已装38.62GW</td></tr>
+<tr><td>2027E</td><td>120-130</td><td>878-888</td><td>105-110</td><td>10-14</td><td>海风2026年Q1核准4.61GW+开工13GW进入吊装期；陆风管线充裕</td></tr>
+<tr><td>2028E</td><td>125-135</td><td>993-1,013</td><td>105</td><td>13-18</td><td>国管海风项目批量化；深远海比例升至30%+</td></tr>
+<tr><td>2029E</td><td>130-145</td><td>1,123-1,158</td><td>105</td><td>15-22</td><td>施工船产能充分释放；漂浮式GW级项目启动</td></tr>
+<tr><td>2030E</td><td>135-155</td><td>~1,258-1,313</td><td>105</td><td>18-28</td><td>冲击风能北京宣言2.0目标（≥1,300GW）</td></tr>
+</tbody></table>
+</details>
+<div class="scenario-cards" id="t09-scen">
+<div class="kpi-card"><p>~115GW → ~1,215GW</p><p>基准：政策正常推进，消纳可控（弃风率&lt;10%），海风十五五保底53GW</p></div>
+<div class="kpi-card"><p>~130GW → ~1,290GW</p><p>乐观：陆风超预期+海风国管审批放开+消纳改善+<dfn class="term" data-term="特高压" title="跨区输电通道；已建42条，西北外送仅86.7GW，多数通道煤电占比超50%">特高压</dfn>加速</p></div>
+<div class="kpi-card"><p>~95GW → ~1,115GW</p><p>保守：弃风率破10%，大批项目废止/暂缓，海风审批延续十四五节奏</p></div>
+</div>
+<p class="footnote">图注：2026–2030年均新增三情景卡（单位：GW；口径：情景假设口径，三情景实现条件不同，不可直接比较）。</p>
+<details><summary>原表备查（T09）</summary>
+<table class="data-table"><thead><tr><th>情景</th><th>2026-2030年均新增</th><th>2030年累计</th><th>实现条件</th></tr></thead><tbody>
+<tr><td>基准</td><td>~115GW</td><td>~1,215GW</td><td>政策正常推进，消纳可控（弃风率&lt;10%），海风十五五保底53GW</td></tr>
+<tr><td>乐观</td><td>~130GW</td><td>~1,290GW</td><td>陆风超预期+海风国管审批放开+消纳改善+特高压投运加速</td></tr>
+<tr><td>保守</td><td>~95GW</td><td>~1,115GW</td><td>弃风率突破10%，大批项目废止/暂缓，海风审批延续十四五节奏</td></tr>
+</tbody></table>
+</details>
+<div class="chart"><div class="echart" id="ec-10" role="img" aria-label="海风新增迷你折线：2024年4.04GW、2025年6.59GW、2026E中点6.2GW" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：海风新增迷你折线（单位：GW；口径：海风报告分层管线概率法修正版，与本报告口径一致）。</p>
+<details><summary>原表备查（T10）</summary>
+<table class="data-table"><thead><tr><th>指标</th><th>2024实</th><th>2025实</th><th>2026E</th><th>2030E</th></tr></thead><tbody>
+<tr><td>新增装机(GW)</td><td>4.04</td><td>6.59</td><td>5.5-7.0</td><td>18-28</td></tr>
+<tr><td>累计装机(GW)</td><td>41.3</td><td>47</td><td>~53</td><td>&gt;100</td></tr>
+<tr><td>占风电总装机比例</td><td>7.9%</td><td>7.3%</td><td>~5-6%</td><td>~8-10%</td></tr>
+</tbody></table>
+</details>
+<div class="callout quote"><strong>综合判断引用：</strong>季节模式法110–129GW / 管线覆盖法102–115GW / 综合判断118GW（110–125GW区间）——海风平淡化被陆风超预期完全对冲。</div>
+<p class="footnote">口径：宣言2.0（2025-10-20发布，Tier2）；海风分项已同步海风报告（2026-08-02版，7-13管线方法论修正版），2026年海风从初版11–15GW下修至5.5–7.0GW（中位6.2GW，与远景杨亚文~6GW预判交叉验证），十五五海风保底53GW可实现性未被动摇。测算依据：2025年<dfn class="term" data-term="核准" title="省级发改委批项目合规；领先装机18–36个月，2025年160GW">核准</dfn>160GW+<dfn class="term" data-term="定标" title="签合同定中标；领先装机6–15个月，2025年144GW">定标</dfn>144GW为2026–2027年交付底座；以大代小（1.5MW及以下存量约98GW，2030年前约200GW增量）；海风深远海300km内技术可开发量超270GW，16MW批量应用、18MW+样机投运，各省海风规划超64GW。NEA 1–7月及7月单月数据截至9月14日尚未发布，无新数据改变基准，待Q3验证。</p>
+</section>
+</section>
+
+<section id="ch32" class="chapter">
+<h2>3.2 招标量 <span class="tier-badge t2">T2</span></h2>
+<p><strong>结论：定标年化164GW强兑现，<dfn class="term" data-term="公开招标" title="不含框采的公开发标量；H1 51.80GW（-28.0%，金风IR口径）">公开招标</dfn>H1弱分化，交付依赖<dfn class="term" data-term="框采" title="框架采购：一次性签多年总量、分批提货；签约≠提货">框采</dfn>转化。</strong></p>
+<p><strong>三环节辨析：核准管远期，定标管近期，招标管趋势。</strong></p>
+<ul>
+<li>核准：省级发改委批合规，领先装机18–36个月，2025年160GW。</li>
+<li>招标：开发商发标书，领先装机12–18个月，2025年121GW。</li>
+<li>定标：签合同定中标，领先装机6–15个月，2025年144GW。</li>
+<li>定标大于招标：含框采协议（如电建35GW）与上年招标结转签约。</li>
+</ul>
+<div class="kpi-strip" id="t11-flow">
+<div class="kpi-card"><p>160GW</p><p>核准（2025，领先18–36月）</p></div>
+<div class="kpi-card"><p>121GW</p><p>招标（2025，领先12–18月）</p></div>
+<div class="kpi-card"><p>144GW</p><p>定标（2025，领先6–15月）</p></div>
+</div>
+<p class="footnote">图注：核准→招标→定标三环节流程卡（单位：GW；口径：2025年全口径，Tier2综合）。</p>
+<details><summary>原表备查（T11）</summary>
+<table class="data-table"><thead><tr><th>环节</th><th>谁做</th><th>干什么</th><th>领先装机多久</th><th>2025年数据</th></tr></thead><tbody>
+<tr><td>核准</td><td>省级发改委</td><td>批项目合规（用地/环评/接入）</td><td>18-36月</td><td>160 GW</td></tr>
+<tr><td>招标</td><td>开发商（华能/国电投等）</td><td>发标书，叫整机商来报价</td><td>12-18月</td><td>121 GW</td></tr>
+<tr><td>定标</td><td>开发商+整机商</td><td>签合同，确定谁中标多少台</td><td>6-15月</td><td>144 GW</td></tr>
+</tbody></table>
+</details>
+<p><strong>定标比结论：2.86x是锁价囤单上行，不是当年需求。</strong></p>
+<ul>
+<li>比值：2023年1.27x→2024年2.86x→2025年1.20x，回归正常。</li>
+<li>成因：开发商趁低价签框采锁单，2024年末管线库存飙至168GW。</li>
+<li>释放：库存堆至2025年释放，兑现120GW装机高峰。</li>
+<li>警示：框采签约≠提货；192GW在手库存（含部分虚单）需结合废止审慎看待。</li>
+<li>2026验证：1–7月定标95.84GW，年化约164GW，历史最强延续。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-12" role="img" aria-label="央国企定标与实际装机双柱及定标装机比折线（2024年2.86x为框采锁单）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：定标vs装机双柱+定标/装机比折线（单位：GW/倍；口径：央国企定标口径Tier2 vs NEA装机Tier1），2024年2.86x框采注记见图。</p>
+<details open><summary>原表备查（T12）</summary>
+<table class="data-table"><thead><tr><th>年份</th><th>央国企定标</th><th>实际装机（NEA）</th><th>定标/装机比</th><th>说明</th></tr></thead><tbody>
+<tr><td>2023</td><td>96.27 GW</td><td>75.9 GW</td><td>1.27x</td><td>正常周期</td></tr>
+<tr><td>2024</td><td>228.36 GW</td><td>79.8 GW</td><td>2.86x</td><td>框采暴增锁低价单，大量结转</td></tr>
+<tr><td>2025</td><td>143.82 GW</td><td>120 GW</td><td>1.20x</td><td>2024年库存被消化，回归正常</td></tr>
+<tr><td>2026</td><td>1-6月89.31GW / 1-7月95.84GW（年化约164GW）</td><td>1-7月95.84GW较1-5月70GW新增25.84GW（6月19.31GW+7月4.77GW）</td><td>—</td><td>年化定标历史最强延续</td></tr>
+</tbody></table>
+</details>
+<p><strong>公开招标结论：2025年覆盖倍数1.01x承压，2026年定标强招标弱分化。</strong></p>
+<ul>
+<li>总量：2023年86.3GW→2024年164.1GW（+90.2%）→2025年121.2GW（-26.1%）。</li>
+<li>覆盖：公开招标对当年装机覆盖1.14x→2.06x→1.01x，勉强够用。</li>
+<li>2026Q1：28.0GW（-2.2%），绝对值仍处历史高位。</li>
+<li>分化：1–7月定标/H1装机=2.48x，库存再增厚；2027年交付依赖框采转化。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-13" role="img" aria-label="公开招标与当年装机双柱及覆盖倍数折线（单位GW与倍数）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：公开招标vs装机双柱+覆盖倍数折线（单位：GW/倍；口径：金风IR公开招标口径不含框采Tier2 vs NEA装机Tier1）。</p>
+<details><summary>原表备查（T13）</summary>
+<table class="data-table"><thead><tr><th>年份</th><th>公开招标</th><th>YoY</th><th>当年装机</th><th>覆盖倍数</th></tr></thead><tbody>
+<tr><td>2023</td><td>86.3 GW</td><td>—</td><td>75.9 GW</td><td>1.14x</td></tr>
+<tr><td>2024</td><td>164.1 GW</td><td>+90.2%</td><td>79.8 GW</td><td>2.06x</td></tr>
+<tr><td>2025</td><td>121.2 GW</td><td>-26.1%</td><td>120 GW</td><td>1.01x</td></tr>
+<tr><td>2026</td><td>Q1 28.0 GW</td><td>-2.2%</td><td>—</td><td>—</td></tr>
+<tr><td>2026</td><td>1-6月定标89.31GW / 1-7月95.84GW</td><td>（定标口径，含框采）</td><td>H1装机38.62GW</td><td>1-7月定标/ H1装机 = 2.48x，库存再增厚</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：定标/招标为风电头条央国企口径（含框采，Tier2），公开招标为金风IR口径（不含框采，Tier2），与NEA装机（Tier1）差异见本节辨析，不可直接比较。2024年末管线168GW=（228-80=148）叠加2023年结转的推算值；192GW在手库存为截至2025年末估算，含部分虚单。2022年WoodMac跟踪94GW不足一半一年内转化，为框采转化率的历史参照。</p>
+
+<section id="ch32-1" class="foldable" data-default="collapsed">
+<h3>3.2.1 2025–2026年招标全景时序</h3>
+<p class="fold-summary"><strong>结论：Q1 28.0GW面对高基数企稳，属正常回归非恶化。</strong></p>
+<ul>
+<li>起点：2024年招标164GW（+90%），大基地集中放量+海风释放。</li>
+<li>惯性：2025年Q1招标28.6GW（+22.7%），延续2024年高景气。</li>
+<li>扰动：2025年2月136号文发布（6-01前投产享存量电价），影响施工不影响招标节奏。</li>
+<li>抢装：2025年5月单月装机26.3GW（同比近8倍），消耗项目储备。</li>
+<li>回落：2025年下半年招标骤降，全年122GW（-26%）。</li>
+<li>企稳：2026年Q1招标28.0GW（-2.2%），绝对值仍为历史高位。</li>
+</ul>
+<p class="footnote">口径：时序为多来源综合（金风IR/券商统计Tier2），2025年全年招标122GW与121.2GW为不同来源口径差异，约数经交叉验证量级一致。136号文抢装属一次性事件。</p>
+</section>
+
+<section id="ch32-2" class="foldable" data-default="collapsed">
+<h3>3.2.2 2026年Q1多口径数据全景</h3>
+<p class="fold-summary"><strong>结论：国内中标-14.8%承压，海外+215%对冲上行。</strong></p>
+<ul>
+<li>国内公开招标：28.0GW（-2.2%，金风IR）。</li>
+<li>全球中标：32.13GW（-3.4%，风芒能源）。</li>
+<li>国内中标：27.30GW（-14.8%，风芒能源）。</li>
+<li>国际中标：4.82GW（+215%，风芒能源）。</li>
+<li>央国企集采定标：56.93GW（含框采，风电头条）。</li>
+<li>Q1新核准：35.24GW（风电头条）。</li>
+</ul>
+<div class="kpi-strip" id="t14-kpi">
+<div class="kpi-card"><p>28.0GW</p><p>国内公开招标（-2.2%）</p></div>
+<div class="kpi-card"><p>32.13GW</p><p>全球中标（-3.4%）</p></div>
+<div class="kpi-card"><p>27.30GW</p><p>国内中标（-14.8%）</p></div>
+<div class="kpi-card"><p>4.82GW</p><p>国际中标（+215%）</p></div>
+<div class="kpi-card"><p>56.93GW</p><p>央国企集采定标（含框采）</p></div>
+<div class="kpi-card"><p>35.24GW</p><p>Q1新核准</p></div>
+</div>
+<p class="footnote">图注：Q1六口径KPI卡（单位：GW；口径：六口径统计边界各异，不可直接比较）。</p>
+<details><summary>原表备查（T14）</summary>
+<table class="data-table"><thead><tr><th>统计口径</th><th>Q1 2026</th><th>Q1 2025</th><th>YoY</th><th>数据来源</th></tr></thead><tbody>
+<tr><td>国内公开招标量</td><td>28.0 GW</td><td>28.63 GW</td><td>-2.2%</td><td>金风科技IR</td></tr>
+<tr><td>整机商全球中标总量</td><td>32.13 GW</td><td>33.27 GW</td><td>-3.4%</td><td>风芒能源</td></tr>
+<tr><td>其中：国内中标</td><td>27.30 GW</td><td>32.05 GW</td><td>-14.8%</td><td>风芒能源</td></tr>
+<tr><td>其中：国际中标</td><td>4.82 GW</td><td>1.53 GW</td><td>+215%</td><td>风芒能源</td></tr>
+<tr><td>央国企集采定标（含框采）</td><td>56.93 GW</td><td>—</td><td>—</td><td>风电头条</td></tr>
+<tr><td>Q1新核准项目</td><td>35.24 GW</td><td>—</td><td>—</td><td>风电头条</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：金风IR/风芒能源/风电头条三源（Tier2），定标含框采而中标不含框采，差异见本节辨析。Q1 2025定标与新核准基数原表未披露（—）。</p>
+</section>
+
+<section id="ch32-3" class="foldable" data-default="collapsed">
+<h3>3.2.3 2026年1–7月中标格局</h3>
+<p class="fold-summary"><strong>结论：1–7月95.84GW强兑现，海上仅3.90GW持续萎缩。</strong></p>
+<ul>
+<li>总量：Q1 56.93GW→1–4月63.11GW→1–5月约70GW→1–6月89.31GW→1–7月95.84GW。</li>
+<li>年化：1–7月95.84GW年化约164GW，已超2025全年招标121GW的79%。</li>
+<li>峰值：6月19.31GW（52项目）创年内定标次高；7月骤降至4.77GW（环比-75%）。</li>
+<li>海上：1–6月3.88GW→1–7月3.90GW，7月单月仅17MW（华能<dfn class="term" data-term="漂浮式" title="深远海漂浮式基础；7月17MW华能漂浮式为单月海上全部定标">漂浮式</dfn>）。</li>
+<li>格局：1–7月CR5 69.62%，电气升至年度第一，明阳7月1.01GW显著回升。</li>
+<li>全口径：1–5月338项目共50.4GW，TOP3为运达/远景/东方风电。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-15" role="img" aria-label="Q1至1–7月定标累计面积图（56.93GW至95.84GW，6月19.31GW峰值）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：Q1→1–7月定标累计面积图（单位：GW；口径：风电头条央国企定标口径Tier2，含框采），6月19.31GW峰值注记见图。</p>
+<details open><summary>原表备查（T15）</summary>
+<table class="data-table"><thead><tr><th>时间段</th><th>定标规模</th><th>关键特征</th><th>数据来源</th></tr></thead><tbody>
+<tr><td>2026年Q1</td><td>56.93 GW</td><td>东方风电(18.37%)、电气风电(14.46%)领跑</td><td>风电头条</td></tr>
+<tr><td>2026年1-4月</td><td>63.11 GW</td><td>运达(18.8%)反超</td><td>风电头条</td></tr>
+<tr><td>2026年1-5月</td><td>~70 GW</td><td>CR5 70.02%</td><td>风电头条</td></tr>
+<tr><td>2026年6月</td><td>19.31 GW（52个项目）</td><td>金风32%、三一18%、电气16%分列前三；陆上7.46GW、海上0.85GW</td><td>风电头条6月统计</td></tr>
+<tr><td>2026年1-6月</td><td>89.31 GW（275个项目）</td><td>运达16.05%、东方14.76%、电气13.91%、金风13.43%、远景10.17%居前五，CR5 68.32%</td><td>同上</td></tr>
+<tr><td>2026年7月</td><td>4.77 GW（47个项目）</td><td>电气29%、金风24%、明阳21%居前三；陆上4.75GW、海上仅17MW</td><td>风电头条7月统计</td></tr>
+<tr><td>2026年1-7月</td><td>95.84 GW（334个项目）</td><td>电气14.89%、运达14.36%、金风14.01%、明阳13.56%、东方12.80%居前五，CR5 69.62%</td><td>同上</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：风电头条口径（Tier2），更新至8-07发布；8月统计截至9月14日尚未发布。海上占比4.07%（1–7月3.90GW/95.84GW）与7.81%为是否含框采的口径差异，不可直接比较。1–7月全口径中标数据截至9月14日未检得，沿用1–5月50.4GW。待验证：国能15GW框采（7-16资格预审）与国电投5.73GW第二批集采（7-21招标）若Q3落地将支撑下半年节奏。</p>
+</section>
+
+<section id="ch32-4" class="foldable" data-default="collapsed">
+<h3>3.2.4 海外订单暴增：对冲国内回落的关键变量</h3>
+<p class="fold-summary"><strong>结论：海外订单上行，Q1 +215%几乎完全对冲国内下滑。</strong></p>
+<ul>
+<li>Q1：海外4.82GW（+215%），远景2.56GW领跑，金风/三一跟随。</li>
+<li>1–5月：海外6.8GW，远景2.6GW、三一2.0GW领跑。</li>
+<li>累计：2025年以来海外新签超40GW，覆盖印度/哈萨克斯坦/巴基斯坦/越南/澳大利亚/巴西/中东。</li>
+<li>对冲：Q1全球总中标仅-3.4%，海外增量对冲国内-14.8%。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-16" role="img" aria-label="海外订单双柱：Q1为4.82GW、1–5月为6.8GW" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：Q1 4.82GW vs 1–5月6.8GW海外双柱（单位：GW；口径：券商/行业统计Tier2，领跑企业注记见图）。</p>
+<details open><summary>原表备查（T16）</summary>
+<table class="data-table"><thead><tr><th>时间段</th><th>海外订单规模</th><th>同比</th><th>领跑企业</th></tr></thead><tbody>
+<tr><td>2026年Q1</td><td>4.82 GW</td><td>+215%</td><td>远景(2.56GW)、金风、三一</td></tr>
+<tr><td>2026年1-5月</td><td>6.8 GW</td><td>—</td><td>远景(2.6GW)、三一(2.0GW)</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：国信证券/荣格工业资源网转引（Tier2）；1–5月同比原表未披露（—）。2025年以来超40GW为累计新签估算，待权威来源交叉验证。</p>
+</section>
+
+<section id="ch32-5" class="foldable" data-default="collapsed">
+<h3>3.2.5 Q1招标同比下降的真实原因与核心判断</h3>
+<p class="fold-summary"><strong>结论：高基数回归非恶化，陆风交付无忧，海风承压待验证。</strong></p>
+<ul>
+<li>基数：2025Q1招标28.6GW（+22.7%）、中标36.1GW（+112%），景气惯性消退。</li>
+<li>现状：2026Q1招标28.0GW（-2.2%）、中标27.3GW（-14.8%），绝对值仍处高位。</li>
+<li>2026装机：不受影响，由存量招标（2024年164GW+2025年122GW）驱动。</li>
+<li>2027装机：陆风无忧（定标年化164GW远超120GW底线），海风承压（H1仅3.88GW）。</li>
+<li>分化：定标强（含框采） vs 公开招标弱（H1 -28.0%），交付依赖框采转化。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-17" role="img" aria-label="2024Q1至2026Q1公开招标折线与中标量对照（单位GW）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2024Q1→2026Q1公开招标折线+中标量对照（单位：GW；口径：金风IR/券商统计Tier2）。</p>
+<details><summary>原表备查（T17）</summary>
+<table class="data-table"><thead><tr><th>时间段</th><th>公开招标量</th><th>同比</th><th>中标量</th><th>同比</th><th>核心驱动</th></tr></thead><tbody>
+<tr><td>2024年Q1</td><td>~23.3 GW</td><td>—</td><td>~17 GW</td><td>—</td><td>大基地启动</td></tr>
+<tr><td>2024全年</td><td>164 GW</td><td>+90%</td><td>~197 GW</td><td>+85%</td><td>大基地+海风集中释放</td></tr>
+<tr><td>2025年Q1</td><td>28.6 GW</td><td>+22.7%</td><td>36.1 GW</td><td>+112%</td><td>延续2024年高景气惯性</td></tr>
+<tr><td>2025全年</td><td>122 GW</td><td>-26%</td><td>—</td><td>—</td><td>抢装消耗储备+消纳恶化</td></tr>
+<tr><td>2026年Q1</td><td>28.0 GW</td><td>-2.2%</td><td>27.3 GW</td><td>-14.8%</td><td>面对高基数，绝对值仍处高位</td></tr>
+</tbody></table>
+</details>
+<div class="callout quote" id="t18-verdict">
+<p><strong>综合判断（截至8-07数据更新）：</strong></p>
+<p>① Q1招标为何下降：2025Q1高基数（+22.7%/+112%）景气惯性消退，绝对值28GW仍为历史高位，属正常回归；但H1国内公开招标51.80GW同比-28.0%（金风H1半年报IR口径，其中陆上48.87GW、海上2.93GW，隐含Q2约23.8GW），降幅较Q1（-2.2%）显著扩大。</p>
+<p>② 会否影响2026年装机：不会。2026年装机由存量招标（2024年164GW+2025年122GW）驱动，H1并网38.62GW及6月13.57GW已验证。</p>
+<p>③ 会否影响2027年装机：陆风无忧，海风承压。1–7月定标95.84GW年化约164GW远超120GW底线，2027年陆风交付已锁定；但H1海上仅3.88GW、7月仅17MW，海上管线缺口是2027年海风能否达10GW+的唯一约束。2026年呈现定标强（年化164GW，含框采）、公开招标弱（H1 -28.0%）分化，2027年交付高度依赖框采协议转化，Q3公开招标是否回暖是关键观察点。</p>
+<p>④ 核心超预期变量：海外订单能否持续高增（H1逻辑延续）；海风招标能否在Q3密集落地（国能15GW框采+国电投5.73GW集采为关键观察点）。</p>
+<p>⑤ 最需跟踪指标：8–9月月度定标量能否重回10GW+（7月仅4.77GW环比-75%）；海风单月是否放量至1GW+；中标价是否跌破1,500元/kW。</p>
+</div>
+<p class="footnote">图注：综合判断结论卡（CSS卡片，无ECharts图；口径：多口径综合研判，Tier2）。</p>
+<details><summary>原表备查（T18）</summary>
+<table class="data-table"><thead><tr><th>维度</th><th>结论</th></tr></thead><tbody>
+<tr><td>Q1招标为何下降</td><td>2025Q1高基数（+22.7%/+112%）的景气惯性消退，绝对值28GW仍为历史高位，属正常回归；但H1国内公开招标51.80GW同比-28.0%（金风科技2026H1半年报IR口径，其中陆上48.87GW、海上2.93GW，隐含Q2约23.8GW），降幅较Q1（-2.2%）显著扩大</td></tr>
+<tr><td>会否影响2026年装机</td><td>不会。2026年装机由存量招标（2024年164GW+2025年122GW）驱动，H1并网38.62GW及6月13.57GW已验证</td></tr>
+<tr><td>会否影响2027年装机</td><td>陆风无忧，海风承压。1-7月定标95.84GW年化约164GW，远超120GW底线，2027年陆风交付已锁定；但H1海上仅3.88GW、7月仅17MW，海上管线缺口是2027年海风能否达10GW+的唯一约束。2026年呈现“定标强（年化164GW，含框采）、公开招标弱（H1-28.0%）”分化，2027年交付高度依赖框采协议转化，Q3公开招标是否回暖是关键观察点</td></tr>
+<tr><td>核心超预期变量</td><td>海外订单能否持续高增（H1逻辑延续）；海风招标能否在Q3密集落地（国能15GW框采+国电投5.73GW集采为关键观察点）</td></tr>
+<tr><td>最需跟踪指标</td><td>8-9月月度定标量能否重回10GW+（7月仅4.77GW环比-75%）；海风单月是否放量至1GW+；中标价是否跌破1,500元/kW</td></tr>
+</tbody></table>
+</details>
+<div class="sig-board" id="t19-risk">
+<p><span class="sig-light yellow"></span>国内招标总量：定标年化164GW vs 公开招标H1 -28.0%——框采驱动分化，关注</p>
+<p><span class="sig-light yellow"></span>月度节奏放缓：7月仅4.77GW（环比-75%），创年内次低——关注</p>
+<p><span class="sig-light red"></span>海风招标严重滞后：H1 3.88GW/1–7月3.90GW，年均15GW目标仅完成26%——较高</p>
+<p><span class="sig-light green"></span>头部集中度：CR5从75.18%→69.62%，竞争分散无恶性信号——较低</p>
+</div>
+<p class="footnote">图注：4风险信号灯卡（口径：风电头条定标口径Tier2，更新至7月）。</p>
+<details><summary>原表备查（T19）</summary>
+<table class="data-table"><thead><tr><th>风险维度</th><th>具体数据</th><th>严重程度</th><th>说明</th></tr></thead><tbody>
+<tr><td>国内招标总量</td><td>定标1-7月95.84GW年化约164GW vs 公开招标H1 51.80GW（-28.0%，金风IR口径）</td><td>关注</td><td>框采驱动定标强，公开招标连续走弱反映新项目供给收缩，2027年交付依赖框采转化</td></tr>
+<tr><td>月度节奏放缓</td><td>7月仅4.77GW（环比-75%），创年内次低</td><td>关注</td><td>需跟踪8-9月回升力度；框采落地将支撑</td></tr>
+<tr><td>海风招标严重滞后</td><td>H1海上3.88GW、1-7月3.90GW、7月仅17MW，年均15GW目标仅完成26%</td><td>较高</td><td>Q3是2027年交付的最后窗口，若Q3仍&lt;3GW则2027年海风10GW+承压</td></tr>
+<tr><td>头部集中度</td><td>CR5从75.18%→69.62%（1-7月）</td><td>较低</td><td>竞争分散但未出现恶性信号，电气/运达/金风/明阳四强胶着</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：券商/IR统计（Tier2），2024Q1约数为估算；CR5 75.18%为年初口径基数。8月统计截至9月14日尚未发布，8–9月定标回升力度与海风单月放量待验证。</p>
+</section>
+</section>
+
+<section id="ch33" class="chapter">
+<h2>3.3 风机价格 <span class="tier-badge t2">T2</span></h2>
+<p><strong>结论：价格中枢企稳但两连降承压，自律防线待8月验证。</strong></p>
+
+<section id="ch33-1" class="foldable" data-default="collapsed">
+<h3>3.3.1 价格暴跌全景（2021–2024）</h3>
+<p class="fold-summary"><strong>结论：三年暴跌57%下行，2024年11月自律拐点企稳。</strong></p>
+<ul>
+<li>起点：2021年初&gt;3,000元/kW（陆上<dfn class="term" data-term="不含塔筒" title="风机主机不含塔筒报价口径；2026年7月1,589.80元/kW">不含塔筒</dfn>）为基准。</li>
+<li>腰斩：2022年末约1,800（累计↓40%）→2023年末约1,500（累计↓50%）。</li>
+<li>底部：2024年9–10月低于1,400（最低1,286），累计↓57%。</li>
+<li>拐点：2024年11月反弹至1,400以上，行业自律生效。</li>
+<li>成本线：8MW以下1400–1600元/kW，8MW以上约1300元/kW。</li>
+<li>亏损期：2024年2–10月月度均价六度跌破1400，绝大多数企业亏损销售。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-20" role="img" aria-label="2021初至2024年11月价格折线（大于3000元跌至最低1286元后反弹）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2021→2024年价格瀑布/折线（单位：元/kW；口径：陆上不含塔筒Tier2），-57%注记与1400成本虚线见图。</p>
+<details><summary>原表备查（T20）</summary>
+<table class="data-table"><thead><tr><th>时间节点</th><th>价格（元/kW，陆上不含塔筒）</th><th>变化</th></tr></thead><tbody>
+<tr><td>2021年初</td><td>&gt;3,000</td><td>基准起点</td></tr>
+<tr><td>2022年末</td><td>~1,800</td><td>累计↓40%</td></tr>
+<tr><td>2023年末</td><td>~1,500</td><td>累计↓50%</td></tr>
+<tr><td>2024年9-10月（最低点）</td><td>&lt;1,400（最低1286）</td><td>累计↓57%</td></tr>
+<tr><td>2024年11月（拐点）</td><td>反弹至&gt;1,400</td><td>行业自律生效</td></tr>
+</tbody></table>
+</details>
+<p class="footnote">口径：《财经》/华尔街见闻转引（Tier2/Tier3线索），价格为约数估算，须以整机商公告为准。成本线为行业综合测算，8MW分界上下成本结构不同，不可直接比较。</p>
+</section>
+
+<section id="ch33-2" class="foldable" data-default="collapsed">
+<h3>3.3.2 反转机制：行业自律+招标规则改革</h3>
+<p class="fold-summary"><strong>结论：12家自律公约上行，新规则杜绝最低价中标。</strong></p>
+<ul>
+<li>节点：2024年10月北京国际风能大会，12家整机企业签署<dfn class="term" data-term="行业自律公约" title="2024年10月12家整机企业签署的公平竞争自律公约，价格拐点制度因由">《中国风电行业维护市场公平竞争环境自律公约》</dfn>。</li>
+<li>旧规则：以最低报价为<dfn class="term" data-term="评标基准价" title="新规则：有效投标均价下浮5%为基准，≤基准得满分，杜绝最低价中标">评标基准价</dfn>，最低价中标，恶性竞价。</li>
+<li>新规则：有效投标均值下浮5%为基准，≤基准得满分，超出按梯度扣分。</li>
+<li>效果：国电投8.4GW项目30标段均价2092元/kW，明显高于此前均价。</li>
+<li>跟进：华能/华润/国电投修改评标规则，40多家企业共识提高技术权重。</li>
+</ul>
+<p class="footnote">口径：《财经》/证券时报转引（Tier2）；2092元/kW为国电投8.4GW项目口径（含特定机型结构），与全市场不含塔筒均价不可直接比较。</p>
+</section>
+
+<section id="ch33-3" class="foldable" data-default="expanded">
+<h3>3.3.3 2025–2026年价格企稳现状</h3>
+<p class="fold-summary"><strong>结论：7月1,589.80元/kW处中枢但两连降承压，自律可持续性待验证。</strong></p>
+<ul>
+<li>修复：2024年9月最低1,286→12月1,527（↑18.7%），自律生效。</li>
+<li>企稳：2025年Q1 1,520→4月1,613（连续3月&gt;1,600）→H1 1,496，区间1,385–1,701。</li>
+<li>回落：2026年5月1,695→6月1,658.92（-36.34）→7月1,589.80（-69.12）。</li>
+<li>两连降：6–7月累计-105元/kW（-6.2%），仍站稳1,500以上。</li>
+<li><dfn class="term" data-term="带塔筒/含塔筒" title="含塔筒总包报价口径；2026年7月2,181.53元/kW，不可与不含塔筒直接比较">含塔筒</dfn>：6月2,103.1（-1.77）→7月2,181.53（+78.43），与不含塔筒背离。</li>
+<li>分化：7月最高1,772.5（电气） vs 最低1,402（金风），价差370元/kW。</li>
+<li>判据：站稳1500–1700确认修复；跌破1400则自律瓦解。</li>
+</ul>
+<div class="chart"><div class="echart" id="ec-21" role="img" aria-label="2024年9月至2026年7月不含塔筒均价折线（两连降段标红）" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：2024-09→2026-07不含塔筒均价折线（单位：元/kW；口径：风电头条央国企口径Tier2），两连降标红段与1500中枢底线见图。</p>
+<details open><summary>原表备查（T21）</summary>
+<table class="data-table"><thead><tr><th>时间段</th><th>均价（元/kW）</th><th>趋势</th><th>备注</th></tr></thead><tbody>
+<tr><td>2024年9月（最低）</td><td>1,286</td><td>历史底部</td><td>跌破成本线</td></tr>
+<tr><td>2024年12月</td><td>1,527</td><td>↑18.7%</td><td>自律生效</td></tr>
+<tr><td>2025年Q1</td><td>1,520</td><td>企稳</td><td>—</td></tr>
+<tr><td>2025年4月</td><td>1,613</td><td>连续3月&gt;1,600</td><td>—</td></tr>
+<tr><td>2025年H1</td><td>1,496</td><td>明确上行</td><td>区间1,385-1,701</td></tr>
+<tr><td>2026年3月</td><td>1,609</td><td>—</td><td>—</td></tr>
+<tr><td>2026年4月</td><td>~1,590</td><td>回调</td><td>—</td></tr>
+<tr><td>2026年5月</td><td>1,695</td><td>回归中枢上沿</td><td>含塔筒2,105（↓21）、海上3,280</td></tr>
+<tr><td>2026年6月</td><td>1,658.92</td><td>↓36.34 vs 5月</td><td>含塔筒2,103.1（↓1.77）、海上3,107.33（↓172.67）</td></tr>
+<tr><td>2026年7月</td><td>1,589.80</td><td>↓69.12 vs 6月</td><td>含塔筒2,181.53（↑78.43），海上无规模化价格</td></tr>
+</tbody></table>
+</details>
+<div class="callout warn"><strong>两连降观察：</strong>6–7月不含塔筒连续两月回落（1,695→1,658.92→1,589.80）为首次出现的两连降信号，按跟踪纪律连续两期同向显著变化启动观察：若8月再跌破1,550且跌至1,500以下，则自律可持续性存疑；若企稳回升至1,600+，则判为月度结构性波动（7月含塔筒反涨78元显示塔筒/混塔结构影响）。核心判据不变：站稳1,500–1,700元/kW确认修复，跌破1,400元/kW意味着自律瓦解；当前1,589.80仍处中枢安全区，但已从上沿回落至中位。</div>
+<p class="footnote">口径：风电头条央国企口径（Tier2），更新至8-07发布；8月统计截至9月14日尚未发布，8月均价待验证。含塔筒与不含塔筒为不同报价口径，不可直接比较；6月周度（6-15–21）含塔筒2,036.68元/kW（5项目930MW）、不含塔筒1,635元/kW（1项目50MW）为小样本周度口径。中信建投预计2025年涨幅约10%、2026年毛利率明显增长，为券商预测口径，仅作方向参考。</p>
+</section>
+</section>
+<section id="ch34" aria-label="3.4 竞争格局">
+<h2>3.4 竞争格局</h2>
+<p class="footnote">条件展开节：排名卡常驻，大表折叠备查。口径：CWEA吊装口径（制造交付）与NEA并网口径不可直接比较，差异约10GW并网滞后 <span class="tier-badge t1">T1</span>。</p>
+
+<section id="ch34-1" aria-label="3.4.1 2025年整机商吊装排名">
+<h3>3.4.1 2025年整机商吊装排名（CWEA）</h3>
+<p><strong>结论：头部高度集中，CR5达73.4%，金风以19.8%稳居第一。</strong></p>
+<ul>
+<li>金风科技吊装25.90GW、份额19.8%，2024年排名第1，领先优势扩大。</li>
+<li>运达股份吊装19.24GW、份额14.7%，2024年排名第4，上升2位首次进前三。</li>
+<li>明阳智能吊装18.55GW、份额14.2%，2024年排名第3，稳守海风优势。</li>
+<li>远景能源吊装17.58GW、份额13.5%，2024年排名第2，下降2位但仍为海外第一。</li>
+<li>三一重能吊装14.71GW、份额11.2%，2024年排名第5，陆风低价策略扩张。</li>
+<li>集中度CR3=48.7%、CR5=73.4%、CR7=91.8%，7家企业新增吊装均超10GW，国外整机商在中国市场已几乎归零。</li>
+</ul>
+<h4>T22 · TOP7份额横向条形</h4>
+<div class="chart"><div class="echart" id="ec-22" role="img" aria-label="TOP7吊装份额横向条形图：金风19.8%、运达14.7%、明阳14.2%、远景13.5%、三一11.2%、东方约6.4%、电气其余" data-chart="t22-share-hbar" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位GW与%；口径CWEA 2025年吊装口径 <span class="tier-badge t1">T1</span>；CR3=48.7%、CR5=73.4%、CR7=91.8%。</p>
+<details><summary>T22原表保留备查（7行6列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>排名</th><th>企业</th><th class="n">2025吊装(GW)</th><th class="n">市场份额</th><th>2024排名</th><th>核心变化</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>金风科技</td><td class="n">25.90</td><td class="n">19.8%</td><td>1</td><td>领先优势扩大</td></tr>
+<tr><td>2</td><td>运达股份</td><td class="n">19.24</td><td class="n">14.7%</td><td>4</td><td>↑2位，首次进前三</td></tr>
+<tr><td>3</td><td>明阳智能</td><td class="n">18.55</td><td class="n">14.2%</td><td>3</td><td>稳守海风优势</td></tr>
+<tr><td>4</td><td>远景能源</td><td class="n">17.58</td><td class="n">13.5%</td><td>2</td><td>↓2位，海外第一</td></tr>
+<tr><td>5</td><td>三一重能</td><td class="n">14.71</td><td class="n">11.2%</td><td>5</td><td>陆风低价策略扩张</td></tr>
+<tr><td>6</td><td>东方电气</td><td class="n">~8.4</td><td class="n">~6.4%</td><td>6</td><td>—</td></tr>
+<tr><td>7</td><td>电气风电</td><td class="n">&gt;10</td><td class="n">—</td><td>7</td><td>—</td></tr>
+</tbody></table></div></details>
+<p class="footnote">口径：CWEA吊装口径 <span class="tier-badge t1">T1</span>；东方电气约数保留~原样；电气风电&gt;10GW原样保留。</p>
+</section>
+
+<section id="ch34-2" aria-label="3.4.2 海上风电格局">
+<h3>3.4.2 海上风电格局</h3>
+<p><strong>结论：海风双寡头集中，CR2达62.2%，金风首次登顶。</strong></p>
+<ul>
+<li>金风科技海上吊装2.089GW、海上份额37.6%，排名第1。</li>
+<li>明阳智能海上吊装1.367GW、海上份额24.6%，排名第2。</li>
+<li>其余6家（电气风电/远景/东方电气/三一/运达/中船海装）合计2.104GW、份额37.8%。</li>
+<li>2025年共8家整机商有海风新增吊装；金风2025年首次登顶海风吊装第一。</li>
+</ul>
+<h4>T23 · 海风份额环形</h4>
+<div class="chart"><div class="echart" id="ec-23" role="img" aria-label="海风份额环形图：金风37.6%、明阳24.6%、其余37.8%，CR2=62.2%" data-chart="t23-offshore-donut" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位GW与%；口径CWEA 2025年海上吊装口径 <span class="tier-badge t1">T1</span>；CR2=62.2%。</p>
+<div class="scroll-x"><table class="data-table">
+<thead><tr><th>排名</th><th>企业</th><th class="n">海上吊装(GW)</th><th class="n">海上份额</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>金风科技</td><td class="n">2.089</td><td class="n">37.6%</td></tr>
+<tr><td>2</td><td>明阳智能</td><td class="n">1.367</td><td class="n">24.6%</td></tr>
+<tr><td>3-8</td><td>电气风电/远景/东方电气/三一/运达/中船海装</td><td class="n">2.104</td><td class="n">37.8%</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="ch34-3" aria-label="3.4.3 2026年中标端格局重塑信号">
+<h3>3.4.3 2026年中标端格局重塑信号（更新至1–7月）</h3>
+<p><strong>结论：中标端格局较吊装口径显著重塑，头部回流但月度波动加大。</strong></p>
+<ul>
+<li>1–7月央国企中标95.84GW：电气风电14.89%居第1，运达14.36%居第2，金风14.01%居第3，明阳13.56%居第4，东方12.80%居第5，CR5为69.62%。</li>
+<li>月度验证：6月TOP3为金风/三一/电气合计65.92%；7月TOP3为电气/金风/明阳合计74.44%，TOP3集中度从65.9%升至74.4%边际提升。</li>
+<li>电气风电凭6月16%与7月29%跃居年度第一，海风与框采受益；金风6月31.77%单月第一强势回升，全年在手订单53.9GW。</li>
+<li>大兆瓦（陆风8MW+、海风12MW+）成为央采硬性门槛，中小整机商逐步被挤出；中国能建11GW集采全部由国内10家整机商入围，无任何外资品牌。</li>
+</ul>
+<h4>T24 · 吊装排名 vs 1–7月中标排名bump对照</h4>
+<div class="chart"><div class="echart" id="ec-24" role="img" aria-label="吊装排名与1-7月中标排名对照图：电气7→1、运达2→2、金风1→3、明阳3→4、东方6→5、远景4→6+" data-chart="t24-bump" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位排名位次；口径左侧CWEA 2025年吊装排名、右侧风电头条1–7月央国企中标排名 <span class="tier-badge t2">T2</span>；箭头仅示位次升降；远景未进前五无份额口径，本柱5%为占位示意。</p>
+<details><summary>T24原表保留备查（6行5列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>企业</th><th>2025吊装排名</th><th>2026年1-5月中标排名</th><th>2026年1-7月中标排名</th><th>趋势信号</th></tr></thead>
+<tbody>
+<tr><td>运达股份</td><td>2</td><td>1（央国企口径）</td><td>2（14.36%）</td><td>1-6月曾居第1，7月未进前三，份额收敛</td></tr>
+<tr><td>东方风电</td><td>6</td><td>2（央国企口径）</td><td>5（12.80%）</td><td>6月后位次回落，但仍处第一梯队</td></tr>
+<tr><td>电气风电</td><td>7</td><td>3（央国企口径）</td><td>1（14.89%）</td><td>凭借6月16%+7月29%跃居年度第一，海风+框采受益</td></tr>
+<tr><td>远景能源</td><td>4</td><td>4/5</td><td>6+（未进前五）</td><td>全球中标5.68GW居首逻辑转向国内份额承压</td></tr>
+<tr><td>金风科技</td><td>1</td><td>5/6（央国企口径）</td><td>3（14.01%）</td><td>6月31.77%单月第一强势回升，全年在手订单53.9GW</td></tr>
+<tr><td>明阳智能</td><td>3</td><td>5/6</td><td>4（13.56%）</td><td>7月21.15%单月第三显著改善</td></tr>
+</tbody></table></div></details>
+<p class="footnote">口径：风电头条央国企定标口径 <span class="tier-badge t2">T2</span>；1–7月及7月单月装机截至2026-09-14尚未发布，下一验证窗待8月统计。</p>
+</section>
+
+<section id="ch34-4" aria-label="3.4.4 海外出口格局">
+<h3>3.4.4 海外出口格局</h3>
+<p><strong>结论：海外订单持续高增上行，对冲国内回落的关键变量兑现。</strong></p>
+<ul>
+<li>2025年全年出口7.734GW（+48.9%），2025年至今累计海外新签&gt;40GW。</li>
+<li>2026年Q1海外订单4.82GW（+215%），2026年1–5月海外订单6.8GW。</li>
+<li>区域覆盖印度、哈萨克斯坦、巴基斯坦、越南、澳大利亚、巴西、中东；三家中国整机商（远景/三一/金风）合计拿下62%印度市场份额。</li>
+<li>BNEF：2025年中国整机企业获得近14GW海外销售协议，中国占全球年度新增订单比例从23%提升至29%。</li>
+</ul>
+<h4>T25 · 出口KPI四卡</h4>
+<div class="chart"><div class="echart" id="ec-25" role="img" aria-label="出口KPI：2025全年7.734GW、2026Q1海外4.82GW、1–5月6.8GW（大于40GW为累计口径另注）" style="width:100%;height:320px"> data-chart="t25-export-kpi"></div>
+<p class="footnote">图注：单位GW与%；口径CWEA出口/风芒能源订单/国信证券统计，口径不同不可直接比较 <span class="tier-badge t2">T2</span>。</p>
+<details><summary>T25原表折叠（4行3列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>指标</th><th>数据</th><th>来源</th></tr></thead>
+<tbody>
+<tr><td>2025年全年出口</td><td>7.734GW（+48.9%）</td><td>CWEA</td></tr>
+<tr><td>2026年Q1海外订单</td><td>4.82GW（+215%）</td><td>风芒能源</td></tr>
+<tr><td>2026年1-5月海外订单</td><td>6.8GW</td><td>国信证券/每日风电</td></tr>
+<tr><td>2025年至今累计海外新签</td><td>&gt;40GW</td><td>国信证券</td></tr>
+</tbody></table></div></details>
+</section>
+</section>
+
+<section id="ch35" aria-label="3.5 盈利与财务">
+<h2>3.5 盈利与财务</h2>
+<p class="footnote">必须展开节。盈利是检验景气的最后一尺；单家确认不满足行业级修正条件。</p>
+
+<section id="ch35-1" aria-label="3.5.1 2025年主要上市整机商业绩">
+<h3>3.5.1 2025年主要上市整机商业绩</h3>
+<p><strong>结论：增收分化下行，盈利承压但龙头守住正利率。</strong></p>
+<ul>
+<li>金风科技营收730.2亿元（+29%），归母27.74亿元（+49%），净利率3.79%，风机毛利率8.95%，海外毛利24.3%“全能王”。</li>
+<li>明阳智能营收381.0亿元（+40%），归母6.60亿元（+91%），净利率1.73%，风机毛利修复6.84pct，海风龙头电站利润贡献。</li>
+<li>运达股份营收294.0亿元（+32%），归母3.40亿元（-27%），净利率1.16%，风机毛利率6.43%，95%收入来自国内陆风。</li>
+<li>三一重能营收273.8亿元（+54%），归母7.12亿元（-60%），净利率2.60%，风机毛利率下降，2024年低价订单集中交付。</li>
+<li>电气风电营收136.8亿元（+31%），归母-9.89亿元增亏，净利率为负，海风竞争与零部件涨价及项目延期三重拖累。</li>
+</ul>
+<h4>T26 · 5家营收横向条与归母净利对照</h4>
+<div class="chart"><div class="echart" id="ec-26" role="img" aria-label="5家2025年营收与归母净利对照图：金风730.2亿/27.74亿、明阳381.0亿/6.60亿、运达294.0亿/3.40亿、三一273.8亿/7.12亿、电气136.8亿/-9.89亿" data-chart="t26-annual" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位亿元与%；口径上市公司2025年报 <span class="tier-badge t1">T1</span>；净利率=归母/营收。</p>
+<details><summary>T26原表保留备查（5行8列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>公司</th><th class="n">营收(亿元)</th><th class="n">YoY</th><th class="n">归母净利(亿元)</th><th class="n">YoY</th><th class="n">净利率</th><th class="n">风机毛利率</th><th>核心特征</th></tr></thead>
+<tbody>
+<tr><td>金风科技</td><td class="n">730.2</td><td class="n">+29%</td><td class="n">27.74</td><td class="n">+49%</td><td class="n">3.79%</td><td class="n">8.95%</td><td>海外毛利24.3%，“全能王”</td></tr>
+<tr><td>明阳智能</td><td class="n">381.0</td><td class="n">+40%</td><td class="n">6.60</td><td class="n">+91%</td><td class="n">1.73%</td><td class="n">修复6.84pct</td><td>海风龙头，电站利润贡献</td></tr>
+<tr><td>运达股份</td><td class="n">294.0</td><td class="n">+32%</td><td class="n">3.40</td><td class="n">-27%</td><td class="n">1.16%</td><td class="n">6.43%</td><td>95%收入来自国内陆风</td></tr>
+<tr><td>三一重能</td><td class="n">273.8</td><td class="n">+54%</td><td class="n">7.12</td><td class="n">-60%</td><td class="n">2.60%</td><td class="n">下降</td><td>2024年低价订单集中交付</td></tr>
+<tr><td>电气风电</td><td class="n">136.8</td><td class="n">+31%</td><td class="n">-9.89</td><td class="n">增亏</td><td class="n">负</td><td class="n">下降</td><td>海风竞争+零部件涨价+项目延期</td></tr>
+</tbody></table></div></details>
+</section>
+
+<section id="ch35-2" aria-label="3.5.2 2026年Q1业绩">
+<h3>3.5.2 2026年Q1业绩：盈利修复信号明确</h3>
+<p><strong>结论：头部修复信号明确上行，尾部分化仍存。</strong></p>
+<ul>
+<li>金风科技Q1营收154.85亿元（+63.5%），归母9.07亿元（+59.6%），净利率5.85%，风机销量+133%。</li>
+<li>明阳智能Q1营收86.63亿元（+12.5%），归母0.25亿元（-91.8%），净利率0.28%，电站销售减少拖累利润。</li>
+<li>运达股份Q1营收66.7亿元（+66.4%），归母0.48亿元（-18.7%），净利率0.72%，毛利率8.03%处低价订单尾阶段。</li>
+<li>三一重能Q1营收+82.2%，归母1.79亿元扭亏，净利率4.49%跃升至行业第二，风场出售贡献利润。</li>
+<li>电气风电Q1营收+66.9%，归母续亏，在手订单集中交付但尚未扭亏。</li>
+</ul>
+<h4>T27 · 5家Q1归母净利条形</h4>
+<div class="chart"><div class="echart" id="ec-27" role="img" aria-label="5家Q1归母净利条形图：金风9.07亿、明阳0.25亿、运达0.48亿、三一1.79亿、电气续亏" data-chart="t27-q1" style="width:100%;height:320px"></div></div><p class="footnote">续亏注：电气风电Q1续亏，无正值可示，图中以空位表示；其余4家见原表。</p>
+<p class="footnote">图注：单位亿元与%；口径上市公司2026年Q1季报 <span class="tier-badge t1">T1</span>；YoY注于原表。</p>
+<details><summary>T27原表保留备查（5行7列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>公司</th><th class="n">Q1营收(亿元)</th><th class="n">YoY</th><th class="n">Q1归母净利(亿元)</th><th class="n">YoY</th><th class="n">净利率</th><th>关键信号</th></tr></thead>
+<tbody>
+<tr><td>金风科技</td><td class="n">154.85</td><td class="n">+63.5%</td><td class="n">9.07</td><td class="n">+59.6%</td><td class="n">5.85%</td><td>风机销量+133%，毛利率环比+3pct，海外在手订单9.57GW</td></tr>
+<tr><td>明阳智能</td><td class="n">86.63</td><td class="n">+12.5%</td><td class="n">0.25</td><td class="n">-91.8%</td><td class="n">0.28%</td><td>电站销售减少拖累利润，海风在手订单45.6GW</td></tr>
+<tr><td>运达股份</td><td class="n">66.7</td><td class="n">+66.4%</td><td class="n">0.48</td><td class="n">-18.7%</td><td class="n">0.72%</td><td>毛利率8.03%，低价订单尾阶段</td></tr>
+<tr><td>三一重能</td><td class="n">—</td><td class="n">+82.2%</td><td class="n">1.79</td><td class="n">扭亏</td><td class="n">4.49%</td><td>净利率跃升至行业第二，风场出售贡献利润</td></tr>
+<tr><td>电气风电</td><td class="n">—</td><td class="n">+66.9%</td><td class="n">续亏</td><td class="n">—</td><td class="n">负</td><td>在手订单集中交付但尚未扭亏</td></tr>
+</tbody></table></div></details>
+</section>
+
+<section id="ch35-2b" aria-label="3.5.2b 2026年H1业绩">
+<h3>3.5.2b 2026年H1业绩：金风半年报确认修复，明阳仍为预告（截至2026-09-14）</h3>
+<p><strong>结论：龙头确认修复上行，但行业拐点待验证、分化加剧。</strong></p>
+<ul>
+<li>金风科技H1归母18.55亿元（+24.67%），Q2隐含约9.48亿元较Q1的9.07亿元环比改善；营收337.39亿元（+18.23%）。</li>
+<li>金风<dfn class="term" data-term="扣非净利" title="扣非经常损益后归母净利；金风H1为20.22亿元">扣非净利</dfn>20.22亿元（+47.79%），风机及零部件毛利率11.62%（+3.65pp），机组对外销售12,364MW（+16.19%）。</li>
+<li>金风国际销售108.87亿元（+29.94%）、毛利率17.79%，<dfn class="term" data-term="在手订单" title="已签未交付订单；金风54.14GW含海外9.49GW">在手订单</dfn>54.14GW（含海外9.49GW、+28.93%），正式半年报8-25已披露。</li>
+<li>明阳智能H1预告归母1.0–1.5亿元（-75.41%~-83.60%），扣非0.05亿元至-0.45亿元（98.97%~-109.27%），正式半年报截至2026-09-14未检得。</li>
+<li>运达/三一/电气风电3家H1截至2026-09-14未检得，不得以券商预测替代，行业级拐点尚待验证。</li>
+</ul>
+<h4>T28 · H1披露状态5卡</h4>
+<div class="chart"><div class="echart" id="ec-28" role="img" aria-label="H1披露状态5卡：金风已披露18.55亿、明阳预告1.0-1.5亿、其余3家未检得" data-chart="t28-h1-status" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位亿元与%；口径公司公告与业绩预告，截至2026-09-14 <span class="tier-badge t1">T1</span>；未检得≠未披露。</p>
+<details><summary>T28原表保留备查（5行6列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>公司</th><th>2026H1披露状态</th><th class="n">归母净利(亿元)</th><th class="n">同比</th><th>关键原因</th><th>数据来源</th></tr></thead>
+<tbody>
+<tr><td>明阳智能</td><td>已发布业绩预告（7月14日），正式半年报截至9月14日未检得</td><td class="n">1.0-1.5</td><td class="n">-75.41%~-83.60%</td><td>电站产品销售规模同比大幅下降（建设进度+出售进展放缓）；海外业务投入（市场推广、本地化团队、项目调研）同比增加</td><td>明阳智能2026年半年度业绩预告</td></tr>
+<tr><td>金风科技</td><td>已发布正式半年报（8月25日）</td><td class="n">18.55</td><td class="n">+24.67%</td><td>营收337.39亿（+18.23%）、扣非20.22亿（+47.79%）；风机及零部件销售272.56亿（+24.73%）、毛利率11.62%（+3.65pp）；机组对外销售12,364MW（+16.19%）；在手外部订单50,959MW（另有内部订单3,183MW）；国际销售108.87亿（+29.94%）、毛利率17.79%；在手海外订单9,489MW（+28.93%）</td><td>金风科技2026年半年度报告全文</td></tr>
+<tr><td>运达股份</td><td>尚未发布（截至9月14日未检得）</td><td class="n">—</td><td class="n">—</td><td>同上，Q1净利-18.7%已显低价订单拖累，H1是否延续待验证</td><td>—</td></tr>
+<tr><td>三一重能</td><td>尚未发布（截至9月14日未检得）</td><td class="n">—</td><td class="n">—</td><td>同上，Q1扭亏但毛利率仍承压，H1降本及中标价提升（+5pct）能否兑现待验证</td><td>—</td></tr>
+<tr><td>电气风电</td><td>尚未发布（截至9月14日未检得）</td><td class="n">—</td><td class="n">—</td><td>同上，Q1续亏，H1在手订单20.13GW同比+70%但盈利拐点待披露</td><td>—</td></tr>
+</tbody></table></div></details>
+<div class="callout warn"><strong>缺口警示：</strong>明阳正式半年报截至2026-09-14未检得；运达/三一/电气风电H1截至2026-09-14未检得；单家确认不满足行业级修正条件，维持“修复进行中、分化加剧”。</div>
+</section>
+
+<section id="ch35-3" aria-label="3.5.3 盈利分化的核心逻辑">
+<h3>3.5.3 盈利分化的核心逻辑：两海决定盈利质量</h3>
+<p><strong>结论：“两海”（海外+海上）分化加剧，是盈利质量的胜负手。</strong></p>
+<ul>
+<li>金风科技海外业务收入180.82亿元（+50.6%），毛利率24.29%，比国内高出近14个百分点；H1国际108.87亿元（+29.94%）、毛利率17.79%。</li>
+<li>三一重能Q1净利率从2025年的2.6%跃升至4.49%，扭亏确认低价订单消化完毕，陆风成本控制能力强。</li>
+<li>明阳智能风机销售毛利率仅6.38%，电站销售28.99%，风电场发电45.99%，“不卖电站=不赚钱”结构性脆弱暴露。</li>
+<li>运达股份95%收入来自国内陆风，毛利率仅8.03%，但为高弹性纯整机标的，下半年高价订单交付有望加速修复。</li>
+<li>电气风电海风竞争加剧与零部件涨价及项目延期三重压力，持续亏损。</li>
+</ul>
+<p class="footnote">口径：公司年报与半年报分部口径 <span class="tier-badge t1">T1</span>；明阳电站转让节奏扰动需纳入保守端；2026年全年为盈利修复关键验证年。</p>
+</section>
+</section>
+
+<section id="ch36" aria-label="3.6 消纳">
+<h2>3.6 消纳</h2>
+<p class="footnote">主线必须展开节。消纳是当前最大单一风险变量；H1分省数据截至2026-09-14未发布，见缺口警示。</p>
+
+<section id="ch36-1" aria-label="3.6.1 全国利用率持续下滑">
+<h3>3.6.1 全国利用率持续下滑（更新至2026H1）</h3>
+<p><strong>结论：利用率趋势恶化下行，H1弃风率9.1%距10%红线仅0.9pct。</strong></p>
+<ul>
+<li>2023年利用率97.3%（<dfn class="term" data-term="弃风率" title="弃风电量占可发电量比；2026H1为9.1%，距10%红线0.9pct">弃风率</dfn>2.7%）为历史最优，2024年95.9%（4.1%）下降1.4pct。</li>
+<li>2025年H1与全年同为94.3%（5.7%），首次跌破95%红线，同比几乎翻倍。</li>
+<li>2026年1–2月91.5%（8.5%）加速恶化；Q1的91.4%（8.6%）较2025Q1下降1.9pct；消纳中心新口径Q1为91.9%（8.1%）。</li>
+<li>2026H1为90.9%（9.1%），较Q1再降0.5pct，较2025H1降3.4pct；H1发电5,984亿kWh、<dfn class="term" data-term="利用小时数" title="年发电量/装机容量；2026H1风电917小时（-170小时）">利用小时数</dfn>917小时（-170小时）、设备平均1,392小时（-113小时）。</li>
+<li>损失量化：2025年弃风约644亿kWh（1.13万亿kWh×5.7%）；按H1利用率推算2026年全年或破1,100亿kWh量级。</li>
+</ul>
+<h4>T29 · 利用率与弃风率镜像</h4>
+<div class="chart"><div class="echart" id="ec-29" role="img" aria-label="利用率折线与弃风率镜像柱：97.3%/95.9%/94.3%/91.4%/90.9%与2.7%/4.1%/5.7%/8.6%/9.1%，10%红线" data-chart="t29-mirror" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位%；口径NEA口径与消纳中心新口径（Q1差异约0.5pct） <span class="tier-badge t1">T1</span>；10%红线画在弃风率右轴（左轴为利用率85–100%）。</p>
+<details><summary>T29原表保留备查（8行5列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>时期</th><th class="n">全国风电利用率</th><th class="n">弃风率</th><th>变化</th><th>备注</th></tr></thead>
+<tbody>
+<tr><td>2023年全年</td><td class="n">97.3%</td><td class="n">2.7%</td><td>历史最优水平</td><td>—</td></tr>
+<tr><td>2024年全年</td><td class="n">95.9%</td><td class="n">4.1%</td><td>↓1.4pct</td><td>—</td></tr>
+<tr><td>2025年H1</td><td class="n">94.3%</td><td class="n">5.7%</td><td>同比几乎翻倍</td><td>—</td></tr>
+<tr><td>2025年全年</td><td class="n">94.3%</td><td class="n">5.7%</td><td>首次跌破95%红线</td><td>—</td></tr>
+<tr><td>2026年1-2月</td><td class="n">91.5%</td><td class="n">8.5%</td><td>加速恶化</td><td>消纳中心口径</td></tr>
+<tr><td>2026年Q1（NEA口径）</td><td class="n">91.4%</td><td class="n">8.6%</td><td>较2025Q1(93.3%)↓1.9pct</td><td>NEA发布会</td></tr>
+<tr><td>2026年Q1（消纳中心新口径*）</td><td class="n">91.9%</td><td class="n">8.1%</td><td>仅统计系统原因弃电</td><td>消纳中心</td></tr>
+<tr><td>2026年H1（NEA口径）</td><td class="n">90.9%</td><td class="n">9.1%</td><td>较Q1再↓0.5pct，较2025H1 ↓3.4pct</td><td>NEA 7月30日发布会；发电量5,984亿kWh、利用小时917小时（-170）；6月单月风电发电量同比+15.8%，风资源边际恢复</td></tr>
+</tbody></table></div></details>
+<p class="footnote">*2026年起消纳中心仅计算系统原因受限电量；H1消纳中心口径截至2026-09-14仍未见发布，如发布应按系统原因口径交叉验证。6月发电+15.8%为统计局7月15日口径。</p>
+</section>
+
+<section id="ch36-2" aria-label="3.6.2 省区分化">
+<h3>3.6.2 省区分化：东西“冰火两重天”</h3>
+<p><strong>结论：三北承压下行，沿海无忧，分化加剧。</strong></p>
+<ul>
+<li>西藏利用率68.6%（弃风率31.4%）为极端；新疆91.0%（-2.4pct）与蒙西91.8%（-1.6pct）为严重。</li>
+<li>蒙东92.8%、河北92.0%（-0.6pct）、甘肃93.7%（-0.3pct）处警戒；上海/浙江/福建&gt;99%无忧。</li>
+<li>三北占全国风电新增装机79%，却是消纳最困难地区；西北等效小时1,606小时 vs 全国平均2,031小时。</li>
+<li>2026年Q1有12个地区风光利用率均在95%以上，10个地区风电或光伏在90%以下；H1分省数据截至2026-09-14未发布。</li>
+</ul>
+<h4>T30 · 7省区利用率横向条形</h4>
+<div class="chart"><div class="echart" id="ec-30" role="img" aria-label="省区利用率横条：西藏68.6%、新疆91.0%、蒙西91.8%、河北92.0%、蒙东92.8%、甘肃93.7%、沿海高于99%" style="width:100%;height:320px"> data-chart="t30-province"></div>
+<p class="footnote">图注：单位%；口径2025年全国新能源并网消纳情况 <span class="tier-badge t1">T1</span>；西藏68.6%标红极端；沿海高于99%原文无精确值，99.5为示意占位。</p>
+<details><summary>T30原表保留备查（7行4列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>省区</th><th class="n">2025年风电利用率</th><th class="n">同比变化</th><th>严重程度</th></tr></thead>
+<tbody>
+<tr><td>西藏</td><td class="n">68.6%</td><td class="n">—</td><td>极端（弃风率31.4%）</td></tr>
+<tr><td>新疆</td><td class="n">91.0%</td><td class="n">-2.4pct</td><td>严重</td></tr>
+<tr><td>蒙西</td><td class="n">91.8%</td><td class="n">-1.6pct</td><td>严重</td></tr>
+<tr><td>蒙东</td><td class="n">92.8%</td><td class="n">-1.2pct</td><td>警戒</td></tr>
+<tr><td>河北</td><td class="n">92.0%</td><td class="n">-0.6pct</td><td>警戒</td></tr>
+<tr><td>甘肃</td><td class="n">93.7%</td><td class="n">-0.3pct</td><td>警戒</td></tr>
+<tr><td>上海/浙江/福建</td><td class="n">&gt;99%</td><td class="n">—</td><td>无忧</td></tr>
+</tbody></table></div></details>
+</section>
+
+<section id="ch36-3" aria-label="3.6.3 根因分析">
+<h3>3.6.3 根因分析：三座大山</h3>
+<p><strong>结论：通道与灵活性及省间壁垒三重约束，短期难解。</strong></p>
+<ul>
+<li>第一座山：<dfn class="term" data-term="特高压" title="跨区输电通道；已建42条，西北外送仅86.7GW，多数通道煤电占比超50%">特高压</dfn>外送通道建得慢用得少：全国已建成42条，西北外送仅86.7GW，2024年西北新能源外送占比仅25%。</li>
+<li>3条在建（新疆–川渝/陕北–安徽/甘肃–浙江）加8条规划，建设周期3–5年，2027年前难形成实质性增量。</li>
+<li>第二座山：<dfn class="term" data-term="火电灵活性改造" title="提升煤电调峰深度让路新能源；推进缓慢，北方供暖季热电联产挤占风电空间">火电灵活性改造</dfn>不足，北方供暖季热电联产挤占风电空间；灵活调度不足而非单纯通道不足是根本原因。</li>
+<li>第三座山：省间壁垒与市场机制缺失，跨省长协无法匹配波动性，送受端电源结构同质化。</li>
+</ul>
+<p class="footnote">口径：通道与外送占比为行业媒体与规划口径 <span class="tier-badge t2">T2</span>；十五五新增投产15回、西电东送超4.2亿kW、电网固投5万亿+见3.6.4。</p>
+</section>
+
+<section id="ch36-4" aria-label="3.6.4 政策应对">
+<h3>3.6.4 政策应对</h3>
+<p><strong>结论：政策“一松一紧”兑现，远期改善后置至2028年后。</strong></p>
+<ul>
+<li>2024年利用率下限从95%放宽至90%，承认短期难以达标；2025年1360号文分档设目标并建预警机制。</li>
+<li>发改委第42号令2026-06-22发布、2026-08-01施行，构建“消费端最低比重+<dfn class="term" data-term="消纳责任权重" title="42号令制度：消费端最低比重+消纳端属地责任双轮驱动，2026-08-01施行">消纳责任权重</dfn>”双轮驱动，细则与首批分省执行待跟踪。</li>
+<li>十五五规划2026-06-25发布（发改能源〔2026〕884号）：电力总装机54亿kW、风光比重超50%、电网固投5万亿+、15回特高压、西电东送超4.2亿kW、总投资超20万亿、储能3亿kW/抽蓄1.6亿kW。</li>
+<li>碳达峰方案2026-07-05口径为金风半年报援引（28亿kW/8000万kW/25%），原文待核验，不得作定稿事实。</li>
+</ul>
+<div class="callout warn"><strong>缺口警示：</strong>碳达峰方案原文待核验；42号令细则与2030年权重指标执行情况待跟踪；对2026–2027年即期弃风改善有限。</div>
+</section>
+
+<section id="ch36-5" aria-label="3.6.5 量化影响推演">
+<h3>3.6.5 量化影响推演</h3>
+<p><strong>结论：基准情景承压下行，全年弃风或破1,100亿kWh。</strong></p>
+<ul>
+<li>乐观情景利用率93%/弃风7%，等效损失约910亿kWh，对IRR影响-1.5pct。</li>
+<li>基准情景利用率91%/弃风9%，等效损失约1,170亿kWh，对IRR影响-2.5pct。</li>
+<li>悲观情景利用率88%/弃风12%，等效损失约1,560亿kWh，对IRR影响-4.0pct。</li>
+<li>传导链条：弃风限电→等效小时下降→度电收入减少→IRR下降→招标萎缩→装机放缓。</li>
+</ul>
+<h4>T31 · 三情景卡</h4>
+<div class="chart"><div class="echart" id="ec-31" role="img" aria-label="三情景卡：乐观7%/910亿/-1.5pct、基准9%/1170亿/-2.5pct、悲观12%/1560亿/-4.0pct" data-chart="t31-scenario" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位%与亿kWh及pct；口径报告测算口径，推算/测算警示 <span class="tier-badge t3">T3</span>；2025年弃风约644亿kWh、2026年或破1,100亿kWh。</p>
+<details><summary>T31原表折叠（3行4列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>情景</th><th class="n">弃风率假设</th><th class="n">等效损失(亿kWh)</th><th class="n">对风电项目IRR影响</th></tr></thead>
+<tbody>
+<tr><td>乐观（利用率93%）</td><td class="n">7%</td><td class="n">~910</td><td class="n">-1.5pct</td></tr>
+<tr><td>基准（利用率91%）</td><td class="n">9%</td><td class="n">~1,170</td><td class="n">-2.5pct</td></tr>
+<tr><td>悲观（利用率88%）</td><td class="n">12%</td><td class="n">~1,560</td><td class="n">-4.0pct</td></tr>
+</tbody></table></div></details>
+</section>
+
+<section id="ch36-6" aria-label="3.6.6 弃风向招标传导的证据链">
+<h3>3.6.6 弃风向招标传导的证据链</h3>
+<p><strong>结论：废止潮传导兑现，但风电韧性好于光伏、“弃光追风”显现。</strong></p>
+<ul>
+<li>2024H2至今至少15省累计超90GW风光废止/调整；5省纯风电废止约5.7GW，全国含调整约40–50GW。</li>
+<li>贵州3,107MW占纯风电总量约60%，主因行政审批清退；河北约859MW取消加约5,188MW调整/延期。</li>
+<li>陕西800MW、山西715MW、宁夏281MW、内蒙古约6,000MW估（3批37个项目、风光混合12.65GW）。</li>
+<li>国电投IRR门槛7%、华能低于6%强制退出；赤峰40MW从8.53%降至5.1%即核销；CWEA测算有弃风加无<dfn class="term" data-term="机制电价" title="136号文前保量保价存量电价；增量项目全量入市，无机制电价+有弃风则半数省IRR<6%">机制电价</dfn>半数以上省份IRR低于6%。</li>
+</ul>
+<h4>T32 · 5省与内蒙古废止横向条形</h4>
+<div class="chart"><div class="echart" id="ec-32" role="img" aria-label="废止横条：贵州3107MW、河北859+5188MW、陕西800MW、山西715MW、宁夏281MW、内蒙古约6000MW" data-chart="t32-curtailed" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位MW；口径各省发改委公告，取消与调整/延期分色 <span class="tier-badge t2">T2</span>；贵州3107MW最大。</p>
+<details><summary>T32原表保留备查（6行4列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>省份</th><th class="n">风电废止/调整规模</th><th>时间</th><th>详情</th></tr></thead>
+<tbody>
+<tr><td>贵州</td><td class="n">3,107 MW</td><td>2025H2</td><td>40个项目未按期核准/备案</td></tr>
+<tr><td>河北</td><td class="n">~859 MW（取消）+ ~5,188 MW（调整/延期）</td><td>2025年至今</td><td>35个项目调整、9个取消</td></tr>
+<tr><td>陕西</td><td class="n">800 MW</td><td>2025年至今</td><td>10个项目</td></tr>
+<tr><td>山西</td><td class="n">715 MW</td><td>2025-2026四批次</td><td>16个项目</td></tr>
+<tr><td>宁夏</td><td class="n">281 MW</td><td>2025年至今</td><td>12个项目</td></tr>
+<tr><td>内蒙古</td><td class="n">~6,000 MW+（估，含调整）</td><td>2025年至今</td><td>3批37个项目，总规模12.65GW（风光混合）</td></tr>
+</tbody></table></div></details>
+<h4>T33 · 废止根因四卡</h4>
+<div class="chart"><div class="echart" id="ec-33" role="img" aria-label="废止根因四卡：IRR跌破门槛、行政审批过期、136号文转向、配套未落地" data-chart="t33-cause" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：根因排序①–④；口径事件归纳口径 <span class="tier-badge t3">T3</span>；光伏为主、风电三北为辅。</p>
+<details><summary>T33原表折叠（4行3列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>根因</th><th>典型表现</th><th>影响规模</th></tr></thead>
+<tbody>
+<tr><td>① 消纳恶化+电价下跌 → IRR跌破门槛</td><td>山东光伏电价中午跌破5分/kWh；三北弃风率&gt;15%区域IRR&lt;6%</td><td>光伏为主，风电三北区域为辅</td></tr>
+<tr><td>② 行政审批过期</td><td>贵州3.1GW风电未按期核准；备案文件过期失效</td><td>贵州为主</td></tr>
+<tr><td>③ 政策转向（136号文）</td><td>取消保量保价，增量项目全面市场化竞价</td><td>全面的增量项目类型</td></tr>
+<tr><td>④ 配套产业未落地</td><td>内蒙古工业园区绿电项目因配套电解铝未能落地被废止</td><td>内蒙古为主</td></tr>
+</tbody></table></div></details>
+<h4>T34 · IRR三情景可行性灯</h4>
+<div class="chart"><div class="echart" id="ec-34" role="img" aria-label="IRR三情景灯：无弃风+机制电价绿灯、无弃风无机制黄灯、有弃风无机制红灯半数省低于6%" data-chart="t34-irr" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：单位全投资IRR%；口径CWEA基于各省机制电价测算 <span class="tier-badge t2">T2</span>；测算警示。</p>
+<div class="scroll-x"><table class="data-table">
+<thead><tr><th>情景</th><th class="n">全投资IRR</th><th>投资可行性</th></tr></thead>
+<tbody>
+<tr><td>无弃风+享受机制电价</td><td class="n">7%-14%</td><td>大部分可投</td></tr>
+<tr><td>无弃风+不享受机制电价</td><td class="n">仅2省低于6%</td><td>整体可行</td></tr>
+<tr><td>有实际弃风+不享受机制电价</td><td class="n">半数以上省份低于6%</td><td>大面积不可投</td></tr>
+</tbody></table></div>
+<div class="callout quote"><strong>风电韧性好于光伏（全文保留结论）：</strong>河北5.2GW风电多为调整/延期而非直接废止；长源电力砍800MW光伏转投风电；中广核河北200MW风电转型“风电+制氢”将IRR拉回9.1%。消纳危机中风电正从光伏手里抢投资优先级。</div>
+</section>
+
+<section id="ch36-7" aria-label="3.6.7 海上风电消纳安全区">
+<h3>3.6.7 海上风电：消纳“安全区”</h3>
+<p><strong>结论：海风基本无弃风上行，是区别陆风最核心的结构性优势。</strong></p>
+<ul>
+<li>2025年上海约100%、福建约100%、浙江&gt;98%、江苏&gt;98%、广东&gt;97%，全国平均94.3%。</li>
+<li>海风弃风阈值超100GW，陆风仅50–80GW；<dfn class="term" data-term="容量因子" title="实际出力/额定出力年均；海风35–45% vs 陆风25–30%">容量因子</dfn>海风35–45% vs 陆风25–30%。</li>
+<li>根源：靠近负荷中心无需数千公里<dfn class="term" data-term="特高压" title="跨区输电通道；海风距负荷仅数十至百公里">特高压</dfn>；出力与负荷匹配更好；沿海电网调节资源充足。</li>
+<li><dfn class="term" data-term="漂浮式" title="深远海漂浮式基础；7月17MW华能漂浮式为单月海上全部定标">漂浮式</dfn>与深远海是下一代增量；<dfn class="term" data-term="绿电交易" title="绿色电力市场化交易；2026年6月275亿kWh（+15.0%），H1累计1,641亿kWh（+6.6%）">绿电交易</dfn>6月275亿kWh（+15.0%）、H1累计1,641亿kWh（+6.6%）支撑消纳。</li>
+</ul>
+<div class="scroll-x"><table class="data-table">
+<thead><tr><th>2025年</th><th class="n">上海</th><th class="n">福建</th><th class="n">浙江</th><th class="n">江苏</th><th class="n">广东</th><th class="n">全国平均</th></tr></thead>
+<tbody>
+<tr><td>风电利用率</td><td class="n">~100%</td><td class="n">~100%</td><td class="n">&gt;98%</td><td class="n">&gt;98%</td><td class="n">&gt;97%</td><td class="n">94.3%</td></tr>
+</tbody></table></div>
+<p class="footnote">T35单点表：2025年截面单点，不得补序列；口径省级消纳口径 <span class="tier-badge t2">T2</span>；不制图。</p>
+</section>
+</section>
+
+<section id="ch37" aria-label="3.7 风险全景">
+<h2>3.7 风险全景</h2>
+<p><strong>结论：消纳是P0级风险上行，8项风险须对照跟踪。</strong></p>
+<ul>
+<li>消纳恶化（极高）：弃风率2.7%→5.7%→9.1%加速上行；触发为全国利用率跌破90%或重点省跌破85%；H1已至90.9%距90%仅0.9pct。</li>
+<li>价格内卷复燃（中等）：不含塔筒跌破1,400元/kW即瓦解；当前7月1,590元/kW连续两月回落105元；8月价格截至2026-09-14未发布。</li>
+<li>远期装机缺口（已缓解）：1–7月定标95.84GW年化约164GW，陆风已锁定，仅海上缺口。</li>
+<li>电价市场化冲击（中等）：增量全量入市，现货下行压力，各地分化总体可控。</li>
+<li>海风建设低于预期（较高）：2026年吊装仅5.5–7.0GW中位6.2GW；H1海上定标3.88GW、1–7月3.90GW、7月仅17MW。</li>
+<li>供应链瓶颈（较低）：大型铸件与叶片树脂及塔筒钢材阶段性上涨。</li>
+<li>海外贸易壁垒（中等）：欧美反补贴与关税风险上升但尚未实质落地。</li>
+<li>风资源异常（暂时）：2026年3–5月十年来最差，不改变中长期逻辑。</li>
+</ul>
+<h4>T36 · 概率×影响气泡图</h4>
+<div class="chart"><div class="echart" id="ec-36" role="img" aria-label="风险气泡图：消纳极高置顶、海风较高、价格中等、电价中等、贸易中等、缺口已缓解、供应链较低、风资源暂时" data-chart="t36-risk" style="width:100%;height:320px"></div></div>
+<p class="footnote">图注：横轴概率、纵轴影响、气泡为严重程度；口径报告研判口径 <span class="tier-badge t3">T3</span>；消纳为P0级。</p>
+<details><summary>T36原表保留备查（8行5列）</summary><div class="pad scroll-x"><table class="data-table">
+<thead><tr><th>风险类别</th><th>具体描述</th><th>严重程度</th><th>触发信号</th><th>当前状态</th></tr></thead>
+<tbody>
+<tr><td>消纳恶化</td><td>弃风率2.7%→5.7%→9.1%加速上行，IRR击穿投资门槛；全国&gt;90GW风光项目被废止/调整（其中纯风电约5.7GW）</td><td>极高</td><td>全国利用率跌破90%；重点省份跌破85%</td><td>2026H1已至90.9%（弃风9.1%），距90%仅0.9pct；6月发电+15.8%显示风资源恢复但利用率未更新，H1分省数据截至9月14日未发布</td></tr>
+<tr><td>价格内卷复燃</td><td>行业自律瓦解，不含塔筒跌破1400元/kW</td><td>中等</td><td>连续两月中标均价低于1400</td><td>当前1,590元/kW（7月）仍处中枢但连续两月回落105元；8月价格截至9月14日未发布，若企稳回升则判结构性波动，若跌破1,550则预警升级</td></tr>
+<tr><td>远期装机缺口</td><td>2025年招标121GW覆盖2026年仅1.01x，若2026年全年招标低于120GW则2027年面临缺口</td><td>已缓解</td><td>2026年全年招标低于120GW</td><td>1-7月定标95.84GW年化约164GW，陆风已锁定；仅海上缺口</td></tr>
+<tr><td>电价市场化冲击</td><td>增量项目全量入市，现货市场价格下行压力</td><td>中等</td><td>结算电价连续两季同比下降&gt;10%</td><td>各地分化大，总体可控</td></tr>
+<tr><td>海风建设大幅低于预期</td><td>2026年海风吊装仅5.5-7.0GW（中位6.2GW），较券商一致预期11-15GW裂口~5GW；明阳/起帆Q1海风零交付确认结构性约束；H1海上定标仅3.88GW、1-7月3.90GW（7月仅17MW）</td><td>较高</td><td>全年海风吊装&lt;5.5GW；Q3单季海上招标仍&lt;3GW则2027年海风也承压</td><td>H1海上并网仅0.84GW较Q1未加速，分层管线概率法指向平淡年</td></tr>
+<tr><td>供应链瓶颈</td><td>大型铸件、叶片树脂、塔筒钢材价格上涨</td><td>较低</td><td>连续两季零部件涨价&gt;15%</td><td>2025年高峰期间阶段性上涨</td></tr>
+<tr><td>海外贸易壁垒</td><td>欧美反补贴调查、加征关税</td><td>中等</td><td>欧盟/美国正式发起调查或加征关税</td><td>风险上升但尚未实质落地</td></tr>
+<tr><td>风资源异常</td><td>2026年3-5月风资源为十年来最差</td><td>暂时</td><td>连续多季风速显著低于常年</td><td>气象条件，不改变中长期逻辑</td></tr>
+</tbody></table></div></details>
+<div class="callout warn"><strong>核心原则（全文保留）：</strong>消纳是P0级风险——弃风率若持续上升，所有关于“量价利齐升”的乐观情景都将被打破。月度装机和价格波动多为噪声，真正决定行业走势的是弃风率的方向。</div>
+</section>
+
+<section id="ch4" aria-label="四、核心结论">
+<h2>四、核心结论</h2>
+
+<section id="ch4-1" aria-label="4.1 三重确定性与一个重大约束">
+<h3>4.1 三重确定性与一个重大约束（6条一条不合并）</h3>
+<p><strong>结论：量价利三重确定性兑现上行，消纳硬约束与“弃光追风”及十五五路线图收敛。</strong></p>
+<ul>
+<li><strong>第1条·量有确定性：</strong>2026年预测新增装机约118GW（110–125GW区间），较2025年120GW回落约2%；H1 38.62GW超预期33%，6月13.57GW确认赶工效率；1–7月定标95.84GW年化约164GW。</li>
+<li><strong>第2条·价有支撑但连续回落需跟踪：</strong>自2024年11月未再跌破1,400元/kW，5月1,695→6月1,658.92（-36.34）→7月1,589.80（-69.12），两连降105元仍处1,500–1,700中枢；8月价格截至2026-09-14尚未发布。</li>
+<li><strong>第3条·利将修复但分化加剧：</strong>金风H1归母+24.67%、扣非+47.79%、风机毛利率11.62%（+3.65pp）龙头确认；明阳H1预告1.0–1.5亿元（-75%~-84%）提示分化；行业级拐点待其余4家半年报验证。</li>
+<li><strong>第4条·但消纳构成硬约束且趋势恶化：</strong>弃风率2.7%→5.7%→H1 9.1%，较Q1再恶化0.5pct，距10%仅0.9pct；消纳能力将取代政策目标成为未来5年装机实际天花板。</li>
+<li><strong>第5条·废止潮中风电比光伏韧性更好：</strong>全国超90GW风光废止/调整中风电比例远低于光伏；河北多为调整/延期；长源电力砍800MW光伏转投风电；中广核“风电+制氢”拉回IRR至9.1%。</li>
+<li><strong>第6条·十五五路线图确认：</strong>54亿kW电力总装机、风光比重超50%、电网固投5万亿+、15回特高压、能源总投资超20万亿；碳达峰方案口径（28亿kW/8000万kW/25%）原文待核验。</li>
+</ul>
+</section>
+
+<section id="ch4-2" aria-label="4.2 关键观察指标">
+<h3>4.2 关键观察指标（2026年跟踪重点，7项全列）</h3>
+<ul>
+<li><strong>月度招标量：</strong>维持100GW+年化是2027年前置指标；1–7月定标95.84GW年化约164GW，海上仅3.90GW（7月仅17MW）；关注8–9月是否回升至10GW+。</li>
+<li><strong>风机中标价：</strong>不含塔筒站稳1,500元/kW以上（7月1,589.80元/kW，两连降105元）；跌破1,550元/kW预警升级，跌破1,400元/kW判自律瓦解。</li>
+<li><strong>风电利用率：</strong>Q2–Q3维持90%以上（H1 90.9%距90%仅0.9pct）；若连续两月跌破90%触发预警；H1分省截至2026-09-14未发布。</li>
+<li><strong>海上风电开工进度：</strong>Q3为判断2027年能否回归10GW+关键窗口；海风1GW+单月放量为积极信号，Q3仍低于3GW则2027年承压。</li>
+<li><strong>电力现货市场价格：</strong>风电结算电价趋势变化，连续两季同比下降超10%即预警。</li>
+<li><strong><dfn class="term" data-term="特高压" title="跨区输电通道；新疆–川渝/陕北–安徽/甘肃–浙江三条在建">特高压</dfn>投运进度：</strong>新疆–川渝、陕北–安徽、甘肃–浙江三条在建线路实际投产时间；十五五15回目标节奏后置。</li>
+<li><strong>废止潮进展：</strong>风电项目废止月度节奏，若加速则IRR跌破门槛范围扩散；当前约40–50GW、纯风电约5.7GW。</li>
+</ul>
+</section>
+
+<section id="ch4-3" aria-label="4.3 投资启示">
+<h3>4.3 投资启示（三段全列）</h3>
+<ul>
+<li><strong>短期（2026年）：</strong>装机高景气确定性增强（H1 38.62GW超预期，全年118GW中枢，1–7月定标95.84GW年化164GW），关注整机商毛利率修复弹性（金风H1净利+24.67%/风机毛利率11.62%龙头确认，但明阳H1预告-75%提示分化，行业级拐点待验证）及零部件量价齐升；价格端待8月统计验证（7月1,590元/kW两连降）。海风为平淡年（5.5–7.0GW吊装，H1并网仅0.84GW、1–7月定标3.90GW），关注整机（金风/电气风电）、海缆（东方电缆）、桩基（大金重工/海力风电），提前布局2027年海风放量。</li>
+<li><strong>中期（2027–2028年）：</strong>海上风电有望进入实质性交付高峰（2027E 10–14GW→2028E 13–18GW），关注海风产业链（海缆、管桩、海上施工）。2026年Q1海上核准4.61GW加开工建设13GW构成2027年充裕储备。</li>
+<li><strong>长期（2029–2030年）：</strong>深远海开发加漂浮式风电技术突破是下一代增长引擎。</li>
+</ul>
+<p class="footnote">下一验证窗：8月定标与价格统计、H1分省利用率、其余3家H1与明阳正式半年报，截至2026-09-14均尚未发布或未检得；42号令细则与碳达峰原文待核验待跟踪。</p>
+</section>
+</section>
+<section id="ch5">
+<h2>五、持续跟踪框架</h2>
+<p class="footnote">本章分为两部分：<strong>5.1–5.6为具体跟踪事项</strong>（按本报告分析维度组织，12张跟踪表T37–T48全部转跟踪卡，原表折叠备查）与<strong>5.7–5.11为指导原则</strong>（框架之外新信息的发掘、评估与纳入研判）。承接§4.1六条收敛、§4.2七个观察指标、§4.3三段投资启示；映射§5.9四阶段、§5.11五类更新、§5.10五级信源；来源见第六章参考资料67条。全文结构计数：标题66个、表格52张（T01–T52）、参考资料67条、跟踪表12张、风险8项、尾部事件9项、废止根因4项、政策卡6项；口径67处、交叉验证12处、尚未发布9处、未检得17处、待验证7处、待核验1处。</p>
+<div class="callout warn"><p><strong>缺口警示汇总（截至2026-09-14，折叠时保留，六条一条不删）：</strong></p>
+<ul>
+<li>1–7月及7月单月装机截至9月14日尚未发布（NEA）。</li>
+<li>8月定标量及8月风机定标价格截至9月14日尚未发布（风电头条8月统计缺席）。</li>
+<li>消纳中心H1分省利用率截至9月14日尚未发布（仅NEA口径H1 90.9%可用）。</li>
+<li>42号令考核细则及首批分省执行评估、2030年权重指标待跟踪（施行45天，截至9月14日仍未检得）。</li>
+<li>“十五五”碳达峰行动方案（2026-07-05）为金风半年报援引口径，政策原文待核验。</li>
+<li>3家整机商（运达/三一/电气风电）H1正式半年报截至9月14日未检得；明阳正式半年报未检得（仅7月14日预告）。</li>
+</ul>
+</div>
+
+<section id="ch51-1">
+<h3>5.1.1 装机数据跟踪（T37）</h3>
+<p><strong>结论：装机是行业总需求的终极标尺，当前基准全年118GW中枢H1已兑现38.62GW。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>年/季新增并网（拆分陆风/海风）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025年120GW；2026H1 38.62GW（陆上37.78GW/海上0.84GW，6月13.57GW年内最高）；累计6.79亿kW（陆上6.3亿/海上4,841万kW）；H1利用率90.9%/弃风9.1%；全年预测118GW中枢（110–125区间，9月14日复核维持）。</li><li>来源：国家能源局（NEA）季度发布会；频率：季度。</li><li>交叉验证：金风半年报援引口径H1并网-24.8%/公开招标-28.0%通过；6月风电发电+15.8%（统计局）。</li><li><strong>阈值红线：全年118GW中枢要求H2月均约13.2GW；1–7月装机截至9月14日尚未发布，为下一验证窗。</strong></li></ul></div>
+<div class="company-card"><p><strong>年新增吊装及TOP10排名</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025年130GW；可与并网数据交叉验证（差值约10GW为并网滞后）。</li><li>来源：CWEA年度统计简报；频率：年度。</li><li><strong>阈值红线：吊装与并网差值持续扩大至15GW以上，提示并网瓶颈或统计口径漂移，需交叉验证。</strong></li></ul></div>
+<div class="company-card"><p><strong>风电投资完成额</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2026Q1 436亿元（+72.3%），表明在建项目充裕；H1利用小时917小时（-170）需跟踪。</li><li>来源：NEA季度数据；频率：季度。</li><li><strong>阈值红线：领先并网6–12个月的前瞻指标；若投资额连续两季转负而并网仍高增，警惕管线断档。</strong></li></ul></div>
+<div class="company-card"><p><strong>全球新增装机及中国占比</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：中国占比71%（2025）；全球视角判断出海空间。</li><li>来源：GWEC、WWEA年度报告；频率：年度。</li><li><strong>阈值红线：跟踪中国占比与海外订单增速的匹配度，占比回落叠加海外订单转负提示出海受阻。</strong></li></ul></div>
+</div>
+<div class="callout method"><p><strong>季节性提醒：</strong>Q1是施工淡季（春节+冻土期），6月和Q4是传统赶工放量期。2026年H1新增38.62GW（Q1仅15.77GW→Q2飙升至22.85GW，含6月13.57GW）充分体现季节性节奏。月度装机须考虑季节性，不可以单月同比下降直接推断全年趋势。<strong>NEA 7月30日发布会已明确H1拆分（陆上37.78GW+海上0.84GW），后续月度数据应以NEA总量+发布会拆分为准，不以推算值替代。</strong></p></div>
+<details><summary>T37原表折叠备查（4行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T37装机跟踪原表">
+<thead><tr><th>具体指标</th><th>数据来源</th><th>频率</th><th>为什么关注</th></tr></thead>
+<tbody>
+<tr><td>中国年/季新增风电并网（GW），拆分陆风/海风</td><td>国家能源局（NEA）季度发布会</td><td>季度</td><td>行业总需求的终极标尺；当前基准2025年120GW，2026H1 38.62GW（其中陆上37.78GW/海上0.84GW，6月13.57GW创年内最高），累计6.79亿kW（陆上6.3/海上4,841万kW），H1利用率90.9%/弃风9.1%，全年预测118GW中枢（110-125区间，9月14日复核维持）；金风半年报援引口径H1并网-24.8%/公开招标-28.0%交叉验证通过；6月风电发电+15.8%（统计局）；1-7月装机截至9月14日未发布</td></tr>
+<tr><td>中国年新增吊装（GW）及TOP10排名</td><td>CWEA年度统计简报</td><td>年度</td><td>反映制造端交付，可与并网数据交叉验证；2025年130GW</td></tr>
+<tr><td>风电投资完成额（亿元）</td><td>NEA季度数据</td><td>季度</td><td>领先并网6-12个月的前瞻指标；2026Q1 436亿元（+72.3%）表明在建项目充裕；H1利用小时917小时（-170）需跟踪</td></tr>
+<tr><td>全球新增风电装机（GW）及中国占比</td><td>GWEC、WWEA年度报告</td><td>年度</td><td>中国占比71%（2025），全球视角判断出海空间</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch51-2">
+<h3>5.1.2 招标与核准跟踪——核心领先指标（T38）</h3>
+<p><strong>结论：招标领先装机12–18个月，十五五年均120GW至少需月均招标10GW。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>月度公开招标量</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>来源：金风科技IR统计、北极星风力发电网；频率：月度。</li><li><strong>阈值红线：月均10GW为十五五底线；月度招标量连续三个月低于8GW是预警信号——7月4.77GW已触发单月预警，需跟踪8–9月回升。</strong></li></ul></div>
+<div class="company-card"><p><strong>整机商国内/全球中标量</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>反映整机商份额变化、国内vs海外结构；来源：风芒能源、国际风力发电网；频率：季度。</li><li><strong>阈值红线：国内中标连续两季同比转负且海外不能对冲，提示总需求走弱。</strong></li></ul></div>
+<div class="company-card"><p><strong>央国企集采定标量（含框采）</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：2026Q1 56.93GW，1–4月63.11GW，1–5月约70GW，1–6月89.31GW，1–7月95.84GW（7月单月4.77GW）；8月统计截至9月14日尚未发布；金风IR口径H1国内公开招标51.80GW（-28.0%，陆上48.87/海上2.93），定标与公开招标分化。</li><li>来源：风电头条、各央企招标平台；频率：季度。</li><li><strong>阈值红线：框架采购反映长期需求储备，但签约不等于提货，须结合废止与开工转化率审慎看待。</strong></li></ul></div>
+<div class="company-card"><p><strong>新核准项目容量</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>当前基准：2025年核准160GW，是后续装机的储备池；来源：各省发改委、行业媒体；频率：季度。</li><li><strong>阈值红线：核准量连续两季大幅低于招标量，提示储备池消耗过快。</strong></li></ul></div>
+<div class="company-card"><p><strong>核准→开工转化率</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>来源：项目公告、券商跟踪；频率：季度。</li><li><strong>阈值红线：若转化率连续下降，说明审批或收益瓶颈重新收紧。</strong></li></ul></div>
+</div>
+<div class="callout warn"><p><strong>关键判据：</strong>2025年全年招标122GW（-26%），2026年Q1招标28GW基本持平去年同期。1–7月定标95.84GW年化约164GW，陆风已锁定2027年交付，仅海上管线存缺口。<strong>月度招标量连续三个月低于8GW是预警信号——7月4.77GW已触发单月预警，需跟踪8–9月回升。</strong></p></div>
+<details><summary>T38原表折叠备查（5行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T38招标核准跟踪原表">
+<thead><tr><th>具体指标</th><th>数据来源</th><th>频率</th><th>为什么关注</th></tr></thead>
+<tbody>
+<tr><td>月度风电公开招标量（GW）</td><td>金风科技IR统计、北极星风力发电网</td><td>月度</td><td>装机的核心领先指标（领先12-18个月）。当前十五五目标年均120GW，至少需月均招标10GW</td></tr>
+<tr><td>整机商国内/全球中标量（GW）</td><td>风芒能源、国际风力发电网</td><td>季度</td><td>反映整机商份额变化、国内vs海外结构</td></tr>
+<tr><td>央国企集采定标量（含框架采购，GW）</td><td>风电头条、各央企招标平台</td><td>季度</td><td>框架采购反映长期需求储备，2026Q1 56.93GW，1-4月63.11GW，1-5月约70GW，1-6月89.31GW，1-7月95.84GW（7月单月4.77GW）；8月统计截至9月14日未发布；金风IR口径H1国内公开招标51.80GW（-28.0%，陆上48.87/海上2.93），定标与公开招标分化</td></tr>
+<tr><td>新核准项目容量（GW）</td><td>各省发改委、行业媒体</td><td>季度</td><td>2025年核准160GW，是后续装机的储备池</td></tr>
+<tr><td>核准→开工转化率</td><td>项目公告、券商跟踪</td><td>季度</td><td>若转化率连续下降，说明审批或收益瓶颈重新收紧</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch51-3">
+<h3>5.1.3 陆风与海风拆分跟踪（T39）</h3>
+<p><strong>结论：海风招标滞后已从隐忧升级为确认且窗口收窄，陆海必须拆分看。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>陆风月度招标量</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：公开招标约26.5GW（Q1）；来源：金风IR、招标平台；频率：月度。</li><li><strong>阈值红线：陆风交付已由1–7月定标锁定2027年，跟踪重心转向公开招标是否回暖。</strong></li></ul></div>
+<div class="company-card"><p><strong>海风月度招标量</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：H1海上定标3.88GW、1–7月3.90GW（7月仅17MW），严重滞后于十五五年均15GW目标（完成度26%）；全年海风吊装预测5.5–7.0GW（分层管线概率法，H1并网仅0.84GW）。</li><li>来源：招标平台/风电头条；频率：月度。</li><li><strong>阈值红线：Q3月度海上招标是判断2027年海风能否重回10GW+的最关键前瞻指标，若Q3仍低于3GW则2027年10GW+承压。</strong></li></ul></div>
+</div>
+<div class="callout warn"><p><strong>海风招标滞后已从“隐忧”升级为“确认”且窗口收窄：</strong>H1定标3.88GW、1–7月3.90GW不足全年预期15–20GW的20–26%，7月单月仅17MW（华能17MW漂浮式）为年内最低。2026年海风平淡化已由H1并网0.84GW（占H1总量2.2%）二次印证——产业链实物验证（明阳/起帆Q1零交付）+H1定标/并网双弱+产业一线判断（远景杨亚文约6GW预判）+分层管线概率法（5.5–7.0GW中位6.2GW）四重印证。详见海风报告3.1.4及3.2.10节。</p></div>
+<details><summary>T39原表折叠备查（2行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T39陆海拆分跟踪原表">
+<thead><tr><th>具体指标</th><th>当前基准（2026）</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>陆风月度招标量（GW）</td><td>公开招标约26.5GW（Q1）</td><td>金风IR、招标平台</td><td>月度</td></tr>
+<tr><td>海风月度招标量（GW）</td><td>H1海上定标3.88GW、1-7月3.90GW（7月仅17MW），严重滞后于十五五年均15GW目标（完成度26%）。全年海风吊装预测5.5-7.0GW（分层管线概率法，H1并网仅0.84GW）</td><td>招标平台/风电头条</td><td>月度</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch51-4">
+<h3>5.1.4 海外出口跟踪（T40）</h3>
+<p><strong>结论：海外订单暴增是对冲国内招标下滑的关键变量，上行趋势延续。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>整机年/季度出口量</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025年全年7.734GW（+48.9%）；2026Q1 4.82GW（+215%）；1–5月6.8GW；金风H1在手海外订单9.49GW（+28.93%）；BNEF：中国整机商海外累计装机21GW、已获批+已融资储备19.8GW（金风半年报援引）。</li><li>来源：CWEA；风芒能源；频率：年度/季度。</li></ul></div>
+<div class="company-card"><p><strong>海外订单季度中标量及同比</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：2026Q1 4.82GW（+215%）；来源：风芒能源；频率：季度。</li><li><strong>阈值红线：海外增速转负且国内同步走弱，则对冲逻辑证伪。</strong></li></ul></div>
+<div class="company-card"><p><strong>海外出口目的国分布</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>当前基准：印度、哈萨克斯坦、巴基斯坦、越南、澳大利亚、巴西等；来源：整机商公告；频率：季度。</li><li><strong>阈值红线：欧美实质性贸易壁垒落地（见5.6尾部事件）将重塑目的国结构。</strong></li></ul></div>
+</div>
+<p><strong>关注逻辑：</strong>2026Q1全球总中标仅微降3.4%，海外增215%几乎完全对冲了国内-14.8%。</p>
+<details><summary>T40原表折叠备查（3行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T40海外出口跟踪原表">
+<thead><tr><th>具体指标</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>中国风电整机年/季度出口量（GW）</td><td>2025年全年7.734GW（+48.9%）；2026Q1 4.82GW（+215%）；1-5月6.8GW；金风H1在手海外订单9.49GW（+28.93%）；BNEF：中国整机商海外累计装机21GW、已获批+已融资储备19.8GW（金风半年报援引）</td><td>CWEA；风芒能源</td><td>年度/季度</td></tr>
+<tr><td>海外订单季度中标量（GW）及同比</td><td>2026Q1 4.82GW（+215%）</td><td>风芒能源</td><td>季度</td></tr>
+<tr><td>海外出口目的国分布</td><td>印度、哈萨克斯坦、巴基斯坦、越南、澳大利亚、巴西等</td><td>整机商公告</td><td>季度</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch52-1">
+<h3>5.2.1 风机中标价跟踪——行业自律效果的温度计（T41）</h3>
+<p><strong>结论：价格仍站稳1,500–1,700中枢，但6–7月两连降105元首次触发观察纪律。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>陆上不含塔筒月度均价</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：2025H1均价1,496，Q1 1,520，2026年3月1,609；5月1,695；6月1,658.92（-36.34）、7月1,589.80（-69.12），连续两月回落但仍在1,500–1,700中枢；1–5月区间1,385–1,701；8月均价截至9月14日尚未发布。</li><li>来源：风电头条6月/7月统计、招标平台；频率：月度。</li><li><strong>阈值红线：站稳1,500–1,700确认修复；跌破1,400意味着自律瓦解、价格战复燃；8月若再跌破1,550则预警升级。</strong></li></ul></div>
+<div class="company-card"><p><strong>陆上含塔筒中标价</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：2025H1均价2,096；6月2,103.1（-1.77）、7月2,181.53（+78.43）；来源：风电头条；频率：月度。</li><li><strong>阈值红线：含塔筒与不含塔筒不可直接比较（塔筒/混塔结构影响），7月含塔筒反涨78元提示结构性因素。</strong></li></ul></div>
+<div class="company-card"><p><strong>海上含塔筒中标价</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：2025H1均价3,107，Q1 2,933→H1 3,107回升；5月3,280、6月3,107.33（-172.67）、7月无规模化报价；来源：风电头条；频率：月度。</li></ul></div>
+<div class="company-card"><p><strong>各整机商风机毛利率</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：金风8.95%（+3.9pp，2025年）→H1风机及零部件11.62%（+3.65pp）；运达6.43%、明阳修复6.84pp；明阳H1预告扣非接近盈亏平衡印证分化；其余3家H1截至9月14日未检得。</li><li>来源：公司季报/预告；频率：季度。</li><li><strong>阈值红线：连续两季改善则修复趋势确认；单家确认不满足行业级修正条件。</strong></li></ul></div>
+</div>
+<div class="callout warn"><p><strong>价格趋势解读：</strong>风机价格从2021年大于3,000元/kW暴跌至2024年9–10月最低1,286元/kW（累计-57%），2024年11月以来行业自律生效、价格中枢回升至1,500–1,600元/kW。<strong>若不含塔筒均价跌破1,400元/kW，意味着行业自律瓦解、价格战复燃——这是当前最大的竞争格局风险信号；若持续站稳1,600元/kW以上，则盈利修复逻辑得到确认。新增观察：6–7月不含塔筒连续两月回落105元（-6.2%），首次触发“两连降”关注，8月需验证是结构性波动还是自律松动。</strong></p></div>
+<p><strong>盈利修复的验证路径：</strong></p>
+<ul>
+<li>2024年低价订单在2025年基本消化完毕→2026年起整机商毛利率应普遍改善。</li>
+<li>Q1 2026三一重能已实现扭亏（净利润1.79亿元），是修复逻辑的首个验证点。</li>
+<li>H1 2026明阳智能预告同比-75%~-84%显示“电站+整机”模式的非线性，修复并非单向——需待8月下旬其余4家半年报披露后确认行业级拐点。</li>
+<li>跟踪每个季报的整机商风机毛利率变化方向，连续两季改善则修复趋势确认。</li>
+</ul>
+<details><summary>T41原表折叠备查（4行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T41价格跟踪原表">
+<thead><tr><th>具体指标</th><th>当前基准（2025-2026）</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>陆上风电不含塔筒月度加权平均中标价（元/kW）</td><td>2025H1均价1,496，Q1 1,520，2026年3月1,609；5月1,695；6月1,658.92（-36.34）、7月1,589.80（-69.12），连续两月回落但仍在1,500-1,700中枢；1-5月区间1,385-1,701；8月均价截至9月14日未发布</td><td>风电头条6月/7月统计、招标平台</td><td>月度</td></tr>
+<tr><td>陆上风电含塔筒中标价（元/kW）</td><td>2025H1均价2,096；6月2,103.1（-1.77）、7月2,181.53（+78.43）</td><td>风电头条</td><td>月度</td></tr>
+<tr><td>海上风电含塔筒中标价（元/kW）</td><td>2025H1均价3,107，Q1 2,933→H1 3,107回升；5月3,280、6月3,107.33（-172.67）、7月无规模化报价</td><td>风电头条</td><td>月度</td></tr>
+<tr><td>各整机商风机毛利率</td><td>金风8.95%（+3.9pp，2025年）→H1风机及零部件11.62%（+3.65pp）；运达6.43%、明阳修复6.84pp；明阳H1预告扣非接近盈亏平衡印证分化；其余3家H1截至9月14日未检得</td><td>公司季报/预告</td><td>季度</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch53-1">
+<h3>5.3.1 全国与省区利用率跟踪（T42）</h3>
+<p><strong>结论：消纳是当前最大的单一风险变量，H1 90.9%距90%仅0.9pct边际预警已触发。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>全国月度/季度平均利用率</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2026H1 NEA口径90.9%（弃风9.1%），Q1 91.4%（弃风8.6%）→H1恶化0.5pct；消纳中心新口径Q1 91.9%（仅系统原因），H1分省数据截至9月14日尚未发布；6月风电发电+15.8%（统计局，风资源边际恢复）。</li><li>来源：NEA 7月30日发布会/全国新能源消纳监测预警中心；频率：月度/季度。</li><li><strong>阈值红线：全国利用率连续两月跌破90%意味着弃风率突破10%心理阈值，运营商将大规模重估新项目IRR。</strong></li></ul></div>
+<div class="company-card"><p><strong>分省区利用率（蒙西/新疆/甘肃/河北/蒙东/西藏）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：西藏68.6%、新疆91.0%、蒙西91.8%、河北92.0%（2025年）；2026年1–2月河北86.2%、蒙西84.4%、新疆88.7%已深度恶化，Q1/H1分省更新待发布。</li><li>来源：同上；频率：月度。</li><li><strong>阈值红线：蒙西/新疆/甘肃任一省区利用率跌破85%，该省区新增招标将急剧萎缩。</strong></li></ul></div>
+<div class="company-card"><p><strong>风电等效利用小时数（全国及分省）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025年全国平均2,031h，西北仅1,606h；2026H1全国风电917h（-170h）、全国设备平均1,392h（-113h），创近年最大降幅。</li><li>来源：NEA、中电联；频率：年度/季度。</li></ul></div>
+</div>
+<div class="callout warn"><p><strong>关键判据（不可折叠红线）：</strong>若全国利用率连续两月跌破90%，意味着弃风率突破10%——这是心理阈值，超过此线运营商将大规模重新评估新项目IRR。若蒙西/新疆/甘肃任一省区利用率跌破85%，该省区新增招标将急剧萎缩（已有多省因IRR跌破6%而废止超10GW项目）。<strong>当前H1 90.9%距90%仅0.9pct，边际预警已触发。</strong></p></div>
+<div class="callout quote"><p><strong>2026年Q2–H1复盘：</strong>3–5月全国风资源为十年来同期最差，风电发电量连续三月异常（-17.3%/-5.0%/+0.5%），但H1利用率仍从Q1 91.4%恶化至90.9%，说明“低风量改善利用率”的逻辑被“装机高增+通道约束”完全对消，消纳能力而非资源禀赋是当前瓶颈。</p></div>
+<details><summary>T42原表折叠备查（3行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T42利用率跟踪原表">
+<thead><tr><th>具体指标</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>全国风电月度/季度平均利用率（%）</td><td>2026H1 NEA口径90.9%（弃风9.1%），Q1 91.4%（弃风8.6%）→H1恶化0.5pct；消纳中心新口径Q1 91.9%（仅系统原因），H1分省数据截至9月14日尚未发布；6月风电发电+15.8%（统计局，风资源边际恢复）</td><td>NEA 7月30日发布会/全国新能源消纳监测预警中心</td><td>月度/季度</td></tr>
+<tr><td>分省区风电利用率（%，重点看蒙西、新疆、甘肃、河北、蒙东、西藏）</td><td>西藏68.6%、新疆91.0%、蒙西91.8%、河北92.0%（2025年）；2026年1-2月河北86.2%、蒙西84.4%、新疆88.7%已深度恶化，Q1/H1分省更新待发布</td><td>同上</td><td>月度</td></tr>
+<tr><td>风电等效利用小时数（全国及分省）</td><td>2025年全国平均2,031h，西北仅1,606h；2026H1全国风电917h（-170h）、全国设备平均1,392h（-113h），创近年最大降幅</td><td>NEA、中电联</td><td>年度/季度</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch53-2">
+<h3>5.3.2 弃风对招标的传导监测（T43）</h3>
+<p><strong>结论：消纳恶化→IRR跌破门槛→废止/招标萎缩→装机放缓，传导链条完整跟踪。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>各省废止风电项目数量及规模</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025H2至今全国大于140个项目、大于10GW；来源：各省发改委公告；频率：按事件。</li><li><strong>阈值红线：单季度废止量超过3GW则景气向下预警（见5.9拐点判据）。</strong></li></ul></div>
+<div class="company-card"><p><strong>央企风电项目IRR测算更新（分省）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：CWEA测算半数以上省份在有弃风+无机制电价情况下IRR低于6%；来源：CWEA、券商研报；频率：年度。</li><li><strong>阈值红线：国电投门槛7%、华能低于6%强制退出；弃风大于15%区域IRR跌破6%央企门槛。</strong></li></ul></div>
+<div class="company-card"><p><strong>运营商年报弃风/消纳表述</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>当前基准：—；来源：龙源电力、三峡能源、华能国际等年报；频率：年度。</li><li><strong>阈值红线：若龙头运营商年报集中下调新增指引，视为传导确认信号。</strong></li></ul></div>
+</div>
+<details><summary>T43原表折叠备查（3行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T43传导监测原表">
+<thead><tr><th>具体指标</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>各省废止风电项目数量及规模（GW）</td><td>2025H2至今全国&gt;140个项目、&gt;10GW</td><td>各省发改委公告</td><td>按事件</td></tr>
+<tr><td>央企风电项目IRR测算更新（分省）</td><td>CWEA测算：半数以上省份在有弃风+无机制电价情况下IRR&lt;6%</td><td>CWEA、券商研报</td><td>年度</td></tr>
+<tr><td>运营商年报中对弃风/消纳的表述</td><td>—</td><td>龙源电力、三峡能源、华能国际等年报</td><td>年度</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch53-3">
+<h3>5.3.3 消纳改善的供给侧跟踪（T44）</h3>
+<p><strong>结论：供给侧硬支撑后置，2028年前主要依赖存量通道利用率提升与火电灵活性改造。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>在建特高压投产进度</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：3条在建（新疆–川渝、陕北–安徽、甘肃–浙江），8条规划中；十五五规划目标新增投产15回，西电东送规模大于4.2亿千瓦。</li><li>来源：国家电网、国家能源局；频率：按工程节点。</li><li><strong>阈值红线：在建3条任一条延期大于1年（见5.6尾部事件）。</strong></li></ul></div>
+<div class="company-card"><p><strong>消纳制度顶层设计（42号令）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：发改委第42号令已于2026年8月1日施行（2026-06-22发布）：消费最低比重+消纳责任权重双轮驱动；实施后的首批分省执行和2030年权重指标尚未公开。</li><li>来源：国家发改委；频率：按事件。</li><li><strong>阈值红线：42号令考核细则及非电纳入执行情况待跟踪；首批分省执行评估缺席则制度效果待验证。</strong></li></ul></div>
+<div class="company-card"><p><strong>火电灵活性改造年度完成量</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：推进缓慢，改造后调峰深度仍有限；来源：国家能源局；频率：年度。</li></ul></div>
+<div class="company-card"><p><strong>全国新型储能新增装机</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：2025年新增66.4GW；来源：CNESA；频率：季度。</li></ul></div>
+<div class="company-card"><p><strong>绿电直连试点扩容</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>当前基准：5省试点，总容量大于7GW（2025年底）；来源：各省能源局；频率：按事件。</li></ul></div>
+</div>
+<p><strong>关注逻辑：</strong>特高压建设周期3–5年，当前在建线路最早2026–2027年投运。投运后能否显著改善消纳，取决于通道中新能源占比是否提升（当前多数通道煤电占比大于50%）。</p>
+<details><summary>T44原表折叠备查（5行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T44供给侧跟踪原表">
+<thead><tr><th>具体指标</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>在建特高压线路投产进度</td><td>当前3条在建（新疆-川渝、陕北-安徽、甘肃-浙江），8条规划中。最新：十五五规划目标新增投产15回，西电东送规模&gt;4.2亿千瓦</td><td>国家电网、国家能源局</td><td>按工程节点</td></tr>
+<tr><td>消纳制度顶层设计</td><td>发改委第42号令已于2026年8月1日施行：消费最低比重+消纳责任权重双轮驱动；实施后的首批分省执行和2030年权重指标尚未公开</td><td><a href="https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202606/t20260612_1405837_ext.html">国家发改委</a></td><td>按事件</td></tr>
+<tr><td>火电灵活性改造年度完成量</td><td>推进缓慢，改造后调峰深度仍有限</td><td>国家能源局</td><td>年度</td></tr>
+<tr><td>全国新型储能新增装机（GW）</td><td>2025年新增66.4GW</td><td>CNESA</td><td>季度</td></tr>
+<tr><td>绿电直连试点扩容</td><td>5省试点，总容量&gt;7GW（2025年底）</td><td>各省能源局</td><td>按事件</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch54-1">
+<h3>5.4.1 整机商排名与份额变化跟踪（T45）</h3>
+<p><strong>结论：格局正在重塑，关键验证点是全年CR3能否重回50%以上。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>金风科技</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>核心跟踪指标：年度吊装份额（全口径+海风）；风机毛利率趋势；海外收入增速及毛利率。</li><li>当前基准：全口径19.8%（连续15年第一），海风37.6%登顶；风机毛利率8.95%（+3.9pp，2025年），Q1 2026综合毛利率16.8%（环比+3pct）；海外收入180.8亿（+50.6%），海外毛利率24.3%；Q1 2026营收154.8亿（+63.5%）、净利9.07亿（+59.6%）；2026H1：营收337.39亿（+18.23%）、归母18.55亿（+24.67%）、扣非+47.79%，风机毛利率11.62%（+3.65pp），在手订单54.14GW，H1国内公开招标51.80GW（-28.0%）。</li><li>来源：年报/CWEA/Q1季报+H1核查。</li></ul></div>
+<div class="company-card"><p><strong>运达股份</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>核心跟踪指标：全口径份额变化（2025年跃升至第2）；毛利率能否跟随修复。</li><li>当前基准：全口径14.7%，陆风毛利率仅6.43%，95%收入来自国内；2026H1截至9月14日未检得。</li><li>来源：年报/CWEA。</li></ul></div>
+<div class="company-card"><p><strong>明阳智能</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>核心跟踪指标：海风份额变化；风机毛利率恢复；海外在手订单转化。</li><li>当前基准：全口径14.2%，海风24.6%；H2毛利率修复6.84pp；2026H1预告归母1.0–1.5亿（-75%~-84%），扣非0.05亿至-0.45亿，电站销售放缓+海外投入增加；正式半年报截至9月14日未检得。</li><li>来源：年报/CWEA+<a href="http://static.cninfo.com.cn/finalpage/2026-07-15/1225424115.PDF">2026H1预告</a>。</li></ul></div>
+<div class="company-card"><p><strong>远景能源</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>核心跟踪指标：海外订单能否维持第一；全口径份额变化。</li><li>当前基准：全口径13.5%（降2位）；Q1 2026海外订单2.56GW领跑；全球中标5.68GW居首；1–7月国内份额未进前五承压。</li><li>来源：年报/风芒能源+风电头条7月。</li></ul></div>
+<div class="company-card"><p><strong>三一重能</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>核心跟踪指标：净利润能否止跌回升；低价订单消化进度。</li><li>当前基准：2025年净利-60%，但Q1 2026已扭亏（净利润1.79亿）；2026H1截至9月14日未检得，中标价+5pct+海外毛利大于20%待验证。</li><li>来源：年报/季报。</li></ul></div>
+<div class="company-card"><p><strong>电气风电</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>核心跟踪指标：能否减亏；海风累计装机是否仍维持第一。</li><li>当前基准：2025年净利-9.89亿（增亏）；2026H1截至9月14日未检得，但1–7月中标14.89%跃居年度第一，海风1.43GW驱动。</li><li>来源：年报/季报+风电头条。</li></ul></div>
+</div>
+<p><strong>关注逻辑：</strong>格局正在重塑——CR5从75.18%降至69.62%（1–7月），电气风电凭借6–7月强势表现跃居年度第一，头部从“运达/东方”让位至“电气/运达/金风/明阳”四强胶着。关键验证点是：2026年全年CR3是否会再现50%以上（2025年48.7%），这将决定行业是“多头竞争”还是“重新集中”；以及明阳H1预告的-75%是否预示“电站+整机”模式的系统性风险。金风的“两海”优势（海外+海上）若持续扩大，可能拉开与追赶者的差距。</p>
+<details><summary>T45原表折叠备查（6行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T45整机商跟踪原表">
+<thead><tr><th>企业</th><th>核心跟踪指标</th><th>当前基准（2025年报/数据）</th><th>数据来源</th></tr></thead>
+<tbody>
+<tr><td>金风科技</td><td>年度吊装份额（全口径+海风）；风机毛利率趋势；海外收入增速及毛利率</td><td>全口径19.8%（连续15年第一），海风37.6%登顶；风机毛利率8.95%（+3.9pp，2025年），Q1 2026综合毛利率16.8%（环比+3pct）；海外收入180.8亿（+50.6%），海外毛利率24.3%；Q1 2026营收154.8亿（+63.5%）、净利9.07亿（+59.6%）；2026H1：营收337.39亿（+18.23%）、归母18.55亿（+24.67%）、扣非+47.79%，风机毛利率11.62%（+3.65pp），在手订单54.14GW，H1国内公开招标51.80GW（-28.0%）</td><td>年报/CWEA/Q1季报+H1核查</td></tr>
+<tr><td>运达股份</td><td>全口径份额变化（2025年跃升至第2）；毛利率能否跟随修复</td><td>全口径14.7%，陆风毛利率仅6.43%，95%收入来自国内；2026H1截至9月14日未检得</td><td>年报/CWEA</td></tr>
+<tr><td>明阳智能</td><td>海风份额变化；风机毛利率恢复；海外在手订单转化</td><td>全口径14.2%，海风24.6%；H2毛利率修复6.84pp；2026H1预告归母1.0-1.5亿（-75%~-84%），扣非0.05亿至-0.45亿，电站销售放缓+海外投入增加；正式半年报截至9月14日未检得</td><td>年报/CWEA+2026H1预告</td></tr>
+<tr><td>远景能源</td><td>海外订单能否维持第一；全口径份额变化</td><td>全口径13.5%（降2位）；Q1 2026海外订单2.56GW领跑；全球中标5.68GW居首；1-7月国内份额未进前五承压</td><td>年报/风芒能源+风电头条7月</td></tr>
+<tr><td>三一重能</td><td>净利润能否止跌回升；低价订单消化进度</td><td>2025年净利-60%，但Q1 2026已扭亏（净利润1.79亿）；2026H1截至9月14日未检得，中标价+5pct+海外毛利&gt;20%待验证</td><td>年报/季报</td></tr>
+<tr><td>电气风电</td><td>能否减亏；海风累计装机是否仍维持第一</td><td>2025年净利-9.89亿（增亏）；2026H1截至9月14日未检得，但1-7月中标14.89%跃居年度第一，海风1.43GW驱动</td><td>年报/季报+风电头条</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch54-2">
+<h3>5.4.2 海外出口格局跟踪（T46）</h3>
+<p><strong>结论：海外高毛利是盈利分化的胜负手，贸易政策为关键扰动项。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>各整机商海外新签订单季度统计</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：Q1 2026海外4.82GW（+215%）；1–5月6.8GW（远景2.6GW、三一2.0GW领跑）；三家中国厂商占印度62%份额。</li><li>来源：风芒能源、整机商公告；频率：季度。</li></ul></div>
+<div class="company-card"><p><strong>海外毛利率vs国内毛利率</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：金风海外24.3% vs 国内约10%；来源：年报；频率：年度。</li><li><strong>阈值红线：海外毛利率若向国内收敛，则“两海”逻辑弱化。</strong></li></ul></div>
+<div class="company-card"><p><strong>欧美对华风电设备贸易政策</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：欧洲反补贴调查风险上升；明阳拟在英国建厂；来源：欧盟官方公报、行业媒体；频率：按事件。</li><li><strong>阈值红线：正式发起调查或加征关税即触发尾部事件（见5.6）。</strong></li></ul></div>
+</div>
+<details><summary>T46原表折叠备查（3行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T46海外出货跟踪原表">
+<thead><tr><th>具体指标</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>各整机商海外新签订单季度统计</td><td>Q1 2026海外4.82GW（+215%）；1-5月6.8GW（远景2.6GW、三一2.0GW领跑）；三家中国厂商占印度62%份额</td><td>风芒能源、整机商公告</td><td>季度</td></tr>
+<tr><td>海外毛利率vs国内毛利率</td><td>金风海外24.3% vs 国内约10%</td><td>年报</td><td>年度</td></tr>
+<tr><td>欧美对华风电设备贸易政策（关税/反补贴/本地化要求）</td><td>欧洲反补贴调查风险上升；明阳拟在英国建厂</td><td>欧盟官方公报、行业媒体</td><td>按事件</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch55">
+<h3>5.5 政策跟踪（T47）</h3>
+<p><strong>结论：政策三件套已落地两件，十五五规划给出硬目标，碳达峰方案原文待核验。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>新能源上网电价市场化（136号文）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025年2月发布，6月01日前投产享存量电价；增量项目全电量入市，各地结算价差异大。</li><li>来源：各省电力交易中心；频率：季度。</li></ul></div>
+<div class="company-card"><p><strong>发改能源〔2025〕1360号消纳调控</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025年11月发布，分档设置利用率目标，恶化地区论证新增并网；第42号令已自2026年8月1日实施，首批分省执行效果尚未披露。</li><li>来源：国家发改委、NEA；频率：按事件。</li></ul></div>
+<div class="company-card"><p><strong>十五五可再生能源发展规划</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2026年6月25日发布《新型能源体系建设“十五五”规划》（发改能源〔2026〕884号）：2030年电力总装机54亿千瓦，风光装机比重超50%，十五五电网固投5万亿+，新增投产15回特高压直流，能源总投资超20万亿。</li><li>来源：国家发改委、国家能源局；频率：按事件。</li></ul></div>
+<div class="company-card"><p><strong>“以大代小”推进节奏</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：1.5MW及以下老旧机组约98GW存量；来源：国家能源局、各省；频率：年度。</li></ul></div>
+<div class="company-card"><p><strong>“十五五”碳达峰行动方案（新增）</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2026年7月5日印发（金风半年报援引口径）：确保2030年风电太阳能总装机28亿千瓦以上、新增西电东送8000万千瓦以上、十五五非化石能源消费比重25%左右；<strong>政策原文待核验。</strong></li><li>来源：金风2026H1半年报援引；频率：按事件。</li></ul></div>
+<div class="company-card"><p><strong>深远海海上风电管理办法</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：详见海风报告跟踪；来源：国家能源局；频率：按事件。</li></ul></div>
+</div>
+<details><summary>T47原表折叠备查（6行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T47政策跟踪原表">
+<thead><tr><th>具体跟踪事项</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>新能源上网电价市场化（136号文）对不同省份风电结算电价的实际影响</td><td>增量项目全电量入市，各地结算价差异大</td><td>各省电力交易中心</td><td>季度</td></tr>
+<tr><td>发改能源〔2025〕1360号消纳调控政策执行效果</td><td>分档设置利用率目标，恶化地区论证新增并网；第42号令已自2026年8月1日实施，首批分省执行效果尚未披露</td><td>国家发改委、NEA</td><td>按事件</td></tr>
+<tr><td>十五五可再生能源发展规划正式发布</td><td>2026年6月25日发布《新型能源体系建设“十五五”规划》（发改能源〔2026〕884号）：2030年电力总装机54亿千瓦，风光装机比重&gt;50%，十五五电网固投5万亿+，新增投产15回特高压直流，能源总投资&gt;20万亿</td><td>国家发改委、国家能源局</td><td>按事件</td></tr>
+<tr><td>“以大代小”政策推进节奏</td><td>1.5MW及以下老旧机组约98GW存量</td><td>国家能源局、各省</td><td>年度</td></tr>
+<tr><td>“十五五”碳达峰行动方案（新增）</td><td>2026年7月5日印发（金风半年报援引口径）：确保2030年风电太阳能总装机28亿千瓦以上、新增西电东送8000万千瓦以上、十五五非化石能源消费比重25%左右；政策原文待核验</td><td>金风2026H1半年报援引</td><td>按事件</td></tr>
+<tr><td>深远海海上风电管理办法出台</td><td>详见海风报告跟踪</td><td>国家能源局</td><td>按事件</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch56">
+<h3>5.6 风险：尾部事件监测（T48）</h3>
+<p><strong>结论：9项尾部事件逐项设阈值红线，触发即升级研判，数量只增不减。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>弃风率持续恶化</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2026H1全国9.1%（Q1 8.6%→H1 9.1%再恶化0.5pct），西藏31.4%；来源：消纳监测预警中心；频率：月度。</li><li><strong>阈值红线：全国突破10%、重点省份突破20%。</strong></li></ul></div>
+<div class="company-card"><p><strong>风机价格跌破自律底线</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：7月1,589.80元/kW连续两月回落但仍在中枢；8月价格截至9月14日尚未发布；来源：招标平台；频率：月度。</li><li><strong>阈值红线：不含塔筒重回1,300元/kW以下。</strong></li></ul></div>
+<div class="company-card"><p><strong>大型项目批量废止</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2025H2至今已大于140项目、大于10GW；来源：各省发改委；频率：按事件。</li><li><strong>阈值红线：单次大于1GW；单季度超过3GW则景气向下预警。</strong></li></ul></div>
+<div class="company-card"><p><strong>特高压投运延迟</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：3条在建预计2026–2027投运；来源：国家电网公告；频率：按工程。</li><li><strong>阈值红线：在建3条任一条延期大于1年。</strong></li></ul></div>
+<div class="company-card"><p><strong>欧美实质性贸易壁垒</strong> <span class="tier-badge t2">Tier 2</span></p><ul><li>当前基准：反补贴调查风险上升；来源：欧盟官方公报/USTR；频率：按事件。</li><li><strong>阈值红线：正式发起调查或加征关税/制裁。</strong></li></ul></div>
+<div class="company-card"><p><strong>重大风机事故</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>当前基准：—；来源：公司公告、行业媒体；频率：实时。</li><li><strong>阈值红线：批量性质量/设计缺陷。</strong></li></ul></div>
+<div class="company-card"><p><strong>供应链瓶颈</strong> <span class="tier-badge t3">Tier 3</span></p><ul><li>当前基准：2025年装机高峰期间阶段性上涨；来源：行业调研；频率：季度。</li><li><strong>阈值红线：大型铸件/主轴承/叶片树脂短缺推高成本，连续两季零部件涨价大于15%。</strong></li></ul></div>
+<div class="company-card"><p><strong>风资源持续异常</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：2026年3–5月为十年来同期最差，风电发电量-17.3%/-5.0%/+0.5%，6月+15.8%边际恢复；H1风电利用小时-170小时。</li><li>来源：中国气象局、国家统计局；频率：月度。</li><li><strong>阈值红线：连续多月风速显著低于常年。</strong></li></ul></div>
+<div class="company-card"><p><strong>消纳制度执行风险</strong> <span class="tier-badge t1">Tier 1</span></p><ul><li>当前基准：已于2026年8月1日施行45天；截至9月14日仍未检得首批分省执行评估或2030年权重指标（42号令考核细则及非电纳入执行情况待跟踪）。</li><li>来源：国家发改委、各省能源局；频率：按事件。</li></ul></div>
+</div>
+<details><summary>T48原表折叠备查（9行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T48尾部事件原表">
+<thead><tr><th>具体跟踪事项</th><th>当前基准</th><th>数据来源</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>弃风率持续恶化（全国突破10%、重点省份突破20%）</td><td>2026H1全国9.1%（Q1 8.6%→H1 9.1%再恶化0.5pct），西藏31.4%</td><td>消纳监测预警中心</td><td>月度</td></tr>
+<tr><td>风机价格跌破自律底线（不含塔筒重回1,300元/kW以下）</td><td>当前7月1,589.80元/kW连续两月回落但仍在中枢；8月价格截至9月14日未发布</td><td>招标平台</td><td>月度</td></tr>
+<tr><td>大型风电项目批量废止（单次&gt;1GW）</td><td>2025H2至今已&gt;140项目、&gt;10GW</td><td>各省发改委</td><td>按事件</td></tr>
+<tr><td>特高压投运延迟（在建3条任一条延期&gt;1年）</td><td>3条在建预计2026-2027投运</td><td>国家电网公告</td><td>按工程</td></tr>
+<tr><td>欧美对华风电设备实质性贸易壁垒（关税/制裁）</td><td>反补贴调查风险上升</td><td>欧盟官方公报/USTR</td><td>按事件</td></tr>
+<tr><td>重大风机事故（批量性质量/设计缺陷）</td><td>—</td><td>公司公告、行业媒体</td><td>实时</td></tr>
+<tr><td>供应链瓶颈（大型铸件/主轴承/叶片树脂短缺推高成本）</td><td>2025年装机高峰期间阶段性上涨</td><td>行业调研</td><td>季度</td></tr>
+<tr><td>风资源持续异常（连续多月风速显著低于常年）</td><td>2026年3-5月为十年来同期最差，风电发电量-17.3%/-5.0%/+0.5%，6月+15.8%边际恢复；H1风电利用小时-170小时</td><td>中国气象局、国家统计局</td><td>月度</td></tr>
+<tr><td>消纳制度执行风险（42号令实施后各省落实情况）</td><td>已于2026年8月1日施行45天；截至9月14日仍未检得首批分省执行评估或2030年权重指标（42号令考核细则及非电纳入执行情况待跟踪）</td><td>国家发改委、各省能源局</td><td>按事件</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch57">
+<h3>5.7 框架之外：如何发掘新信息</h3>
+<p><strong>结论：框架覆盖之外的新信息靠五路扫描捕获，领先正式政策6–12个月。</strong></p>
+<ol>
+<li><strong>定期扫描行业媒体</strong>（每周一次）：关注Windpower Monthly、北极星风力发电网、风芒能源、国际风力发电网。标记涉及“新整机商中标大规模项目”“消纳新政策”“批量项目废止”的新闻。</li>
+<li><strong>追踪头部整机商季报的“异常项”</strong>：金风/远景/明阳/运达/三一的季报和业绩会中，关注首次提及的新市场、新风险、毛利率预期修订。特别关注其对“价格战复燃”的表述。</li>
+<li><strong>政策前瞻抓取</strong>：国家能源局/发改委的征求意见稿、CWEA年会核心发言（秦海岩）、风能北京宣言后续版本——这些往往领先正式政策6–12个月。</li>
+<li><strong>消纳数据的领先指标</strong>：关注特高压开工/投运、省间电力交易规则修改、储能充放电价格机制——这些比弃风率本身提前1–2年反映消纳改善的可能性。</li>
+<li><strong>逆向信号</strong>：若某整机商突然降价抢单（打破自律）、某大省突然停止风光项目核准、某央企批量退出在建项目——这类“不应该发生的事”往往是拐点信号。</li>
+</ol>
+</section>
+
+<section id="ch58">
+<h3>5.8 信号评估：噪声vs趋势的区分原则</h3>
+<p><strong>结论：方向一致+连续两季同向+结构拆分+区分领先滞后+盯预期差，五条原则过滤噪声。</strong></p>
+<ol>
+<li><strong>方向一致性</strong>：招标量、并网量、核准量、投资额四类数据方向一致时信号置信度最高；矛盾时优先信任实际发生的量。</li>
+<li><strong>持续性</strong>：月度风电数据波动大（Q1尤甚），连续两季同向变化才构成趋势。单月招标量骤降可能是项目集中释放后的正常空档，连续两季下降才是预警。</li>
+<li><strong>结构性追问</strong>：风电行业陆风/海风、三北/沿海的差异极大。陆风面临消纳硬约束，海风消纳无忧——总量数字可能掩盖这种结构性分化，必须拆分来看。</li>
+<li><strong>领先vs滞后</strong>：招标领先并网12–18个月，核准领先开工6–12个月，投资额领先并网6–12个月，消纳政策领先效果2–3年。跟踪中必须区分时序——当前的弃风率反映的是过去的装机，当前的招标量决定的是未来的装机。</li>
+<li><strong>预期差的边际变化</strong>：2026年约118GW装机、价格中枢1,500–1,700元/kW是本报告的基准预测。评估的重点不是“是否发生”而是“是否偏离预期”——重点关注弃风率是否进一步恶化（冲击装机底线）以及海风Q3招标能否放量（判断2027年海风能否回归10GW+）。</li>
+</ol>
+</section>
+
+<section id="ch59">
+<h3>5.9 景气阶段判据（T49）</h3>
+<p><strong>结论：当前处于扩张后期，向上靠价格自律与装机兑现，向下盯四条预警线。</strong></p>
+<div class="config-matrix">
+<div class="company-card"><p><strong>第一阶段：扩张期（当前位：2025年→2026年）</strong></p><ul><li>量：装机/招标/核准持续高增。</li><li>价：价格稳或温和涨，毛利率修复。</li><li>竞争：龙头份额稳固，格局有序。</li><li>距离：2025年→2026年量处于扩张期（120GW创新高），价格从暴跌中修复。</li></ul></div>
+<div class="company-card"><p><strong>第二阶段：过热期（部分特征已现）</strong></p><ul><li>量：装机仍高增但招标开始放缓。</li><li>价：价格竞争加剧，毛利率又压。</li><li>竞争：新进入者或份额争夺激化。</li><li>距离：当前部分特征——招标2025年-26%、Q1国内中标-14.8%。</li></ul></div>
+<div class="company-card"><p><strong>第三阶段：出清期（尚未成规模）</strong></p><ul><li>量：装机增速放缓或转负。</li><li>价：价格跌破成本线，大面积亏损。</li><li>竞争：弱势企业退出。</li><li>距离：当前电气风电持续亏损，但尚未出现成规模退出。</li></ul></div>
+<div class="company-card"><p><strong>第四阶段：复苏期</strong></p><ul><li>量：装机增速触底回升。</li><li>价：价格/毛利率明显修复。</li><li>竞争：格局稳定。</li><li>距离：—。</li></ul></div>
+</div>
+<table class="data-table" aria-label="T49景气阶段原表（保留原表）">
+<thead><tr><th>景气阶段</th><th>量</th><th>价</th><th>竞争</th><th>当前行业距此多远</th></tr></thead>
+<tbody>
+<tr><td>扩张期</td><td>装机/招标/核准持续高增</td><td>价格稳或温和涨，毛利率修复</td><td>龙头份额稳固，格局有序</td><td>2025年→2026年：量处于扩张期（120GW创新高），价格从暴跌中修复</td></tr>
+<tr><td>过热期</td><td>装机仍高增但招标开始放缓</td><td>价格竞争加剧，毛利率又压</td><td>新进入者或份额争夺激化</td><td>当前部分特征：招标2025年-26%、Q1国内中标-14.8%</td></tr>
+<tr><td>出清期</td><td>装机增速放缓或转负</td><td>价格跌破成本线，大面积亏损</td><td>弱势企业退出</td><td>当前电气风电持续亏损，但尚未出现成规模退出</td></tr>
+<tr><td>复苏期</td><td>装机增速触底回升</td><td>价格/毛利率明显修复</td><td>格局稳定</td><td>—</td></tr>
+</tbody>
+</table>
+<div class="callout quote"><p><strong>风电行业的特殊性：</strong>与光伏不同，风电整机环节壁垒较高（CR7=91.8%），不会出现数百家企业涌入的局面。行业的景气拐点更多取决于消纳约束和政策节奏而非市场自发调节。</p></div>
+<div class="callout warn"><p><strong>关键拐点判据（不可折叠红线）：</strong>景气向上——（当前）2024Q4价格自律生效，2025年装机创新高，2026年盈利修复进行中。景气向下预警：(1)弃风率连续两季突破10%；(2)风机不含塔筒均价跌破1,400元/kW（自律瓦解）；(3)月度招标量连续三月低于8GW；(4)单季度风电项目废止量超过3GW。</p></div>
+</section>
+
+<section id="ch510">
+<h3>5.10 信息源体系（T50）</h3>
+<p><strong>结论：五级信源分层使用，任何研判需至少两个不同层级来源支撑。</strong></p>
+<div class="kpi-strip">
+<div class="kpi-card"><span class="tier-badge t1">T1</span><strong>官方统计与监管</strong><span>国家能源局、CWEA、全国新能源消纳监测预警中心、国家发改委</span><span>数据事实可采纳；官方叙事需交叉验证</span></div>
+<div class="kpi-card"><span class="tier-badge t2">T2</span><strong>行业权威与券商</strong><span>金风科技IR数据简报、GWEC、WWEA、BNEF、WoodMac、国金/东吴/中信建投/国信/平安证券</span><span>多源交叉验证，券商预测关注假设而非结论数字</span></div>
+<div class="kpi-card"><span class="tier-badge t3">T3</span><strong>公司披露</strong><span>金风/明阳/远景/运达/三一/电气风电年报/季报/IR材料</span><span>管理层陈述需第三方验证，关注口径一致性</span></div>
+<div class="kpi-card"><span class="tier-badge t3">T4</span><strong>独立研究与学术</strong><span>Nature Communications、Carbon Brief、独立分析师</span><span>关注方法论文和假设</span></div>
+<div class="kpi-card"><span class="tier-badge t3">T5</span><strong>媒体与行业平台</strong><span>北极星风力发电网、风芒能源、国际风力发电网、风电头条、36氪、财经</span><span>核对原始来源，警惕PR稿</span></div>
+</div>
+<div class="callout method"><p><strong>交叉验证原则：</strong>任何一个研判结论需至少两个不同层级来源支撑。单一来源信息仅作为“待验证信号”。</p></div>
+<details><summary>T50原表折叠备查（5行4列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T50信息源体系原表">
+<thead><tr><th>层级</th><th>类型</th><th>代表来源</th><th>使用原则</th></tr></thead>
+<tbody>
+<tr><td>T1</td><td>官方统计与监管</td><td>国家能源局、CWEA、全国新能源消纳监测预警中心、国家发改委</td><td>数据事实可采纳；官方叙事需交叉验证</td></tr>
+<tr><td>T2</td><td>行业权威与券商</td><td>金风科技IR数据简报、GWEC、WWEA、BNEF、WoodMac、国金/东吴/中信建投/国信/平安证券</td><td>多源交叉验证，券商预测关注假设而非结论数字</td></tr>
+<tr><td>T3</td><td>公司披露</td><td>金风/明阳/远景/运达/三一/电气风电年报/季报/IR材料</td><td>管理层陈述需第三方验证，关注口径一致性</td></tr>
+<tr><td>T4</td><td>独立研究与学术</td><td>Nature Communications、Carbon Brief、独立分析师</td><td>关注方法论文和假设</td></tr>
+<tr><td>T5</td><td>媒体与行业平台</td><td>北极星风力发电网、风芒能源、国际风力发电网、风电头条、36氪、财经</td><td>核对原始来源，警惕PR稿</td></tr>
+</tbody>
+</table></div>
+</details>
+</section>
+
+<section id="ch511">
+<h3>5.11 更新纪律（T51）</h3>
+<p><strong>结论：五类更新按触发条件执行，定期审视每季度末兜底。</strong></p>
+<div class="kpi-strip">
+<div class="kpi-card"><span class="tier-badge t1">数据刷新</span><strong>触发：季度装机/招标/价格/消纳发布；年度CWEA排名/年报发布</strong><span>动作：更新对应小节的数据表</span></div>
+<div class="kpi-card"><span class="tier-badge t2">信号标注</span><strong>触发：单一数据点异常（如单月招标骤降、弃风率跳升、价格异常波动）</strong><span>动作：加注“待验证”，等待下一期数据确认</span></div>
+<div class="kpi-card"><span class="tier-badge t1">研判修正</span><strong>触发：连续两期同向异常+多源交叉验证通过</strong><span>动作：更新趋势判断和装机预期</span></div>
+<div class="kpi-card"><span class="tier-badge t1">结构性修订</span><strong>触发：弃风率突破10%且持续；风机价格跌破1,400元/kW；特高压大规模投运显著改善消纳；欧美加征实质性贸易壁垒</strong><span>动作：新增分析小节或重写受影响章节</span></div>
+<div class="kpi-card"><span class="tier-badge t3">定期审视</span><strong>触发：每季度末</strong><span>动作：重查跟踪清单增减、景气阶段判据、消纳传导链条新环节</span></div>
+</div>
+<details><summary>T51原表折叠备查（5行3列，数字一字不差）</summary>
+<div class="tbl-wrap"><table class="data-table" aria-label="T51更新纪律原表">
+<thead><tr><th>更新类型</th><th>触发条件</th><th>动作</th></tr></thead>
+<tbody>
+<tr><td>数据刷新</td><td>季度装机/招标/价格/消纳数据发布；年度CWEA排名/年报发布</td><td>更新对应小节的数据表</td></tr>
+<tr><td>信号标注</td><td>单一数据点出现异常变化（如单月招标骤降、弃风率跳升、价格异常波动）</td><td>加注“待验证”，等待下一期数据确认</td></tr>
+<tr><td>研判修正</td><td>连续两期同向异常+多源交叉验证通过</td><td>更新趋势判断和装机预期</td></tr>
+<tr><td>结构性修订</td><td>发生以下任一事件：(1)弃风率突破10%且持续；(2)风机价格跌破1,400元/kW（自律瓦解）；(3)特高压大规模投运显著改善消纳；(4)欧美加征实质性贸易壁垒</td><td>新增分析小节或重写受影响章节</td></tr>
+<tr><td>定期审视</td><td>每季度末</td><td>重新检查：(1)跟踪清单是否需增减；(2)景气阶段判据是否需调整；(3)消纳传导链条是否出现新环节</td></tr>
+</tbody>
+</table></div>
+</details>
+<div class="callout warn"><p><strong>一条原则（P0级，不可折叠红线）：</strong>风电行业当前最大的问题是消纳天花板在逼近。月度装机和价格波动多为噪声，真正决定行业走势的是弃风率的方向。弃风率若持续上升，所有关于“量价利齐升”的乐观情景都将被打破。<strong>弃风率是高于现货电价、高于招标量、高于任何其他指标的P0级跟踪数据。</strong></p></div>
+</section>
+</section>
+
+<section id="ch6">
+<h2>六、参考资料</h2>
+<p class="footnote">参考资料67条，保留原表（序号/来源/标题链接/层级徽章），按Tier 1（30条）/Tier 2（27条）/Tier 3（10条）分组表头；URL一字不差，67个链接逐个核对。层级含义见5.10五级信源。</p>
+<h3>Tier 1分组（30条：官方统计与监管、公司披露）</h3>
+<div class="tbl-wrap"><table class="data-table" aria-label="T52参考资料Tier1分组原表">
+<thead><tr><th>序号</th><th>来源</th><th>标题</th><th>层级</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>国家能源局</td><td><a href="http://www.nea.gov.cn/20260212/742b8c6a078347b0b39de676c05c5d58/c.html">2025年可再生能源并网运行情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>2</td><td>国家能源局</td><td><a href="https://www.nea.gov.cn/20250221/e10f363cabe3458aaf78ba4558970054/c.html">2024年可再生能源并网运行情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>3</td><td>国家能源局</td><td><a href="https://www.nea.gov.cn/20260427/4b751e59b0d7463a95f74096fed83e14/c.html">2026年Q1可再生能源并网运行情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>4</td><td>国家能源局</td><td><a href="https://www.nea.gov.cn/20250428/4b2dff7ab84347df9a068f8e972f4775/c.html">2025年Q1可再生能源并网运行情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>5</td><td>国家能源局</td><td><a href="https://nnsa.mee.gov.cn/ywdt/hyzx/202601/t20260129_1142949.html">2025年全国电力工业统计数据</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>6</td><td>CWEA</td><td><a href="https://finance.sina.com.cn/roll/2026-02-13/doc-inhmqwcx3585404.shtml">2025年中国风电吊装容量统计简报</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>7</td><td>CWEA</td><td><a href="https://stcn.com/article/detail/1540109.html">2024年中国风电吊装容量统计简报</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>8</td><td>CWEA</td><td><a href="https://www.cweea.com.cn/xwdt/html/33762.html">2021年中国风电吊装容量统计简报</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>9</td><td>国家能源局</td><td><a href="https://www.gov.cn/gongbao/2023/issue_10626/202308/content_6897055.html">风电场改造升级和退役管理办法</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>20</td><td>金风科技</td><td><a href="https://static.cninfo.com.cn/finalpage/2026-03-28/1225043613.PDF">2025年年度报告</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>21</td><td>明阳智能</td><td><a href="https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?id=12263192&amp;stockid=601615">2025年年度报告</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>22</td><td>三一重能</td><td><a href="https://paper.cnstock.com/html/2026-02/28/content_2182883.htm">2025年度业绩快报</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>26</td><td>电气风电</td><td><a href="https://epaper.stcn.com/att/202602/28/ZQ28B006-XM_eBook.pdf">2025年度业绩快报</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>27</td><td>全国新能源消纳监测预警中心</td><td><a href="https://piinfo.com.cn/news/show-4448.html">2025年全年新能源并网消纳情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>28</td><td>电力行业规划研究与监测预警中心</td><td><a href="https://www.163.com/dy/article/KQ6906A405539T4L.html">2026年2月全国新能源并网消纳情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>32</td><td>国家发改委</td><td><a href="https://www.ndrc.gov.cn/xxgk/zcfb/tz/202511/t20251110_1401469.html">关于促进新能源消纳和调控的指导意见（发改能源〔2025〕1360号）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>38</td><td>金风科技</td><td><a href="https://www.goldwind.com/data/uploads/bdc_content2026/41233057965343489024.pdf">2026年Q1业绩演示材料（招标+消纳数据）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>40</td><td>Nature Communications</td><td><a href="https://www.nature.com/articles/s41467-023-37536-3">Grid integration feasibility of offshore wind power in China</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>45</td><td>国家能源局</td><td><a href="https://www.nea.gov.cn/20260525/c509435a0f09497cb3d2ca361fa262de/c.html">2026年1-4月全国电力统计数据</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>47</td><td>国家统计局</td><td><a href="https://www.stats.gov.cn/sj/zxfb/202606/t20260616_1963948.html">2026年5月份能源生产情况</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>48</td><td>金风科技</td><td><a href="https://disc.static.szse.cn/disc/disk03/finalpage/2026-04-25/604bd1bb-56bb-43ca-8a9c-795f85da541d.PDF">2026年第一季度报告</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>49</td><td>国家发改委等</td><td><a href="https://news.qq.com/rain/a/20260622A09E7B00">可再生能源消费最低比重目标和可再生能源电力消纳责任权重制度实施办法（第42号令）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>55</td><td>电力行业规划研究与监测预警中心</td><td><a href="https://finance.sina.com.cn/wm/2026-05-09/doc-inhxhuvi3457583.shtml">2026年Q1新能源消纳数据</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>57</td><td>国家发改委/国家能源局</td><td><a href="https://www.ndrc.gov.cn/xxgk/zcfb/tz/202606/t20260625_1406079.html">《新型能源体系建设“十五五”规划》（发改能源〔2026〕884号，2026.6.25）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>58</td><td>国家能源局</td><td><a href="https://www.nea.gov.cn/20260722/3b678308556b4df0a574537b59a28731/c.html">2026年1-6月全国电力统计数据</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>59</td><td>国家能源局</td><td><a href="https://www.nea.gov.cn/20260730/3ce671c387574eeeb120fc3825be0399/c.html">2026年上半年可再生能源并网运行情况（发布会文字实录，含H1拆分及利用率90.9%）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>60</td><td>中电联</td><td><a href="http://www.cepca.org.cn/news/show-36292.html">《2026年上半年全国电力供需形势分析预测报告》（1.6亿kW新增、风光1.1亿kW占70%、40.4亿kW总装机）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>63</td><td>明阳智能</td><td><a href="http://static.cninfo.com.cn/finalpage/2026-07-15/1225424115.PDF">2026年半年度业绩预告（1.0-1.5亿，同比-75%~-84%）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>66</td><td>金风科技</td><td><a href="https://www.cninfo.com.cn/new/disclosure/detail?orgId=9900003947&amp;announcementId=1225504212&amp;announcementTime=2026-08-25%2009:00">2026年半年度报告全文（H1营收/净利/毛利率/在手订单/海外/公开招标51.80GW-28.0%/H1并网-24.8%口径）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+<tr><td>67</td><td>国家统计局</td><td><a href="https://www.stats.gov.cn/sj/zxfb/202607/t20260715_1968785.html">2026年6月份能源生产情况（6月风电发电+15.8%）</a></td><td><span class="tier-badge t1">Tier 1</span></td></tr>
+</tbody>
+</table></div>
+<h3>Tier 2分组（27条：行业权威与券商）</h3>
+<div class="tbl-wrap"><table class="data-table" aria-label="T52参考资料Tier2分组原表">
+<thead><tr><th>序号</th><th>来源</th><th>标题</th><th>层级</th></tr></thead>
+<tbody>
+<tr><td>10</td><td>新华网</td><td><a href="http://www.news.cn/fortune/20251021/34116cc434624c57b36f5dc6635d06e0/c.html">中国风电锚定50亿千瓦新目标（风能北京宣言2.0）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>11</td><td>GWEC</td><td><a href="https://www.gwec.net/policy/beijing-declaration-on-wind-energy-2.0">Beijing Declaration on Wind Energy 2.0</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>12</td><td>Caixin Global</td><td><a href="https://www.caixinglobal.com/2025-10-22/chinas-wind-industry-aims-to-double-capacity-to-1300-gigawatts-by-2030-102374289.html">China's Wind Industry Aims to Double Capacity by 2030</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>13</td><td>WWEA</td><td><a href="https://www.wwindea.org/ss-uploads/media/2026/4/1775128035-cffcb332-90e1-4364-8ea1-c1622b6bf170.pdf">Annual Report 2025</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>14</td><td>新华网</td><td><a href="https://english.news.cn/20260422/d8292d3f601c4ec3bbc31f4b5388ac89/c.html">China offshore wind capacity to exceed 100GW by 2030</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>15</td><td>《财经》</td><td><a href="https://news.caijingmobile.com/article/detail/552200">风电走出内卷</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>16</td><td>华尔街见闻</td><td><a href="https://wallstreetcn.com/articles/3762203">风电率先走出内卷</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>17</td><td>证券时报</td><td><a href="https://www.stcn.com/article/detail/2125796.html">风电行业自律推动招标价格回升</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>19</td><td>国能能源研究院</td><td><a href="https://finance.sina.com.cn/wm/2026-03-05/doc-inhpwzrx3314634.shtml">政策提振风电装机创新高（2026年展望）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>23</td><td>国际风力发电网</td><td><a href="https://wind.in-en.com/html/wind-2460638.shtml">2025年1-6月风电整机商中标统计</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>24</td><td>Wood Mackenzie</td><td><a href="https://www.ne21.com/news/show-218867.html">2025上半年中国风电整机商订单排名</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>29</td><td>Carbon Brief</td><td><a href="https://www.carbonbrief.org/analysis-chinas-co2-climbs-2-in-early-2026-due-to-wasted-wind-and-solar/">China's CO2 climbs 2% in early 2026 due to wasted wind and solar</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>30</td><td>Caixin Global</td><td><a href="https://www.caixinglobal.com/2026-01-23/in-depth-china-takes-on-green-energy-gridlock-with-direct-connections-102407307.html">China Takes on Green Energy Gridlock With Direct Connections</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>31</td><td>界面新闻</td><td><a href="https://www.jiemian.com/article/13161423.html">投运特高压已超40条，为何东部接收绿电不及预期</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>35</td><td>国能能源研究院</td><td><a href="https://finance.sina.com.cn/wm/2026-03-05/doc-inhpwzrx3314634.shtml">政策提振风电装机创新高（消纳分析）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>36</td><td>Ember</td><td><a href="https://ember-energy.org/latest-insights/china-energy-transition-review-2025/">China Energy Transition Review 2025</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>39</td><td>长城证券</td><td><a href="http://www.cgws.com/cczq/ggdt/ccyj/202504/t20250417_319719.html">25Q1国内整机商中标超38GW</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>41</td><td>Wood Mackenzie</td><td><a href="https://www.woodmac.com/press-releases/new-page3/">China shifts to High-Quality renewable growth (curtailment analysis)</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>42</td><td>Modern Power Systems</td><td><a href="https://www.modernpowersystems.com/news/jiangsu-electric-power-reports-13-49-gw-of-offshore-wind-connected/">Jiangsu 13.49 GW offshore wind connected</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>43</td><td>CWEA/中国能源网</td><td><a href="https://www.china5e.com/news/news-1199975-1.html">弃风比市场化更致命</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>44</td><td>国信证券</td><td>2025年弃风弃光率分析（电投绿能研报 <a href="https://pdf.dfcfw.com/pdf/H3_AP202602101819861836_1.pdf">https://pdf.dfcfw.com/pdf/H3_AP202602101819861836_1.pdf</a>）</td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>46</td><td>风电头条</td><td><a href="https://wind.in-en.com/html/wind-2467887.shtml">2026年1-5月风电整机商中标统计（央国企项目）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>50</td><td>国信证券</td><td><a href="https://max.book118.com/html/2026/0603/7033011011011120.shtm">国产风机海外订单饱满，2027年有望迎来业绩丰收期</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>53</td><td>风电头条</td><td><a href="https://wind.in-en.com/html/wind-2467141.shtml">2026年1-4月风电整机商中标统计（央国企项目）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>54</td><td>新华网</td><td><a href="http://finance.people.com.cn/n1/2026/0622/c1004-40745158.html">压实可再生能源消纳和消费责任 实施办法出台</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>61</td><td>风电头条/国能能源研究院</td><td><a href="https://finance.sina.com.cn/roll/2026-07-08/doc-inihaxzw8068411.shtml">2026年1-6月风电整机商中标统计（89.31GW，6月价格）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+<tr><td>62</td><td>风电头条/国能能源研究院</td><td><a href="https://finance.sina.com.cn/roll/2026-08-07/doc-inimnrai3242426.shtml">2026年1-7月风电整机商中标统计（95.84GW，7月价格）</a></td><td><span class="tier-badge t2">Tier 2</span></td></tr>
+</tbody>
+</table></div>
+<h3>Tier 3分组（10条：媒体与行业平台线索）</h3>
+<div class="tbl-wrap"><table class="data-table" aria-label="T52参考资料Tier3分组原表">
+<thead><tr><th>序号</th><th>来源</th><th>标题</th><th>层级</th></tr></thead>
+<tbody>
+<tr><td>18</td><td>36氪</td><td><a href="https://36kr.com/p/3780331391431427">三一重能与金风远景走出截然相反的路</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>25</td><td>运达股份</td><td><a href="https://www.industrysourcing.cn/article/475008">2025年报深度复盘</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>33</td><td>索比光伏网</td><td><a href="https://news.solarbe.com/202507/28/50004887.html">四年风光大基地为何转向就地消纳</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>34</td><td>数字储能网</td><td><a href="https://desn.com.cn/news/show-2113182.html">弃风弃光翻倍，国家双管齐下破局</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>37</td><td>钛媒体</td><td><a href="https://www.tmtpost.com/7899017.html">新能源弃电限电常态化暴露储能难堪大用</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>51</td><td>荣格工业资源网</td><td><a href="https://www.industrysourcing.cn/article/476233">2026年1-5月中国风电出海全景</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>52</td><td>CCTD中国煤炭市场网</td><td><a href="https://www.cctd.com.cn/show-42-255805-1.html">5月发电量增速加快：风电表现低迷遭遇十年来最差风况</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>56</td><td>观研报告网</td><td><a href="https://www.chinabaogao.com/data/202606/799286.html">2026年1-4月全国风电新增发电装机同比增长97%</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>64</td><td>风电头条</td><td><a href="https://finance.sina.com.cn/roll/2026-07-29/doc-iniknrrf5719503.shtml">21家风电企业上半年业绩预告汇总（明阳/中船科技等）</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+<tr><td>65</td><td>一财/界面</td><td><a href="https://www.yicai.com/news/102825024.html">风电龙头半年盘点（金风/明阳/三一/运达/电气风电H1经营数据）</a></td><td><span class="tier-badge t3">Tier 3</span></td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section id="glossary">
+<h2>术语表（24个）</h2>
+<p class="footnote">术语定义与总纲第5节一字不差；每条附首次出现回链。</p>
+<div class="glossary">
+<div><p><dfn class="term" data-term="并网口径" title="NEA统计已接入电网容量；与吊装差约10GW滞后（2025年130 vs 120GW）">并网口径</dfn></p><p>NEA统计已接入电网容量；与吊装差约10GW滞后（2025年130 vs 120GW）</p><p><a href="#ch31">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="吊装口径" title="CWEA统计制造端吊装容量；通常略高于同期并网，滞后1–3个月">吊装口径</dfn></p><p>CWEA统计制造端吊装容量；通常略高于同期并网，滞后1–3个月</p><p><a href="#ch31">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="弃风率" title="弃风电量占可发电量比；2026H1为9.1%，距10%红线0.9pct">弃风率</dfn></p><p>弃风电量占可发电量比；2026H1为9.1%，距10%红线0.9pct</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="利用小时数" title="年发电量/装机容量；2026H1风电917小时（-170小时）">利用小时数</dfn></p><p>年发电量/装机容量；2026H1风电917小时（-170小时）</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="不含塔筒" title="风机主机不含塔筒报价口径；2026年7月1,589.80元/kW">不含塔筒</dfn></p><p>风机主机不含塔筒报价口径；2026年7月1,589.80元/kW</p><p><a href="#ch33">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="带塔筒/含塔筒">带塔筒/含塔筒</dfn></p><p>含塔筒总包报价口径；2026年7月2,181.53元/kW，不可与不含塔筒直接比较</p><p><a href="#ch33">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="央国企定标" title="央企+国企开发商签约量口径；1–7月95.84GW，含框采">央国企定标</dfn></p><p>央企+国企开发商签约量口径；1–7月95.84GW，含框采</p><p><a href="#ch32">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="框采" title="框架采购：一次性签多年总量、分批提货；签约≠提货">框采</dfn></p><p>框架采购：一次性签多年总量、分批提货；签约≠提货</p><p><a href="#ch32">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="核准" title="省级发改委批项目合规；领先装机18–36个月，2025年160GW">核准</dfn></p><p>省级发改委批项目合规；领先装机18–36个月，2025年160GW</p><p><a href="#ch32">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="定标" title="签合同定中标；领先装机6–15个月，2025年144GW">定标</dfn></p><p>签合同定中标；领先装机6–15个月，2025年144GW</p><p><a href="#ch32">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="公开招标" title="不含框采的公开发标量；H1 51.80GW（-28.0%，金风IR口径）">公开招标</dfn></p><p>不含框采的公开发标量；H1 51.80GW（-28.0%，金风IR口径）</p><p><a href="#ch32">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="IRR" title="项目全投资内部收益率；央企门槛6–7%，弃风&gt;15%区域跌破6%">IRR</dfn></p><p>项目全投资内部收益率；央企门槛6–7%，弃风&gt;15%区域跌破6%</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="行业自律公约" title="2024年10月12家整机企业签署的公平竞争自律公约，价格拐点制度因由">行业自律公约</dfn></p><p>2024年10月12家整机企业签署的公平竞争自律公约，价格拐点制度因由</p><p><a href="#ch33">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="评标基准价" title="新规则：有效投标均价下浮5%为基准，≤基准得满分，杜绝最低价中标">评标基准价</dfn></p><p>新规则：有效投标均价下浮5%为基准，≤基准得满分，杜绝最低价中标</p><p><a href="#ch33">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="特高压" title="跨区输电通道；已建42条，西北外送仅86.7GW，多数通道煤电占比超50%">特高压</dfn></p><p>跨区输电通道；已建42条，西北外送仅86.7GW，多数通道煤电占比超50%</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="消纳责任权重" title="42号令制度：消费端最低比重+消纳端属地责任双轮驱动，2026-08-01施行">消纳责任权重</dfn></p><p>42号令制度：消费端最低比重+消纳端属地责任双轮驱动，2026-08-01施行</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="机制电价" title="136号文前保量保价存量电价；增量项目全量入市，无机制电价+有弃风则半数省IRR&lt;6%">机制电价</dfn></p><p>136号文前保量保价存量电价；增量项目全量入市，无机制电价+有弃风则半数省IRR&lt;6%</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="以大代小" title="老旧小机组退役换大机组；1.5MW及以下存量约98GW，2030年前约200GW增量">以大代小</dfn></p><p>老旧小机组退役换大机组；1.5MW及以下存量约98GW，2030年前约200GW增量</p><p><a href="#ch31">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="容量因子" title="实际出力/额定出力年均；海风35–45% vs 陆风25–30%">容量因子</dfn></p><p>实际出力/额定出力年均；海风35–45% vs 陆风25–30%</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="漂浮式" title="深远海漂浮式基础；7月17MW华能漂浮式为单月海上全部定标">漂浮式</dfn></p><p>深远海漂浮式基础；7月17MW华能漂浮式为单月海上全部定标</p><p><a href="#ch32">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="绿电交易" title="绿色电力市场化交易；2026年6月275亿kWh（+15.0%），H1累计1,641亿kWh（+6.6%）">绿电交易</dfn></p><p>绿色电力市场化交易；2026年6月275亿kWh（+15.0%），H1累计1,641亿kWh（+6.6%）</p><p><a href="#ch1">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="火电灵活性改造" title="提升煤电调峰深度让路新能源；推进缓慢，北方供暖季热电联产挤占风电空间">火电灵活性改造</dfn></p><p>提升煤电调峰深度让路新能源；推进缓慢，北方供暖季热电联产挤占风电空间</p><p><a href="#ch36">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="在手订单" title="已签未交付订单；金风54.14GW（含海外9.49GW），明阳海风45.6GW">在手订单</dfn></p><p>已签未交付订单；金风54.14GW（含海外9.49GW），明阳海风45.6GW</p><p><a href="#ch35">首次出现回链</a></p></div>
+<div><p><dfn class="term" data-term="扣非净利" title="扣非经常损益后归母净利；明阳H1预告0.05亿至-0.45亿，接近盈亏平衡">扣非净利</dfn></p><p>扣非经常损益后归母净利；明阳H1预告0.05亿至-0.45亿，接近盈亏平衡</p><p><a href="#ch35">首次出现回链</a></p></div>
+</div>
+</section>
+  </div>
+</main>
+<script>
+(function(){
+  "use strict";
+  var bar = document.getElementById("progress");
+  var backtop = document.getElementById("backtop");
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max * 100) : 0) + "%";
+    backtop.style.display = h.scrollTop > 600 ? "block" : "none";
+  }
+  document.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+  backtop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  /* 目录高亮 */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute("data-target")] = a; });
+  if("IntersectionObserver" in window){
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          var t = e.target, a = map[t.id];
+          var g = t;
+          while(!a && g && g.parentElement){
+            g = g.parentElement.closest ? g.parentElement.closest("main section[id]") : null;
+            if(!g){ break; }
+            a = map[g.id];
+          }
+          if(a){
+            links.forEach(function(x){ x.classList.remove("active"); });
+            a.classList.add("active");
+          }
+        }
+      });
+    }, {rootMargin:"-20% 0px -70% 0px"});
+    document.querySelectorAll("main section[id]").forEach(function(s){ obs.observe(s); });
+  }
+  /* 折叠：data-default=collapsed 的 foldable 在 JS 下默认收起（无 JS 时展开，不丢信息） */
+  document.querySelectorAll("section.foldable").forEach(function(sec){
+    var body = [];
+    Array.prototype.forEach.call(sec.childNodes, function(n){ body.push(n); });
+    var summary = sec.querySelector(".fold-summary");
+    var det = document.createElement("details");
+    if(sec.getAttribute("data-default") !== "collapsed"){ det.open = true; }
+    var sum = document.createElement("summary");
+    var h = sec.querySelector("h2,h3,h4");
+    sum.textContent = h ? ("展开 / 折叠 · " + h.textContent) : "展开 / 折叠";
+    det.appendChild(sum);
+    var wrap = document.createElement("div");
+    wrap.className = "fold-body";
+    body.forEach(function(n){ wrap.appendChild(n); });
+    det.appendChild(wrap);
+    sec.appendChild(det);
+  });
+  function setAll(open){
+    document.querySelectorAll("main details").forEach(function(d){ d.open = open; });
+  }
+  document.getElementById("btn-expand").addEventListener("click", function(){ setAll(true); });
+  document.getElementById("btn-collapse").addEventListener("click", function(){ setAll(false); });
+  /* 表格包滚动容器 */
+  document.querySelectorAll("table.data-table").forEach(function(t){
+    if(t.parentElement && t.parentElement.classList.contains("tbl-wrap")) return;
+    var w = document.createElement("div");
+    w.className = "tbl-wrap";
+    t.parentNode.insertBefore(w, t);
+    w.appendChild(t);
+  });
+
+/* ECharts初始化（wind_onshore，29个chart容器 ec-01/02/03/04/05/06/08/10/12/13/15/16/17/20/21/22/23/24/25/26/27/28/29/30/31/32/33/34/36。
+   缺 ec-35（T35单点表不制图）、ec-07/09/11/14/18/19（CSS卡片/引用框/信号灯占位，已改用t07-decl等非ec编号，见B片）。
+   数据一律取自片段内原表/正文披露值（见各图注），无一编造；单点/双点序列用类别标签+散点示意。
+   契约：tooltip必备；坐标轴name（单位）；图例；契约色蓝#1d4ed8/绿#15803d/红#dc2626/黄#d97706/灰#6b7280/紫#7c3aed；
+   字体11px；grid containLabel；暗色监听refreshTheme；折叠/resize/打印钩子见外壳JSTAIL。 */
+(function(){
+  "use strict";
+  if(!window.echarts){ return; }
+  var charts = [];
+  var darkMQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  var ink = function(){ return (darkMQ && darkMQ.matches) ? "#e6e8eb" : "#1a1d21"; };
+  var BLUE = "#1d4ed8", GREEN = "#15803d", RED = "#dc2626", YELLOW = "#d97706", GRAY = "#6b7280", PURPLE = "#7c3aed";
+  function baseText(){ return {color: ink(), fontSize: 11}; }
+  function mkAxes(xName, yName, extra){
+    var o = {
+      xAxis: {type: "category", name: xName, nameLocation: "middle", nameGap: 32,
+        nameTextStyle: {fontSize: 11}, axisLabel: baseText()},
+      yAxis: {type: "value", name: yName, nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11}},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11}
+    };
+    if(extra){ for(var k in extra){ o[k] = extra[k]; } }
+    return o;
+  }
+  function mount(id, option){
+    var el = document.getElementById(id);
+    if(!el || typeof option !== "object" || !option){ return; }
+    var c = window.echarts.init(el);
+    c.setOption(option);
+    charts.push(c);
+  }
+  function refreshTheme(){
+    charts.forEach(function(c){
+      c.setOption({textStyle: {color: ink()},
+        xAxis: {axisLabel: {color: ink()}}, yAxis: {axisLabel: {color: ink()}}});
+    });
+  }
+  if(darkMQ && darkMQ.addEventListener){ darkMQ.addEventListener("change", refreshTheme); }
+
+  var YEARS5 = ["2019","2020","2021","2022","2023","2024","2025"];
+
+  /* ec-01 T01: 新增并网柱状（GW）+累计折线（GW）。抢装注记见图注/原表。 */
+  mount("ec-01", (function(){
+    var o = mkAxes("年份", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      yAxis: [
+        {type: "value", name: "新增并网(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+        {type: "value", name: "累计并网(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+      ]});
+    o.xAxis.data = YEARS5;
+    o.series = [
+      {name: "新增并网(GW)", type: "bar", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 11, formatter: "{c}"},
+       data: [25.74, 71, 47.57, 37.63, 75.9, 79.82, 120]},
+      {name: "累计并网(GW)", type: "line", yAxisIndex: 1, itemStyle: {color: GREEN}, lineStyle: {width: 2},
+       label: {show: true, fontSize: 11, formatter: "{c}"},
+       data: [210, 281, 328, 365.44, 441, 521, 640]}
+    ];
+    return o;
+  })());
+
+  /* ec-02 T02: NEA并网 vs CWEA吊装双柱（GW，2021–2025）。差值约10GW滞后注。 */
+  mount("ec-02", (function(){
+    var o = mkAxes("年份", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}});
+    o.xAxis.data = ["2021","2022","2023","2024","2025"];
+    o.series = [
+      {name: "NEA新增并网(GW)", type: "bar", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 11, formatter: "{c}"},
+       data: [47.57, 37.63, 75.9, 79.82, 120]},
+      {name: "CWEA新增吊装(GW)", type: "bar", itemStyle: {color: PURPLE},
+       label: {show: true, fontSize: 11, formatter: "{c}"},
+       data: [55.92, 49.83, 79.37, 86.99, 130]}
+    ];
+    return o;
+  })());
+
+  /* ec-03 T03: 中国占全球比例折线（%）+全球/中国双柱（GW）。 */
+  mount("ec-03", (function(){
+    var o = mkAxes("年份", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      yAxis: [
+        {type: "value", name: "新增(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+        {type: "value", name: "中国占比(%)", min: 0, max: 80, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+      ]});
+    o.xAxis.data = ["2023","2024","2025"];
+    o.series = [
+      {name: "全球新增(GW)", type: "bar", itemStyle: {color: GRAY},
+       label: {show: true, fontSize: 11, formatter: "{c}"}, data: [117, 125, 169]},
+      {name: "中国新增(GW)", type: "bar", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 11, formatter: "{c}"}, data: [75.9, 79.8, 120]},
+      {name: "中国占比(%)", type: "line", yAxisIndex: 1, itemStyle: {color: RED}, lineStyle: {width: 2},
+       label: {show: true, fontSize: 11, formatter: "{c}%"},
+       data: [65, 64, 71]}
+    ];
+    return o;
+  })());
+
+  /* ec-04 T04: 2026年月度累计面积（GW，Q1/1–4/1–5/H1四节点）。6月13.57GW单月注。 */
+  mount("ec-04", (function(){
+    var o = mkAxes("统计节点", "累计新增(GW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis"}});
+    o.xAxis.data = ["Q1","1–4月","1–5月","1–6月(H1)"];
+    o.series = [{name: "累计新增并网(GW)", type: "line", areaStyle: {opacity: 0.15},
+      itemStyle: {color: BLUE}, lineStyle: {width: 3},
+      label: {show: true, fontSize: 11, formatter: "{c}"},
+      data: [15.77, 21.26, 25.05, 38.62]}];
+    return o;
+  })());
+
+  /* ec-05 T05 ★: H1/H2占比100%堆积条（2023/2024/2025/2026E）。2025年42.8%抢装异标。 */
+  mount("ec-05", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"},
+        formatter: function(ps){ var s = ps[0].name + "<br/>"; ps.forEach(function(p){ s += p.marker + p.seriesName + "：" + p.value + "%<br/>"; }); return s; }},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "占比(%)", min: 0, max: 100, nameLocation: "middle", nameGap: 32,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "年份", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11}, data: ["2023","2024","2025(抢装)","2026E"]}
+    };
+    o.series = [
+      {name: "H1占比(%)", type: "bar", stack: "s", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 11, formatter: "{c}%"},
+       data: [30.3, 32.4, 42.8, 32.7]},
+      {name: "H2占比(%)", type: "bar", stack: "s", itemStyle: {color: GRAY},
+       label: {show: true, fontSize: 11, formatter: "{c}%"},
+       data: [69.7, 67.6, 57.2, 67.3]}
+    ];
+    return o;
+  })());
+
+  /* ec-06 T06: 三方法预测区间条（GW）。custom renderItem 画 [下沿,上沿] 横向区间段 + 中枢118竖线。 */
+  mount("ec-06", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"},
+        formatter: function(ps){ var p = ps[0]; var d = p.value; return p.name + "<br/>" + p.marker + p.seriesName + "：" + d[1] + "–" + d[2] + "GW"; }},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "预测区间(GW)", min: 95, max: 135, nameLocation: "middle", nameGap: 38,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "方法", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11}, data: ["季节模式法", "管线覆盖法", "综合判断(中枢)"]}
+    };
+    /* 每行数据 [类目序号, 下沿, 上沿]；renderItem 用坐标系画矩形区间段。 */
+    var ROWS = [[0, 110, 129], [1, 102, 115], [2, 110, 125]];
+    o.series = [
+      {name: "区间下沿–上沿(GW)", type: "custom",
+       renderItem: function(params, api){
+         var row = ROWS[params.dataIndex];
+         var lo = api.coord([row[1], row[0]]);
+         var hi = api.coord([row[2], row[0]]);
+         var h = api.size([0, 1])[1] * 0.42;
+         return {type: "rect",
+           shape: {x: lo[0], y: lo[1] - h / 2, width: hi[0] - lo[0], height: h},
+           style: api.style({fill: BLUE, opacity: 0.85})};
+       },
+       label: {show: true, fontSize: 11, color: ink(), position: "right", distance: 6,
+         formatter: function(p){ return p.value[1] + "–" + p.value[2]; }},
+       encode: {x: [1, 2], y: 0},
+       data: ROWS}
+    ];
+    return o;
+  })());
+
+  /* ec-08 T08: 2025–2030新增堆积柱（陆风/海风，GW）+累计折线（GW）双轴。海风取区间中点示意。 */
+  mount("ec-08", (function(){
+    var o = mkAxes("年份", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      yAxis: [
+        {type: "value", name: "年新增(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+        {type: "value", name: "累计(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+      ]});
+    o.xAxis.data = ["2025","2026E","2027E","2028E","2029E","2030E"];
+    o.series = [
+      {name: "陆风新增(GW)", type: "bar", stack: "a", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 10, position: "inside", formatter: "{c}"},
+       data: [110, 112, 107.5, 105, 105, 105]},
+      {name: "海风新增-中点(GW)", type: "bar", stack: "a", itemStyle: {color: GREEN},
+       label: {show: false},
+       data: [6.6, 6.2, 12, 15.5, 18.5, 23]},
+      {name: "累计(GW)", type: "line", yAxisIndex: 1, itemStyle: {color: RED}, lineStyle: {width: 2},
+       label: {show: false},
+       data: [640, 758, 883, 1003, 1140, 1285]}
+    ];
+    return o;
+  })());
+
+  /* ec-10 T10: 海风新增迷你折线（GW，2024实/2025实/2026E中点/2030E中点）。 */
+  mount("ec-10", (function(){
+    var o = mkAxes("年份", "海风新增(GW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis"}});
+    o.xAxis.data = ["2024实","2025实","2026E(中点)","2030E(中点)"];
+    o.series = [{name: "海风新增(GW)", type: "line", itemStyle: {color: GREEN}, lineStyle: {width: 3},
+      label: {show: true, fontSize: 11, formatter: "{c}"},
+      data: [4.04, 6.59, 6.2, 23]}];
+    return o;
+  })());
+
+  /* ec-12 T12 ★: 央国企定标 vs 实际装机双柱（GW）+定标/装机比折线（x，右轴）。2024年2.86x框采注。 */
+  mount("ec-12", (function(){
+    var o = mkAxes("年份", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      yAxis: [
+        {type: "value", name: "规模(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+        {type: "value", name: "定标/装机比(x)", min: 0, max: 3.2, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+      ]});
+    o.xAxis.data = ["2023","2024","2025"];
+    o.series = [
+      {name: "央国企定标(GW)", type: "bar", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 11, formatter: "{c}"}, data: [96.27, 228.36, 143.82]},
+      {name: "实际装机(GW)", type: "bar", itemStyle: {color: GRAY},
+       label: {show: true, fontSize: 11, formatter: "{c}"}, data: [75.9, 79.8, 120]},
+      {name: "定标/装机比(x)", type: "line", yAxisIndex: 1, itemStyle: {color: RED}, lineStyle: {width: 2},
+       label: {show: true, fontSize: 11, formatter: "{c}x"}, data: [1.27, 2.86, 1.2]}
+    ];
+    return o;
+  })());
+
+  /* ec-13 T13: 公开招标 vs 当年装机双柱（GW）+覆盖倍数折线（x）。 */
+  mount("ec-13", (function(){
+    var o = mkAxes("年份", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      yAxis: [
+        {type: "value", name: "规模(GW)", nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+        {type: "value", name: "覆盖倍数(x)", min: 0, max: 2.5, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+      ]});
+    o.xAxis.data = ["2023","2024","2025"];
+    o.series = [
+      {name: "公开招标(GW)", type: "bar", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 11, formatter: "{c}"}, data: [86.3, 164.1, 121.2]},
+      {name: "当年装机(GW)", type: "bar", itemStyle: {color: GRAY},
+       label: {show: true, fontSize: 11, formatter: "{c}"}, data: [75.9, 79.8, 120]},
+      {name: "覆盖倍数(x)", type: "line", yAxisIndex: 1, itemStyle: {color: RED}, lineStyle: {width: 2},
+       label: {show: true, fontSize: 11, formatter: "{c}x"}, data: [1.14, 2.06, 1.01]}
+    ];
+    return o;
+  })());
+
+  /* ec-15 T15: 央国企定标累计面积（GW，Q1→1–7月五节点）。6月19.31GW峰值注。 */
+  mount("ec-15", (function(){
+    var o = mkAxes("时段", "累计定标(GW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis"}});
+    o.xAxis.data = ["Q1","1–4月","1–5月","1–6月","1–7月"];
+    o.series = [{name: "累计定标(GW)", type: "line", areaStyle: {opacity: 0.15},
+      itemStyle: {color: BLUE}, lineStyle: {width: 3},
+      label: {show: true, fontSize: 11, formatter: "{c}"},
+      data: [56.93, 63.11, 70, 89.31, 95.84]}];
+    return o;
+  })());
+
+  /* ec-16 T16: 海外订单双柱（GW，Q1 4.82 vs 1–5月6.8）。小表，原表并列。 */
+  mount("ec-16", (function(){
+    var o = mkAxes("时段", "海外订单(GW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}});
+    o.xAxis.data = ["Q1", "1–5月"];
+    o.series = [{name: "海外订单(GW)", type: "bar", itemStyle: {color: GREEN},
+      label: {show: true, fontSize: 11, formatter: "{c}"}, data: [4.82, 6.8]}];
+    return o;
+  })());
+
+  /* ec-17 T17: 公开招标折线（GW，2024Q1→2026Q1）+中标量对照。 */
+  mount("ec-17", (function(){
+    var o = mkAxes("时段", "GW", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis"}});
+    o.xAxis.data = ["2024Q1","2024全年","2025Q1","2025全年","2026Q1"];
+    o.series = [
+      {name: "公开招标(GW)", type: "line", itemStyle: {color: BLUE}, lineStyle: {width: 2},
+       label: {show: true, fontSize: 10, formatter: "{c}"}, data: [23.3, 164, 28.6, 122, 28.0]},
+      {name: "中标量(GW)", type: "line", itemStyle: {color: PURPLE}, lineStyle: {width: 2},
+       label: {show: true, fontSize: 10, formatter: "{c}"}, data: [17, 197, 36.1, null, 27.3]}
+    ];
+    return o;
+  })());
+
+  /* ec-20 T20: 价格暴跌折线（元/kW，2021初→2024-11）。成本线1400红色虚线。累计-57%注。 */
+  mount("ec-20", (function(){
+    var o = mkAxes("时间节点", "价格(元/kW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis"}});
+    o.xAxis.data = ["2021初","2022末","2023末","2024-09最低","2024-11拐点"];
+    o.series = [{name: "陆上不含塔筒(元/kW)", type: "line",
+      itemStyle: {color: RED}, lineStyle: {width: 3},
+      label: {show: true, fontSize: 11, formatter: "{c}"},
+      markLine: {silent: true, symbol: "none",
+        lineStyle: {color: RED, type: "dashed", width: 2},
+        label: {fontSize: 11, color: RED, formatter: "成本线1400", position: "start"},
+        data: [{name: "成本线1400", yAxis: 1400}]},
+      data: [3000, 1800, 1500, 1286, 1450]}];
+    return o;
+  })());
+
+  /* ec-21 T21 ★: 2024-09→2026-07不含塔筒均价折线（元/kW）。1500中枢底线绿虚线；两连降段标红。 */
+  mount("ec-21", (function(){
+    var o = mkAxes("时间", "均价(元/kW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis"}});
+    o.xAxis.data = ["2024-09","2024-12","2025Q1","2025-04","2025H1","2026-03","2026-04","2026-05","2026-06","2026-07"];
+    o.series = [
+      {name: "不含塔筒均价(元/kW)", type: "line", itemStyle: {color: BLUE}, lineStyle: {width: 3},
+       label: {show: true, fontSize: 10, formatter: "{c}"},
+       markLine: {silent: true, symbol: "none",
+         lineStyle: {color: GREEN, type: "dashed", width: 2},
+         label: {fontSize: 11, color: GREEN, formatter: "中枢底线1500", position: "start"},
+         data: [{name: "中枢底线1500", yAxis: 1500}]},
+       data: [1286, 1527, 1520, 1613, 1496, 1609, 1590, 1695, 1658.92, 1589.80]},
+      {name: "两连降段(6–7月)", type: "line", itemStyle: {color: RED}, lineStyle: {width: 4},
+       label: {show: true, fontSize: 10, color: RED, formatter: "{c}"},
+       data: [null, null, null, null, null, null, null, 1695, 1658.92, 1589.80]}
+    ];
+    return o;
+  })());
+
+  /* ec-22 T22: TOP7份额横向条形（%）。CR3/CR5/CR7注。 */
+  mount("ec-22", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "份额(%)", nameLocation: "middle", nameGap: 38,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "企业", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["金风科技","运达股份","明阳智能","远景能源","三一重能","东方电气","电气风电"]}
+    };
+    o.series = [{name: "2025吊装份额(%)", type: "bar", itemStyle: {color: BLUE},
+      label: {show: true, fontSize: 11, formatter: "{c}%"},
+      data: [19.8, 14.7, 14.2, 13.5, 11.2, 6.4, 5.6]}];
+    return o;
+  })());
+
+  /* ec-23 T23: 海风份额环形（金风37.6%/明阳24.6%/其余37.8%，CR2=62.2%注）。 */
+  mount("ec-23", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "item", formatter: "{b}：{c}GW（{d}%）"},
+      textStyle: {fontSize: 11}
+    };
+    o.series = [{name: "海上吊装(GW)", type: "pie", radius: ["45%","70%"],
+      label: {fontSize: 11, formatter: "{b}\n{c}GW {d}%"},
+      data: [
+        {name: "金风科技", value: 2.089, itemStyle: {color: BLUE}},
+        {name: "明阳智能", value: 1.367, itemStyle: {color: GREEN}},
+        {name: "其余6家", value: 2.104, itemStyle: {color: GRAY}}
+      ]}];
+    return o;
+  })());
+
+  /* ec-24 T24: 吊装排名 vs 1–7月中标排名对照（6家升降箭头注于图注）。双柱：吊装名次（逆序示意）vs 中标份额。 */
+  mount("ec-24", (function(){
+    var o = mkAxes("企业", "1–7月中标份额(%)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}});
+    o.xAxis.data = ["电气风电","运达股份","金风科技","明阳智能","东方风电","远景能源"];
+    o.series = [{name: "1–7月中标份额(%)", type: "bar", itemStyle: {color: BLUE},
+      label: {show: true, fontSize: 10, formatter: "{c}%"},
+      data: [14.89, 14.36, 14.01, 13.56, 12.80, 5]}];
+    return o;
+  })());
+
+  /* ec-25 T25: 出口KPI四卡——用柱状示意三时点规模（GW）。>40GW累计另注（非同时点，不可比）。 */
+  mount("ec-25", (function(){
+    var o = mkAxes("时段", "规模(GW)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}}});
+    o.xAxis.data = ["2025全年","2026Q1","2026 1–5月"];
+    o.series = [{name: "出口/海外订单(GW)", type: "bar", itemStyle: {color: GREEN},
+      label: {show: true, fontSize: 11, formatter: "{c}"}, data: [7.734, 4.82, 6.8]}];
+    return o;
+  })());
+
+  /* ec-26 T26 ★: 5家2025年营收横向条（亿元）+归母净利点。电气-9.89亿为负值示警。 */
+  mount("ec-26", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "亿元", nameLocation: "middle", nameGap: 38,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "公司", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["金风科技","明阳智能","运达股份","三一重能","电气风电"]}
+    };
+    o.series = [
+      {name: "营收(亿元)", type: "bar", itemStyle: {color: BLUE},
+       label: {show: true, fontSize: 10, position: "insideRight", distance: 6, color: "#fff", formatter: "{c}"},
+       data: [730.2, 381.0, 294.0, 273.8, 136.8]},
+      {name: "归母净利(亿元)", type: "scatter", symbolSize: 12, itemStyle: {color: RED},
+       label: {show: true, fontSize: 10, position: "left", distance: 10, color: RED, formatter: "{c}"},
+       data: [27.74, 6.60, 3.40, 7.12, -9.89]}
+    ];
+    return o;
+  })());
+
+  /* ec-27 T27: 5家Q1归母净利条形（亿元，电气续亏以空值+续亏注）。小值标签置条外。 */
+  mount("ec-27", (function(){
+    var o = mkAxes("公司", "Q1归母净利(亿元)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"},
+        formatter: function(ps){ var p = ps[0]; if(p.value === "-"){ return p.name + "：续亏（无正值可示）"; } return p.name + "：" + p.value + "亿元"; }}});
+    o.xAxis.data = ["金风科技","明阳智能","运达股份","三一重能","电气风电(续亏)"];
+    o.series = [{name: "Q1归母净利(亿元)", type: "bar",
+      itemStyle: {color: BLUE},
+      label: {show: true, fontSize: 11, position: "top", distance: 4, formatter: "{c}"},
+      data: [9.07, 0.25, 0.48, 1.79, "-"]}];
+    return o;
+  })());
+
+  /* ec-28 T28: H1披露状态——金风18.55亿 vs 明阳预告中点1.25亿 vs 3家未披露（0示意+注）。 */
+  mount("ec-28", (function(){
+    var o = mkAxes("公司", "H1归母(亿元)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"},
+        formatter: function(ps){ var p = ps[0]; if(p.name.indexOf("未检得") >= 0){ return p.name + "：截至2026-09-14未检得（0为占位示意）"; } return p.name + "：" + p.value + "亿元"; }}});
+    o.xAxis.data = ["金风(已披露)","明阳(预告中点)","运达(未检得)","三一(未检得)","电气(未检得)"];
+    o.series = [{name: "H1归母(亿元)", type: "bar",
+      itemStyle: {color: BLUE},
+      label: {show: true, fontSize: 10, formatter: "{c}"},
+      data: [18.55, 1.25, 0, 0, 0]}];
+    return o;
+  })());
+
+  /* ec-29 T29 ★: 利用率折线（%，左轴）+弃风率镜像柱（%，右轴）+10%红线。 */
+  mount("ec-29", (function(){
+    var o = mkAxes("时期", "利用率(%)", {legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      yAxis: [
+        {type: "value", name: "利用率(%)", min: 85, max: 100, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+        {type: "value", name: "弃风率(%)", min: 0, max: 12, nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+      ]});
+    o.xAxis.data = ["2023","2024","2025","2026 1–2月","2026Q1","2026H1"];
+    o.series = [
+      {name: "利用率(%)", type: "line", itemStyle: {color: BLUE}, lineStyle: {width: 3},
+       label: {show: true, fontSize: 10, formatter: "{c}%"},
+       data: [97.3, 95.9, 94.3, 91.5, 91.4, 90.9]},
+      {name: "弃风率(%)", type: "bar", yAxisIndex: 1, itemStyle: {color: YELLOW},
+       label: {show: true, fontSize: 10, formatter: "{c}%"},
+       markLine: {silent: true, symbol: "none",
+         lineStyle: {color: RED, type: "dashed", width: 2},
+         label: {fontSize: 11, color: RED, formatter: "10%红线", position: "start"},
+         data: [{name: "10%红线", yAxis: 10}]},
+       data: [2.7, 4.1, 5.7, 8.5, 8.6, 9.1]}
+    ];
+    return o;
+  })());
+
+  /* ec-30 T30: 7省区利用率横向条形（%，西藏68.6%标红极端）。 */
+  mount("ec-30", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "利用率(%)", min: 60, max: 100, nameLocation: "middle", nameGap: 38,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "省区", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["西藏","新疆","蒙西","河北","蒙东","甘肃","沿海(沪浙闽)"]}
+    };
+    o.series = [{name: "2025年利用率(%)", type: "bar",
+      itemStyle: {color: function(p){ return p.value < 90 ? RED : (p.value < 95 ? YELLOW : GREEN); }},
+      label: {show: true, fontSize: 11, formatter: "{c}%"},
+      data: [68.6, 91.0, 91.8, 92.0, 92.8, 93.7, 99.5]}];
+    return o;
+  })());
+
+  /* ec-31 T31: 三情景横向条形（等效损失亿kWh为条长；弃风率与IRR影响标于标签）。 */
+  mount("ec-31", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"},
+        formatter: function(ps){ var p = ps[0]; var i = p.dataIndex; var r = ["7%","9%","12%"][i]; var irr = ["-1.5pct","-2.5pct","-4.0pct"][i]; return p.name + "<br/>等效损失约" + p.value + "亿kWh<br/>弃风率" + r + "<br/>IRR影响" + irr; }},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "等效损失(亿kWh)", nameLocation: "middle", nameGap: 38,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "情景", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["乐观(利用率93%)","基准(利用率91%)","悲观(利用率88%)"]}
+    };
+    o.series = [{name: "等效损失(亿kWh)", type: "bar",
+      itemStyle: {color: function(p){ return [GREEN, BLUE, RED][p.dataIndex]; }},
+      label: {show: true, fontSize: 10, formatter: function(p){ return p.value + "亿kWh（弃风" + ["7%","9%","12%"][p.dataIndex] + "，IRR" + ["-1.5","-2.5","-4.0"][p.dataIndex] + "pct）"; }},
+      data: [910, 1170, 1560]}];
+    return o;
+  })());
+  /* ec-32 T32: 5省+内蒙古废止横向条形（MW，河北拆取消859+调整5188）。行政清退vs实质分色见图注。 */
+  mount("ec-32", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"}},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "规模(MW)", nameLocation: "middle", nameGap: 38,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "省份", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["贵州(行政清退)","河北取消","河北调整/延期","陕西","山西","宁夏","内蒙古(估)"]}
+    };
+    o.series = [{name: "废止/调整(MW)", type: "bar", itemStyle: {color: BLUE},
+      label: {show: true, fontSize: 10, formatter: "{c}"},
+      data: [3107, 859, 5188, 800, 715, 281, 6000]}];
+    return o;
+  })());
+
+  /* ec-33 T33: 废止根因四卡——CSS卡片已在片段内，四根因各一卡；本图用横向条形示意影响权重（定性示意，见图注）。 */
+  mount("ec-33", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "axis", axisPointer: {type: "shadow"},
+        formatter: function(ps){ return ps[0].name + "<br/>定性示意（见原表与图注，不代表量化规模）"; }},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "示意权重", nameLocation: "middle", nameGap: 32,
+        nameTextStyle: {fontSize: 11}, axisLabel: {show: false}},
+      yAxis: {type: "category", name: "根因", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["①消纳+电价→IRR破线","②行政审批过期","③136号文转向","④配套未落地"]}
+    };
+    o.series = [{name: "定性示意", type: "bar", itemStyle: {color: GRAY},
+      label: {show: true, fontSize: 10, color: ink(), formatter: "定性"},
+      data: [4, 2, 3, 1]}];
+    return o;
+  })());
+
+  /* ec-34 T34: IRR三情景可行性灯——CSS灯已在片段内；本图用红绿灯散点示意（X=可行性分，Y=情景）。 */
+  mount("ec-34", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "item",
+        formatter: function(p){ return p.name + "<br/>" + p.value[2]; }},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "可行性(分示意)", min: 0, max: 10, nameLocation: "middle", nameGap: 32,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "category", name: "情景", nameTextStyle: {fontSize: 11},
+        axisLabel: {fontSize: 11},
+        data: ["无弃风+机制电价", "无弃风无机制", "有弃风无机制"]}
+    };
+    function lamp(name, x, y, note, color){
+      return {name: name, type: "scatter", symbolSize: 34, itemStyle: {color: color, opacity: 0.9},
+        label: {show: true, fontSize: 11, color: "#fff", formatter: name, position: "inside"},
+        data: [{name: name, value: [x, y, note]}]};
+    }
+    o.series = [
+      lamp("可投", 8, 0, "7%–14%，大部分可投", GREEN),
+      lamp("可行", 6, 1, "仅2省低于6%，整体可行", YELLOW),
+      lamp("禁投", 2, 2, "半数以上省份低于6%，大面积不可投", RED)
+    ];
+    return o;
+  })());
+
+  /* ec-36 T36 ★: 风险气泡（X=等级分1–5示意，Y=排序位；大小=权重示意；颜色=严重程度）。 */
+  mount("ec-36", (function(){
+    var o = {
+      legend: {top: 0, textStyle: {fontSize: 11}},
+      tooltip: {trigger: "item",
+        formatter: function(p){ return p.name + "<br/>" + p.value[2]; }},
+      grid: {left: 20, right: 28, top: 60, bottom: 42, containLabel: true},
+      textStyle: {fontSize: 11},
+      xAxis: {type: "value", name: "严重程度(分)", min: 0, max: 6, nameLocation: "middle", nameGap: 32,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}},
+      yAxis: {type: "value", name: "排序位", nameLocation: "middle", nameGap: 32,
+        nameTextStyle: {fontSize: 11}, axisLabel: {fontSize: 11}}
+    };
+    function bubble(name, x, y, note, color, size){
+      return {name: name, type: "scatter", symbolSize: size, itemStyle: {color: color, opacity: 0.85},
+        label: {show: true, fontSize: 10, color: "#fff", formatter: name, position: "inside"},
+        data: [{name: name, value: [x, y, note]}]};
+    }
+    o.series = [
+      bubble("消纳恶化", 5, 8, "极高", RED, 52),
+      bubble("海风低于预期", 4, 7, "较高", RED, 44),
+      bubble("价格复燃", 3, 6, "中等", YELLOW, 36),
+      bubble("电价冲击", 3, 5, "中等", YELLOW, 36),
+      bubble("贸易壁垒", 3, 4, "中等", YELLOW, 36),
+      bubble("远期缺口", 1.5, 3, "已缓解", GREEN, 28),
+      bubble("供应链", 1.5, 2, "较低", GREEN, 28),
+      bubble("风资源", 1, 1, "暂时", GREEN, 24)
+    ];
+    return o;
+  })());
+
+  window.__echartsList = charts;
+
+
+
+  /* P1-6打印钩子：打印前展开全部折叠，打印后恢复 */
+  var _closedBeforePrint = [];
+  window.addEventListener("beforeprint", function(){
+    _closedBeforePrint = [];
+    document.querySelectorAll("main details").forEach(function(d){
+      if(!d.open){ _closedBeforePrint.push(d); d.open = true; }
+    });
+    if(typeof resizeAll === "function"){ resizeAll(); }
+  });
+  window.addEventListener("afterprint", function(){
+    _closedBeforePrint.forEach(function(d){ d.open = false; });
+    _closedBeforePrint = [];
+    if(typeof resizeAll === "function"){ resizeAll(); }
+  });
+
+function resizeAll(){ charts.forEach(function(c){ try{ c.resize(); }catch(e){} }); }
+  window.addEventListener("resize", resizeAll);
+  window.onbeforeprint = function(){ resizeAll(); };
+  var _setAll = window.__setAllFold;
+  function hookToggle(id){
+    var b = document.getElementById(id);
+    if(b){ b.addEventListener("click", function(){ setTimeout(resizeAll, 60); }); }
+  }
+  hookToggle("btn-expand");
+  hookToggle("btn-collapse");
+  window.__echartsList = charts;
+
+})();
+
+})();
+</script>
+</body>
+</html>
+
+</script>
+</body>
+</html>
