@@ -579,3 +579,194 @@ def test_save_backfills_source_em_for_legacy_rows(tmp_path, monkeypatch):
         tmp_path / "holder_number" / "symbol=002594" / "data.parquet"
     )
     assert set(saved["source"]) == {"em"}
+
+
+def _cninfo_empty_records_error():
+    """巨潮季度 records==[] 时 pandas 赋值的报错文案。"""
+    return ValueError("Length mismatch: Expected axis has 0 elements")
+
+
+def test_fetch_cninfo_quarter_treats_length_mismatch_as_empty(tmp_path, monkeypatch):
+    """巨潮空季度的 Length mismatch 是空数据而非异常，且空结果入缓存。"""
+    calls = []
+
+    def empty_records(quarter):
+        calls.append(quarter)
+        raise _cninfo_empty_records_error()
+
+    collector, _ = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: pd.DataFrame(),
+        cninfo_fetcher=empty_records,
+    )
+    first = collector._fetch_cninfo_quarter("20250331")
+    assert first.empty
+    # 空结果入缓存：同一批次内重复查询不再请求巨潮
+    assert collector._fetch_cninfo_quarter("20250331").empty
+    assert calls == ["20250331"]
+
+
+def test_fetch_cninfo_quarter_normalizes_none_to_empty(tmp_path, monkeypatch):
+    """源返回 None 归一化为空帧并缓存，避免下游误判。"""
+    calls = []
+
+    def none_result(quarter):
+        calls.append(quarter)
+        return None
+
+    collector, _ = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: pd.DataFrame(),
+        cninfo_fetcher=none_result,
+    )
+    first = collector._fetch_cninfo_quarter("20250331")
+    assert first.empty
+    assert collector._fetch_cninfo_quarter("20250331").empty
+    assert calls == ["20250331"]
+
+
+def test_collect_skips_cninfo_when_quarter_has_no_records(tmp_path, monkeypatch):
+    """东财与巨潮皆空（巨潮空季度）：不抛异常、不记成功、不建分区。"""
+    monkeypatch.setattr(holder_mod.time, "sleep", lambda _: None)
+
+    def empty_records(quarter):
+        raise _cninfo_empty_records_error()
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: pd.DataFrame(),
+        cninfo_fetcher=empty_records,
+    )
+    monkeypatch.setattr(
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20250331", "20250630"]
+    )
+    collector.collect_holder_number("601899")
+    assert statuses == []
+    assert not (tmp_path / "holder_number").exists()
+
+
+def test_collect_swallows_cninfo_length_mismatch_when_em_empty(tmp_path, monkeypatch):
+    """补缺阶段抛出 Length mismatch 且东财无增量：跳过补缺而非整股失败。"""
+    monkeypatch.setattr(holder_mod.time, "sleep", lambda _: None)
+
+    def boom(*args):
+        raise _cninfo_empty_records_error()
+
+    collector, statuses = _isolated_collector(
+        tmp_path, monkeypatch, fetcher=lambda symbol: pd.DataFrame()
+    )
+    monkeypatch.setattr(collector, "_collect_cninfo_quarters", boom)
+    collector.collect_holder_number("601899")
+    assert statuses == []
+    assert not (tmp_path / "holder_number").exists()
+
+
+def test_collect_raises_when_cninfo_error_is_not_empty_quarter(tmp_path, monkeypatch):
+    """巨潮其他异常（如限流）仍是致命错误：东财亦空时整股失败向上抛。"""
+    monkeypatch.setattr(holder_mod.time, "sleep", lambda _: None)
+
+    def throttled(quarter):
+        raise ValueError("访问过于频繁")
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: pd.DataFrame(),
+        cninfo_fetcher=throttled,
+    )
+    monkeypatch.setattr(
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20250331"]
+    )
+    with pytest.raises(ValueError, match="访问过于频繁"):
+        collector.collect_holder_number("601899")
+    assert statuses == []
+    assert not (tmp_path / "holder_number").exists()
+
+
+def test_collect_keeps_em_rows_when_cninfo_quarter_empty(
+    tmp_path,
+    monkeypatch,
+):
+    """东财已有增量时，巨潮空季度不影响落盘：东财行照常保留并记成功。"""
+    monkeypatch.setattr(holder_mod.time, "sleep", lambda _: None)
+
+    calls = []
+
+    def empty_records(quarter):
+        calls.append(quarter)
+        raise _cninfo_empty_records_error()
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: _raw_frame(),
+        cninfo_fetcher=empty_records,
+    )
+    # 东财全量只含 2025-03-31/2025-06-30, 补缺仍需 2025-12-31 这一空季度
+    monkeypatch.setattr(
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20251231"]
+    )
+    collector.collect_holder_number("002594")
+
+    # 巨潮路径确实被激活, 且空季度未使东财增量丢失
+    assert calls == ["20251231"]
+    saved = pd.read_parquet(
+        tmp_path / "holder_number" / "symbol=002594" / "data.parquet"
+    )
+    assert saved["stat_date"].astype(str).tolist() == ["2025-03-31", "2025-06-30"]
+    assert set(saved["source"]) == {"em"}
+    assert statuses and statuses[0][0:2] == ("holder_number", "002594")
+
+
+def test_collect_raises_when_cninfo_mismatch_is_not_empty_quarter(
+    tmp_path,
+    monkeypatch,
+):
+    """非零轴的 Length mismatch 是响应结构畸形, 不是空季度, 不得降级为空数据。"""
+    monkeypatch.setattr(holder_mod.time, "sleep", lambda _: None)
+
+    def malformed(quarter):
+        raise ValueError("Length mismatch: Expected axis has 3 elements")
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: pd.DataFrame(),
+        cninfo_fetcher=malformed,
+    )
+    monkeypatch.setattr(
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20250331"]
+    )
+    with pytest.raises(ValueError, match="Expected axis has 3 elements"):
+        collector.collect_holder_number("601899")
+    assert statuses == []
+    # 畸形响应当季不入缓存, 下次重跑仍会重新请求巨潮
+    assert collector._cninfo_cache == {}
+    assert not (tmp_path / "holder_number").exists()
+
+
+def test_collect_raises_when_cninfo_expected_axis_nonzero(tmp_path, monkeypatch):
+    """期望轴非零 (如 10 elements) 仍是畸形响应, 不得被子串误判为空季度。"""
+    monkeypatch.setattr(holder_mod.time, "sleep", lambda _: None)
+
+    def malformed(quarter):
+        raise ValueError(
+            "Length mismatch: Expected axis has 10 elements, new values have 3 elements"
+        )
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: pd.DataFrame(),
+        cninfo_fetcher=malformed,
+    )
+    monkeypatch.setattr(
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20250331"]
+    )
+    with pytest.raises(ValueError, match="Expected axis has 10 elements"):
+        collector.collect_holder_number("601899")
+    assert statuses == []
+    assert collector._cninfo_cache == {}

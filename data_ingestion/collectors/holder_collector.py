@@ -241,6 +241,25 @@ def _required_cninfo_quarters(after: date, today: date = None) -> list:
     return quarters
 
 
+def _is_empty_cninfo_quarter_error(exc: Exception) -> bool:
+    """判断巨潮季度快照是否因「全市场零记录」而报错。
+
+    巨潮某季度无任何记录时 (接口返回 records==[]), akshare 用空列表构建
+    DataFrame 后赋列名, pandas 抛出
+    ``ValueError: Length mismatch: Expected axis has 0 elements``。
+    必须同时要求期望轴为 0 元素: 若报错指向非零轴, 说明是响应结构畸形
+    而非空季度, 不能降级为空数据, 否则会静默吞掉真实数据问题。
+    判定锚定 "Expected axis has 0 elements" 整个子句, 避免 "10 elements"
+    或 "new values have 0 elements" 之类的子串误命中。
+    """
+    message = str(exc)
+    return (
+        isinstance(exc, ValueError)
+        and "Length mismatch" in message
+        and "Expected axis has 0 elements" in message
+    )
+
+
 class HolderCollector:
     """
     股东人数采集器：主源东财个股明细 (stock_zh_a_gdhs_detail_em)，
@@ -286,13 +305,26 @@ class HolderCollector:
     def _fetch_cninfo_quarter(self, quarter: str) -> pd.DataFrame:
         """按季度拉取巨潮全市场快照 (实例级缓存, 同一批次内缺数股共享)。
 
-        缓存只保留成功结果；失败向上抛，由调用方决定整股重试。
+        巨潮空季度 (records==[]) 是正常的无数据情况, 归一化为空帧而非异常,
+        因此不会使整股同步失败。
+
+        失败向上抛，由调用方决定整股重试。
         """
         if quarter not in self._cninfo_cache:
             _sleep_between_cninfo_fetches()
-            self._cninfo_cache[quarter] = self.cninfo_fetcher(quarter)
-        cached = self._cninfo_cache[quarter]
-        return cached if cached is not None else pd.DataFrame()
+            try:
+                fetched = self.cninfo_fetcher(quarter)
+            except ValueError as exc:
+                if not _is_empty_cninfo_quarter_error(exc):
+                    raise
+                logger.debug(
+                    f"巨潮季度 {quarter} 无记录 (records==[]), 视为空: {exc!r}"
+                )
+                fetched = pd.DataFrame()
+            self._cninfo_cache[quarter] = (
+                fetched if fetched is not None else pd.DataFrame()
+            )
+        return self._cninfo_cache[quarter]
 
     def _local_stat_dates(self, symbol: str) -> set:
         """读取本地已存的统计截止日集合 (用于巨潮补缺口判定)。"""
@@ -370,7 +402,8 @@ class HolderCollector:
 
         # 3. 巨潮补缺：本地缺失的季度 (含尾部新增与中部缺口)，东财行优先。
         #    已落盘与本次东财全量中出现过的日期都不再拉取；显式 --start-date
-        #    不约束补缺下界。
+        #    不约束补缺下界。空季度已在 _fetch_cninfo_quarter 内归一化为空帧；
+        #    此处再判一次仅作纵深防御 (未来新增抛点时不会把空季度当失败)。
         try:
             known_dates = self._local_stat_dates(symbol)
             if not df_em.empty:
@@ -381,6 +414,17 @@ class HolderCollector:
                 if _parse_quarter(q) not in known_dates
             ]
             df_cn = self._collect_cninfo_quarters(symbol, needed)
+        except ValueError as exc:
+            if _is_empty_cninfo_quarter_error(exc):
+                logger.debug(f"{symbol} 巨潮季度无记录，跳过补缺 (records==[])")
+                df_cn = pd.DataFrame(columns=list(OUTPUT_COLUMNS))
+            elif not merged_any:
+                raise
+            else:
+                logger.warning(
+                    f"{symbol} 巨潮 fallback 失败，已保留东财数据", exc_info=True
+                )
+                df_cn = pd.DataFrame(columns=list(OUTPUT_COLUMNS))
         except Exception:
             if not merged_any:
                 raise
