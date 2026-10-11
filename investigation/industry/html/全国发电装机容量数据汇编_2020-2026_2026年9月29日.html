@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全国发电装机容量数据汇编 2020-2026 · 交互图表</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<style>
+:root{
+  --bg:#ffffff; --bg-soft:#f6f7f9; --ink:#1a1d21; --muted:#6b7280;
+  --accent:#1d4ed8; --warn:#d97706; --card-border:#e5e7eb;
+  --font:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#14171a; --bg-soft:#1c2024; --ink:#e8eaed; --muted:#9aa3ad;
+    --accent:#60a5fa; --warn:#fbbf24; --card-border:#2f353b;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.75;font-size:15px}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
+h1{font-size:26px;line-height:1.4;border-bottom:2px solid var(--card-border);padding-bottom:12px;margin:0 0 6px}
+h2{font-size:19px;margin:44px 0 4px;border-left:4px solid var(--accent);padding-left:12px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 20px}
+.meta{font-size:12.5px;color:var(--muted);margin:0 0 22px;line-height:1.9}
+.meta code{font-family:var(--mono);background:var(--bg-soft);padding:1px 5px;border-radius:4px;font-size:12px}
+
+/* 筛选区 */
+.filters{border:1px solid var(--card-border);border-radius:12px;background:var(--bg-soft);padding:16px 18px;margin:0 0 26px}
+.frow{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.frow:last-child{margin-bottom:0}
+.flabel{flex:0 0 76px;font-size:13px;color:var(--muted);padding-top:6px;font-weight:600}
+.chips{display:flex;gap:7px;flex-wrap:wrap;flex:1}
+.chip{border:1px solid var(--card-border);background:var(--bg);color:var(--muted);border-radius:999px;
+  padding:5px 14px;font-size:13px;cursor:pointer;font-family:var(--font);user-select:none;transition:.12s}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.fbtns{display:flex;gap:8px;margin-left:auto;flex:0 0 auto;align-self:flex-start}
+.fbtn{border:1px solid var(--card-border);background:var(--bg);color:var(--muted);border-radius:7px;
+  padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:var(--font)}
+.fbtn:hover{border-color:var(--accent);color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+
+/* 图 */
+.chartbox{border:1px solid var(--card-border);border-radius:12px;background:var(--bg);padding:6px 4px 0}
+.chart{width:100%;height:460px}
+.caption{font-size:12.5px;color:var(--muted);padding:8px 16px 14px;margin:0;border-top:1px solid var(--card-border)}
+.caption b{color:var(--ink)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px;display:none}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--card-border);font-size:12.5px;color:var(--muted);line-height:1.95}
+.foot h3{font-size:14px;color:var(--ink);margin:14px 0 6px}
+.foot ul{margin:6px 0;padding-left:20px}
+.foot li{margin:3px 0}
+#cdnerr{display:none;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;
+  padding:10px 14px;margin:0 0 20px;font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>全国发电装机容量数据汇编 2020—2026 · 交互图表</h1>
+<p class="sub">表一 1-X 月累计新增 · 表二 逐月新增 · 表三 累计装机　单位 GW（1 GW = 100 万千瓦）</p>
+
+<div id="cdnerr"><b>图表库未能加载。</b>本页面依赖 CDN 上的 ECharts（cdn.jsdelivr.net），请检查网络连接后刷新页面。数据本身未受影响，明细见
+<a href="../全国发电装机容量数据集_2020-2026_2026年9月29日.md">数据附录</a>。</div>
+
+<p class="meta">
+<b>数据来源</b>：国家能源局《全国电力（工业）统计数据》系列月度与年度通报，共 72 个统计期，覆盖 2020 年 1-2 月累计至 2026 年 1-8 月累计。<br>
+<b>载体构成</b>：正文 HTML 表格 48 期、.docx 附件 1 期、表格图片 21 期（人工逐格转录，其中 19 期已回原图独立复核）、仅公布累计装机的年度报表 2 期（2023、2024 年报），合计 72 期。<br>
+<b>完整报告</b>：<code>全国发电装机容量数据汇编_2020-2026_2026年9月29日.md</code>　<b>明细表</b>：<code>全国发电装机容量数据集_2020-2026_2026年9月29日.md</code>
+</p>
+
+<div class="filters">
+  <div class="frow">
+    <span class="flabel">年份</span>
+    <div class="chips" id="years"></div>
+    <div class="fbtns">
+      <button class="fbtn" id="yAll">全选</button>
+      <button class="fbtn" id="yNone">清空</button>
+    </div>
+  </div>
+  <div class="frow">
+    <span class="flabel">类型</span>
+    <div class="chips" id="types"></div>
+    <div class="fbtns">
+      <button class="fbtn" id="tAll">全选</button>
+      <button class="fbtn" id="tNone">清空</button>
+    </div>
+  </div>
+  <p class="hint">三个图共享以上筛选，切换图表时选择保持不变。<b>表一/表二默认只勾「总计」</b>——六类 × 七年共 42 条线挤在一张图里无法辨读，先看各年总走势，再按需勾选类型（每个类型是独立的一组线，用线型区分：总计实线、太阳能长虚、火电点线、风电点划、水电点线、核电短划）。表三为时间轴堆叠面积，类型即堆叠层。<br>
+  表格中的「—」表示原表未列或上期缺失，不可作零处理；图上对应位置断线而非落到 0。</p>
+</div>
+
+<h2>表一　1-X 月累计新增发电装机容量</h2>
+<p class="sub">折线图。横轴为月份，各年并列（一条线一年）。官方公布值；2023—2025 年的年度行由年末累计装机差分推算，图上以<b>空心圈</b>标出。</p>
+<div class="chartbox">
+  <div class="chart" id="c1"></div>
+  <div class="empty">未选中任何年份或类型，请在上方筛选。</div>
+  <p class="caption"><b>算法</b>：直接取 NEA 原表「新增发电装机容量」行（1-X 月累计）。2023、2024、2025 三年年度报表不再公布该行，由<b>年末累计装机 − 上年末累计装机</b>推算（<code>derived</code>），精度低于 2022 年及以前的官方值，图中以<b>空心圈</b>标出（共 3 点：2023-12、2024-12、2025-12）。2020 年 9 期月报原表无太阳能分项，故太阳能自 2020-12 年度行起才有线。</p>
+</div>
+
+<h2>表二　逐月新增发电装机容量</h2>
+<p class="sub">同为折线图，横轴为月份，各年并列。<b>总计与五个分项画成同形的折线</b>，用线宽区分（总计加粗），颜色仍按年份。1 月 NEA 不发数据。</p>
+<div class="chartbox">
+  <div class="chart" id="c2"></div>
+  <div class="empty">未选中任何年份或类型，请在上方筛选。</div>
+  <p class="caption"><b>算法</b>：整表均为计算值，非 NEA 原始列。2—11 月为同口径月报之间的累计装机差分；<b>12 月行是年度报表，与 11 月月报口径不同</b>，若对累计装机硬减会得到 +204.57 GW，而正确值是 +88.84 GW，<b>高估 2.3 倍（虚增 115.73 GW）</b>，故改走「全年新增 − 1-11 月累计新增」。2020—2022 两端均为官方值可直接引用，<b>2023—2025 的全年端为差分推算值</b>，这三年 12 月精度较低。<br>
+  <b>2 月的点含 1 月</b>：NEA 序列从「1-2 月」累计起，从不单独发布 1 月，故 2 月为 1+2 月合并值（<b>加紫色描边标出</b>），与其余单月不可比。<br>
+  <b>分项之和 ≠ 总计</b>：官方合计含未单列电源（生物质等），故各分项线之和与总计线之间有差。全序列该差最大为 5.00 GW（2023-06）；<b>2020 年因月报无太阳能分项，视觉落差要大得多</b>——该年只有水/火/风三条线，2020-12 三者和 66.52 GW 对总计 88.84 GW，差 22.32 GW（表三同期因含全部五个分项，差额达 161.94 GW）。<b>正因两者口径不同，本页表二不做堆叠</b>（相加会重复计算未单列部分），分项与总计各自独立成线。<br>
+  <b>负值的真实含义</b>：2023-12 水电为 <b>−1.35 GW</b>，2021/2022-12 核电为 −0.03/−0.01 GW。这不是算错，而是<b>两端口径不同</b>——12 月的全年新增是 2023—2025 由累计装机差分推算的 derived 值，1-11 月却是官方公布值，相减即可能为负（2023 年水电推算值 8.04 GW 低于官方 1-11 月的 9.39 GW）。**这三个月的水电/核电值不应按装机拆解解读**，全序列仅此三处。</p>
+</div>
+
+<h2>表三　累计发电装机容量</h2>
+<p class="sub">堆叠面积图，横轴为 72 个统计期的时间轴。展示装机结构随时间的变迁。</p>
+<div class="chartbox">
+  <div class="chart" id="c3"></div>
+  <div class="empty">未选中任何年份或类型，请在上方筛选。</div>
+  <p class="caption"><b>与表一/表二不同</b>：累计装机是<b>真连续量</b>，年末值与次年初值属同一存量，故此图按时间轴首尾相接是正确的（表一/表二为年内累计量，跨年不可接）。<b>算法</b>：逐期直接取自 NEA 原表，无任何计算，为本数据集最可靠的一张图。<br>
+  <b>「总计」不参与堆叠</b>：官方合计含未单列电源（生物质等），恒大于五个分项之和（2020 年因无太阳能分项，差额一度达 161.94 GW），堆叠会重复计算，故合计以独立折线画在上方。2023 年合计残差一度达 25.97 GW 峰值，2024 年起回落至 0.05—0.06 GW。</p>
+</div>
+
+<div class="foot">
+<h3>口径与已知缺口</h3>
+<ul>
+<li><b>「总计」≠ 五个分项之和</b>：NEA 合计含生物质等未单列电源，官方原始行恒大于五项之和。使用五分项数据时不要强行调平至合计。</li>
+<li><b>2020 年 9 期月报无太阳能行</b>：2020 年月报为 6000 千瓦及以上电厂口径，原表根本没有太阳能分项。这 9 期的太阳能位置断线，是「原表未列」而非零。</li>
+<li><b>2020-08 NEA 确未发布</b>：该年序列为 1-7月(08-20) → 1-9月(10-22)。中电联虽发有该期数据，但为全国电力工业运行口径，与本汇编的 6000 千瓦及以上口径差约 1200 万千瓦量级，混用会破坏同比可比性，故不并入。连带 2020-09 逐月值不可算（跨缺报月）。</li>
+<li><b>2023—2025 年度新增为推算值</b>：见表一图注。2023-12 的合计残差为 −4.53 GW（残差自身回落所致），属正常现象。</li>
+<li><b>已识别的官方口径异常</b>：2023-11 风电存量差分 +8.83 GW vs 官方新增增量 +4.08 GW（差 +4.75 GW），为该年合计残差的峰值月，不宜用该月单月差分推断投产节奏；2025-06 火电存量跳升 +17.12 GW 同理。</li>
+</ul>
+<h3>关于本图的可信度</h3>
+<ul>
+<li>19 期人工转录的图片表格已<b>逐格回原图核对</b>（14 期由未读取过转录记录的独立代理盲读，5 期放大复读），0 处不一致。</li>
+<li>2026-03、2026-08 两期为后期补入，<b>尚未经独立盲读</b>，为「编制者自读自校」，抗确认偏差能力弱于前 19 期。引用 2026 年数据时请留意。</li>
+<li>全部算术校验（四项）结果见主报告第六节；校验未发现残留的转录或解析错误。</li>
+</ul>
+</div>
+
+</div>
+
+<script>
+const DATA = {"unit":"GW","label":{"合计":"总计","风电":"风","太阳能发电":"光","水电":"水","核电":"核","火电":"火"},"series":["合计","风电","太阳能发电","水电","核电","火电"],"periods":[{"period":"2020-02","year":2020,"month":2,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":7.9,"风电":0.99,"太阳能发电":null,"水电":0.62,"核电":0.0,"火电":5.17},"add_month":{"合计":null,"风电":null,"太阳能发电":null,"水电":null,"核电":null,"火电":null},"stock":{"合计":1914.83,"风电":211.85,"太阳能发电":null,"水电":313.1,"核电":48.77,"火电":1190.2}},{"period":"2020-03","year":2020,"month":3,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":13.56,"风电":2.36,"太阳能发电":null,"水电":0.7,"核电":0.0,"火电":7.02},"add_month":{"合计":1.47,"风电":0.54,"太阳能发电":null,"水电":0.08,"核电":0.0,"火电":1.05},"stock":{"合计":1916.3,"风电":212.39,"太阳能发电":null,"水电":313.18,"核电":48.77,"火电":1191.25}},{"period":"2020-04","year":2020,"month":4,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":20.09,"风电":3.55,"太阳能发电":null,"水电":1.14,"核电":0.0,"火电":10.78},"add_month":{"合计":2.97,"风电":1.09,"太阳能发电":null,"水电":0.36,"核电":0.0,"火电":0.98},"stock":{"合计":1919.27,"风电":213.48,"太阳能发电":null,"水电":313.54,"核电":48.77,"火电":1192.23}},{"period":"2020-05","year":2020,"month":5,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":25.24,"风电":4.9,"太阳能发电":null,"水电":1.73,"核电":0.0,"火电":12.41},"add_month":{"合计":5.95,"风电":0.98,"太阳能发电":null,"水电":0.29,"核电":0.0,"火电":3.94},"stock":{"合计":1925.22,"风电":214.46,"太阳能发电":null,"水电":313.83,"核电":48.77,"火电":1196.17}},{"period":"2020-06","year":2020,"month":6,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":36.95,"风电":6.32,"太阳能发电":null,"水电":4.12,"核电":0.0,"火电":16.32},"add_month":{"合计":11.0,"风电":2.13,"太阳能发电":null,"水电":2.31,"核电":0.0,"火电":2.89},"stock":{"合计":1936.22,"风电":216.59,"太阳能发电":null,"水电":316.14,"核电":48.77,"火电":1199.06}},{"period":"2020-07","year":2020,"month":7,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":54.09,"风电":8.56,"太阳能发电":null,"水电":6.57,"核电":0.0,"火电":25.8},"add_month":{"合计":15.49,"风电":1.4,"太阳能发电":null,"水电":2.66,"核电":0.0,"火电":9.98},"stock":{"合计":1951.71,"风电":217.99,"太阳能发电":null,"水电":318.8,"核电":48.77,"火电":1209.04}},{"period":"2020-09","year":2020,"month":9,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":72.24,"风电":13.06,"太阳能发电":null,"水电":8.27,"核电":1.12,"火电":31.83},"add_month":{"合计":null,"风电":null,"太阳能发电":null,"水电":null,"核电":null,"火电":null},"stock":{"合计":1967.66,"风电":223.83,"太阳能发电":null,"水电":319.9,"核电":49.89,"火电":1215.79}},{"period":"2020-10","year":2020,"month":10,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":85.4,"风电":18.29,"太阳能发电":null,"水电":8.89,"核电":1.12,"火电":34.96},"add_month":{"合计":14.31,"风电":5.92,"太阳能发电":null,"水电":0.56,"核电":0.0,"火电":4.89},"stock":{"合计":1981.97,"风电":229.75,"太阳能发电":null,"水电":320.46,"核电":49.89,"火电":1220.68}},{"period":"2020-11","year":2020,"month":11,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":102.03,"风电":24.62,"太阳能发电":null,"水电":10.79,"核电":1.12,"火电":39.34},"add_month":{"合计":14.04,"风电":6.43,"太阳能发电":null,"水电":1.92,"核电":0.0,"火电":4.94},"stock":{"合计":1996.01,"风电":236.18,"太阳能发电":null,"水电":322.38,"核电":49.89,"火电":1225.62}},{"period":"2020-12","year":2020,"month":12,"kind":"year","source":"NEA:html","derived":false,"add_ytd":{"合计":190.87,"风电":71.67,"太阳能发电":48.2,"水电":13.23,"核电":null,"火电":56.37},"add_month":{"合计":88.84,"风电":47.05,"太阳能发电":null,"水电":2.44,"核电":null,"火电":17.03},"stock":{"合计":2200.58,"风电":281.53,"太阳能发电":253.43,"水电":370.16,"核电":49.89,"火电":1245.17}},{"period":"2021-02","year":2021,"month":2,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":15.59,"风电":3.57,"太阳能发电":3.25,"水电":0.85,"核电":1.15,"火电":6.68},"add_month":{"合计":18.99,"风电":3.03,"太阳能发电":3.85,"水电":0.1,"核电":1.15,"火电":10.85},"stock":{"合计":2219.57,"风电":284.56,"太阳能发电":257.28,"水电":370.26,"核电":51.04,"火电":1256.02}},{"period":"2021-03","year":2021,"month":3,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":23.51,"风电":5.26,"太阳能发电":5.33,"水电":1.09,"核电":1.15,"火电":10.6},"add_month":{"合计":8.93,"风电":2.05,"太阳能发电":1.85,"水电":1.06,"核电":0.0,"火电":3.98},"stock":{"合计":2228.5,"风电":286.61,"太阳能发电":259.13,"水电":371.32,"核电":51.04,"火电":1260.0}},{"period":"2021-04","year":2021,"month":4,"kind":"ytd","source":"NEA:docx","derived":false,"add_ytd":{"合计":29.72,"风电":6.6,"太阳能发电":7.08,"水电":1.52,"核电":1.15,"火电":13.28},"add_month":{"合计":6.33,"风电":0.83,"太阳能发电":1.84,"水电":1.98,"核电":0.0,"火电":1.61},"stock":{"合计":2234.83,"风电":287.44,"太阳能发电":260.97,"水电":373.3,"核电":51.04,"火电":1261.61}},{"period":"2021-05","year":2021,"month":5,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":37.43,"风电":7.79,"太阳能发电":9.91,"水电":3.67,"核电":1.15,"火电":14.84},"add_month":{"合计":6.49,"风电":1.08,"太阳能发电":2.61,"水电":0.52,"核电":0.0,"火电":2.28},"stock":{"合计":2241.32,"风电":288.52,"太阳能发电":263.58,"水电":373.82,"核电":51.04,"火电":1263.89}},{"period":"2021-06","year":2021,"month":6,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":51.87,"风电":10.84,"太阳能发电":13.01,"水电":8.12,"核电":2.27,"火电":17.57},"add_month":{"合计":15.28,"风电":3.4,"太阳能发电":4.03,"水电":4.03,"核电":1.12,"火电":2.69},"stock":{"合计":2256.6,"风电":291.92,"太阳能发电":267.61,"水电":377.85,"核电":52.16,"火电":1266.58}},{"period":"2021-07","year":2021,"month":7,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":68.25,"风电":12.57,"太阳能发电":17.94,"水电":11.73,"核电":3.4,"火电":22.47},"add_month":{"合计":15.46,"风电":1.18,"太阳能发电":3.49,"水电":3.58,"核电":1.1,"火电":6.05},"stock":{"合计":2272.06,"风电":293.1,"太阳能发电":271.1,"水电":381.43,"核电":53.26,"火电":1272.63}},{"period":"2021-08","year":2021,"month":8,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":81.96,"风电":14.63,"太阳能发电":22.05,"水电":12.73,"核电":3.4,"火电":28.94},"add_month":{"合计":10.48,"风电":2.22,"太阳能发电":4.03,"水电":0.7,"核电":0.0,"火电":3.48},"stock":{"合计":2282.54,"风电":295.32,"太阳能发电":275.13,"水电":382.13,"核电":53.26,"火电":1276.11}},{"period":"2021-09","year":2021,"month":9,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":92.4,"风电":16.43,"太阳能发电":25.56,"水电":14.36,"核电":3.4,"火电":32.46},"add_month":{"合计":12.29,"风电":1.95,"太阳能发电":3.22,"水电":1.4,"核电":0.0,"火电":5.72},"stock":{"合计":2294.83,"风电":297.27,"太阳能发电":278.35,"水电":383.53,"核电":53.26,"火电":1281.83}},{"period":"2021-10","year":2021,"month":10,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":105.44,"风电":19.19,"太阳能发电":29.31,"水电":16.82,"核电":3.4,"火电":36.51},"add_month":{"合计":8.21,"风电":2.36,"太阳能发电":3.79,"水电":0.99,"核电":0.0,"火电":1.06},"stock":{"合计":2303.04,"风电":299.63,"太阳能发电":282.14,"水电":384.52,"核电":53.26,"火电":1282.89}},{"period":"2021-11","year":2021,"month":11,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":122.54,"风电":24.7,"太阳能发电":34.83,"水电":19.38,"核电":3.4,"火电":39.93},"add_month":{"合计":17.96,"风电":5.23,"太阳能发电":5.33,"水电":3.46,"核电":0.0,"火电":3.92},"stock":{"合计":2321.0,"风电":304.86,"太阳能发电":287.47,"水电":387.98,"核电":53.26,"火电":1286.81}},{"period":"2021-12","year":2021,"month":12,"kind":"year","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":176.29,"风电":47.57,"太阳能发电":54.93,"水电":23.49,"核电":3.37,"火电":46.28},"add_month":{"合计":53.75,"风电":22.87,"太阳能发电":20.1,"水电":4.11,"核电":-0.03,"火电":6.35},"stock":{"合计":2376.92,"风电":328.48,"太阳能发电":306.56,"水电":390.92,"核电":53.26,"火电":1296.78}},{"period":"2022-02","year":2022,"month":2,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":23.49,"风电":5.73,"太阳能发电":10.86,"水电":1.94,"核电":0.0,"火电":4.73},"add_month":{"合计":17.05,"风电":5.94,"太阳能发电":9.25,"水电":1.56,"核电":0.02,"火电":0.03},"stock":{"合计":2393.97,"风电":334.42,"太阳能发电":315.81,"水电":392.48,"核电":53.28,"火电":1296.81}},{"period":"2022-03","year":2022,"month":3,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":31.75,"风电":7.9,"太阳能发电":13.21,"水电":3.43,"核电":1.16,"火电":5.81},"add_month":{"合计":9.7,"风电":2.1,"太阳能发电":2.74,"水电":1.79,"核电":1.15,"火电":1.91},"stock":{"合计":2403.67,"风电":336.52,"太阳能发电":318.55,"水电":394.27,"核电":54.43,"火电":1298.72}},{"period":"2022-04","year":2022,"month":4,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":42.33,"风电":9.58,"太阳能发电":16.88,"水电":5.0,"核电":1.16,"火电":9.38},"add_month":{"合计":8.8,"风电":1.74,"太阳能发电":4.02,"水电":1.28,"核电":0.0,"火电":1.61},"stock":{"合计":2412.47,"风电":338.26,"太阳能发电":322.57,"水电":395.55,"核电":54.43,"火电":1300.33}},{"period":"2022-05","year":2022,"month":5,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":52.98,"风电":10.82,"太阳能发电":23.71,"水电":7.11,"核电":1.16,"火电":9.78},"add_month":{"合计":8.4,"风电":1.1,"太阳能发电":5.32,"水电":0.92,"核电":0.0,"火电":1.03},"stock":{"合计":2420.87,"风电":339.36,"太阳能发电":327.89,"水电":396.47,"核电":54.43,"火电":1301.36}},{"period":"2022-06","year":2022,"month":6,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":69.1,"风电":12.94,"太阳能发电":30.88,"水电":9.41,"核电":2.28,"火电":13.2},"add_month":{"合计":20.14,"风电":2.88,"太阳能发电":8.88,"水电":3.52,"核电":0.9,"火电":3.6},"stock":{"合计":2441.01,"风电":342.24,"太阳能发电":336.77,"水电":399.99,"核电":55.33,"火电":1304.96}},{"period":"2022-07","year":2022,"month":7,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":84.43,"风电":14.93,"太阳能发电":37.73,"水电":10.67,"核电":2.28,"火电":18.35},"add_month":{"合计":14.16,"风电":1.46,"太阳能发电":6.74,"水电":1.55,"核电":0.2,"火电":4.41},"stock":{"合计":2455.17,"风电":343.7,"太阳能发电":343.51,"水电":401.54,"核电":55.53,"火电":1309.37}},{"period":"2022-08","year":2022,"month":8,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":96.32,"风电":16.14,"太阳能发电":44.47,"水电":13.06,"核电":2.28,"火电":19.83},"add_month":{"合计":11.14,"风电":0.8,"太阳能发电":6.39,"水电":1.53,"核电":0.0,"火电":2.16},"stock":{"合计":2466.31,"风电":344.5,"太阳能发电":349.9,"水电":403.07,"核电":55.53,"火电":1311.53}},{"period":"2022-09","year":2022,"month":9,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":114.63,"风电":19.24,"太阳能发电":52.6,"水电":15.9,"核电":2.28,"火电":23.58},"add_month":{"合计":16.97,"风电":3.17,"太阳能发电":8.74,"水电":2.69,"核电":0.0,"火电":2.21},"stock":{"合计":2483.28,"风电":347.67,"太阳能发电":358.64,"水电":405.76,"核电":55.53,"火电":1313.74}},{"period":"2022-10","year":2022,"month":10,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":127.96,"风电":21.14,"太阳能发电":58.24,"水电":17.74,"核电":2.28,"火电":27.33},"add_month":{"合计":11.9,"风电":1.72,"太阳能发电":5.8,"水电":1.75,"核电":0.0,"火电":2.58},"stock":{"合计":2495.18,"风电":349.39,"太阳能发电":364.44,"水电":407.51,"核电":55.53,"火电":1316.32}},{"period":"2022-11","year":2022,"month":11,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":145.76,"风电":22.52,"太阳能发电":65.71,"水电":20.6,"核电":2.28,"火电":33.33},"add_month":{"合计":15.42,"风电":1.57,"太阳能发电":7.58,"水电":2.62,"核电":0.0,"火电":3.51},"stock":{"合计":2510.6,"风电":350.96,"太阳能发电":372.02,"水电":410.13,"核电":55.53,"火电":1319.83}},{"period":"2022-12","year":2022,"month":12,"kind":"year","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":199.74,"风电":37.63,"太阳能发电":87.41,"水电":23.87,"核电":2.27,"火电":44.71},"add_month":{"合计":53.98,"风电":15.11,"太阳能发电":21.7,"水电":3.27,"核电":-0.01,"火电":11.38},"stock":{"合计":2564.05,"风电":365.44,"太阳能发电":392.61,"水电":413.5,"核电":55.53,"火电":1332.39}},{"period":"2023-02","year":2023,"month":2,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":35.11,"风电":5.84,"太阳能发电":20.37,"水电":1.23,"核电":0.0,"火电":5.7},"add_month":{"合计":35.88,"风电":5.82,"太阳能发电":20.43,"水电":0.75,"核电":0.04,"火电":5.47},"stock":{"合计":2599.93,"风电":371.26,"太阳能发电":413.04,"水电":414.25,"核电":55.57,"火电":1337.86}},{"period":"2023-03","year":2023,"month":3,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":59.0,"风电":10.4,"太阳能发电":33.66,"水电":2.71,"核电":1.19,"火电":8.05},"add_month":{"合计":23.49,"风电":4.47,"太阳能发电":12.85,"水电":1.21,"核电":1.19,"火电":2.33},"stock":{"合计":2623.42,"风电":375.73,"太阳能发电":425.89,"水电":415.46,"核电":56.76,"火电":1340.19}},{"period":"2023-04","year":2023,"month":4,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":84.42,"风电":14.2,"太阳能发电":48.31,"水电":3.55,"核电":1.19,"火电":12.66},"add_month":{"合计":25.51,"风电":3.93,"太阳能发电":14.61,"水电":0.87,"核电":0.0,"火电":4.7},"stock":{"合计":2648.93,"风电":379.66,"太阳能发电":440.5,"水电":416.33,"核电":56.76,"火电":1344.89}},{"period":"2023-05","year":2023,"month":5,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":110.54,"风电":16.36,"太阳能发电":61.21,"水电":4.34,"核电":1.19,"火电":22.02},"add_month":{"合计":23.47,"风电":2.94,"太阳能发电":13.42,"水电":0.67,"核电":0.0,"火电":6.06},"stock":{"合计":2672.4,"风电":382.6,"太阳能发电":453.92,"水电":417.0,"核电":56.76,"火电":1350.95}},{"period":"2023-06","year":2023,"month":6,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":140.96,"风电":22.99,"太阳能发电":78.42,"水电":5.36,"核电":1.19,"火电":26.02},"add_month":{"合计":35.32,"风电":6.61,"太阳能发电":16.75,"水电":0.93,"核电":0.0,"火电":6.03},"stock":{"合计":2707.72,"风电":389.21,"太阳能发电":470.67,"水电":417.93,"核电":56.76,"火电":1356.98}},{"period":"2023-07","year":2023,"month":7,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":172.16,"风电":26.31,"太阳能发电":97.16,"水电":5.54,"核电":1.19,"火电":32.27},"add_month":{"合计":32.02,"风电":3.7,"太阳能发电":20.14,"水电":0.19,"核电":0.0,"火电":6.55},"stock":{"合计":2739.74,"风电":392.91,"太阳能发电":490.81,"水电":418.12,"核电":56.76,"火电":1363.53}},{"period":"2023-08","year":2023,"month":8,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":198.55,"风电":28.92,"太阳能发电":113.16,"水电":7.21,"核电":1.19,"火电":34.29},"add_month":{"合计":21.79,"风电":2.46,"太阳能发电":14.6,"水电":0.81,"核电":0.0,"火电":2.53},"stock":{"合计":2761.53,"风电":395.37,"太阳能发电":505.41,"水电":418.93,"核电":56.76,"火电":1366.06}},{"period":"2023-09","year":2023,"month":9,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":226.33,"风电":33.48,"太阳能发电":128.94,"水电":7.88,"核电":1.19,"火电":39.44},"add_month":{"合计":29.71,"风电":4.84,"太阳能发电":15.67,"水电":0.56,"核电":0.0,"火电":6.56},"stock":{"合计":2791.24,"风电":400.21,"太阳能发电":521.08,"水电":419.49,"核电":56.76,"火电":1372.62}},{"period":"2023-10","year":2023,"month":10,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":250.13,"风电":37.31,"太阳能发电":142.56,"水电":8.44,"核电":1.19,"火电":43.72},"add_month":{"合计":21.5,"风电":3.79,"太阳能发电":14.68,"水电":0.74,"核电":0.0,"火电":0.88},"stock":{"合计":2812.74,"风电":404.0,"太阳能发电":535.76,"水电":420.23,"核电":56.76,"火电":1373.5}},{"period":"2023-11","year":2023,"month":11,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":283.1,"风电":41.39,"太阳能发电":163.88,"水电":9.39,"核电":1.19,"火电":46.55},"add_month":{"合计":40.62,"风电":8.83,"太阳能发电":21.86,"水电":1.11,"核电":0.0,"火电":5.34},"stock":{"合计":2853.36,"风电":412.83,"太阳能发电":557.62,"水电":421.34,"核电":56.76,"火电":1378.84}},{"period":"2023-12","year":2023,"month":12,"kind":"year","source":"NEA:html_stock_only","derived":true,"add_ytd":{"合计":355.6,"风电":75.9,"太阳能发电":216.88,"水电":8.04,"核电":1.38,"火电":57.93},"add_month":{"合计":72.5,"风电":34.51,"太阳能发电":53.0,"水电":-1.35,"核电":0.19,"火电":11.38},"stock":{"合计":2919.65,"风电":441.34,"太阳能发电":609.49,"水电":421.54,"核电":56.91,"火电":1390.32}},{"period":"2024-02","year":2024,"month":2,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":52.72,"风电":9.89,"太阳能发电":36.72,"水电":1.03,"核电":0.0,"火电":5.08},"add_month":{"合计":52.2,"风电":9.01,"太阳能发电":38.39,"水电":0.92,"核电":0.0,"火电":3.88},"stock":{"合计":2971.85,"风电":450.35,"太阳能发电":647.88,"水电":422.46,"核电":56.91,"火电":1394.2}},{"period":"2024-03","year":2024,"month":3,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":69.43,"风电":15.5,"太阳能发电":45.74,"水电":1.81,"核电":0.0,"火电":6.39},"add_month":{"合计":21.86,"风电":6.29,"太阳能发电":12.17,"水电":0.94,"核电":0.0,"火电":2.46},"stock":{"合计":2993.71,"风电":456.64,"太阳能发电":660.05,"水电":423.4,"核电":56.91,"火电":1396.66}},{"period":"2024-04","year":2024,"month":4,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":88.82,"风电":16.84,"太阳能发电":60.11,"水电":2.72,"核电":0.0,"火电":9.16},"add_month":{"合计":15.92,"风电":1.39,"太阳能发电":11.42,"水电":1.75,"核电":0.0,"火电":1.36},"stock":{"合计":3009.63,"风电":458.03,"太阳能发电":671.47,"水电":425.15,"核电":56.91,"火电":1398.02}},{"period":"2024-05","year":2024,"month":5,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":115.64,"风电":19.76,"太阳能发电":79.15,"水电":3.44,"核电":1.19,"火电":12.1},"add_month":{"合计":27.7,"风电":3.01,"太阳能发电":19.51,"水电":0.89,"核电":1.17,"火电":3.11},"stock":{"合计":3037.33,"风电":461.04,"太阳能发电":690.98,"水电":426.04,"核电":58.08,"火电":1401.13}},{"period":"2024-06","year":2024,"month":6,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":152.76,"风电":25.84,"太阳能发电":102.48,"水电":4.99,"核电":1.19,"火电":18.25},"add_month":{"合计":33.28,"风电":5.67,"太阳能发电":22.52,"水电":1.11,"核电":0.0,"火电":3.99},"stock":{"合计":3070.61,"风电":466.71,"太阳能发电":713.5,"水电":427.15,"核电":58.08,"火电":1405.12}},{"period":"2024-07","year":2024,"month":7,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":184.84,"风电":29.91,"太阳能发电":123.53,"水电":5.84,"核电":1.19,"火电":24.38},"add_month":{"合计":32.59,"风电":3.82,"太阳能发电":22.07,"水电":1.2,"核电":0.0,"火电":5.49},"stock":{"合计":3103.2,"风电":470.53,"太阳能发电":735.57,"水电":428.35,"核电":58.08,"火电":1410.61}},{"period":"2024-08","year":2024,"month":8,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":209.95,"风电":33.61,"太阳能发电":139.99,"水电":6.58,"核电":1.19,"火电":28.59},"add_month":{"合计":24.44,"风电":3.5,"太阳能发电":16.78,"水电":0.32,"核电":0.0,"火电":3.84},"stock":{"合计":3127.64,"风电":474.03,"太阳能发电":752.35,"水电":428.67,"核电":58.08,"火电":1414.45}},{"period":"2024-09","year":2024,"month":9,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":242.58,"风电":39.12,"太阳能发电":160.88,"水电":7.97,"核电":1.19,"火电":33.43},"add_month":{"合计":32.12,"风电":5.52,"太阳能发电":20.57,"水电":1.88,"核电":0.0,"火电":4.15},"stock":{"合计":3159.76,"风电":479.55,"太阳能发电":772.92,"水电":430.55,"核电":58.08,"火电":1418.6}},{"period":"2024-10","year":2024,"month":10,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":279.33,"风电":45.8,"太阳能发电":181.3,"水电":8.87,"核电":1.19,"火电":42.18},"add_month":{"合计":34.51,"风电":6.62,"太阳能发电":20.19,"水电":0.33,"核电":0.0,"火电":7.37},"stock":{"合计":3194.27,"风电":486.17,"太阳能发电":793.11,"水电":430.88,"核电":58.08,"火电":1425.97}},{"period":"2024-11","year":2024,"month":11,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":316.66,"风电":51.75,"太阳能发电":206.3,"水电":9.98,"核电":1.19,"火电":47.44},"add_month":{"合计":40.72,"风电":6.01,"太阳能发电":25.22,"水电":1.2,"核电":0.0,"火电":8.29},"stock":{"合计":3234.99,"风电":492.18,"太阳能发电":818.33,"水电":432.08,"核电":58.08,"火电":1434.26}},{"period":"2024-12","year":2024,"month":12,"kind":"year","source":"NEA:html_stock_only","derived":true,"add_ytd":{"合计":428.97,"风电":79.34,"太阳能发电":277.17,"水电":14.41,"核电":3.92,"火电":54.13},"add_month":{"合计":112.31,"风电":27.59,"太阳能发电":70.87,"水电":4.43,"核电":2.73,"火电":6.69},"stock":{"合计":3348.62,"风电":520.68,"太阳能发电":886.66,"水电":435.95,"核电":60.83,"火电":1444.45}},{"period":"2025-02","year":2025,"month":2,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":54.53,"风电":9.28,"太阳能发电":39.47,"水电":1.91,"核电":0.0,"火电":3.88},"add_month":{"合计":53.68,"风电":9.14,"太阳能发电":39.56,"水电":1.33,"核电":0.0,"火电":3.64},"stock":{"合计":3402.3,"风电":529.82,"太阳能发电":926.22,"水电":437.28,"核电":60.83,"火电":1448.09}},{"period":"2025-03","year":2025,"month":3,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":85.72,"风电":14.62,"太阳能发电":59.71,"水电":2.13,"核电":0.0,"火电":9.25},"add_month":{"合计":28.51,"风电":5.55,"太阳能发电":20.1,"水电":0.29,"核电":0.0,"火电":2.59},"stock":{"合计":3430.81,"风电":535.37,"太阳能发电":946.32,"水电":437.57,"核电":60.83,"火电":1450.68}},{"period":"2025-04","year":2025,"month":4,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":140.52,"风电":19.96,"太阳能发电":104.93,"水电":2.65,"核电":0.0,"火电":12.98},"add_month":{"合计":56.04,"风电":5.82,"太阳能发电":45.73,"水电":0.15,"核电":0.0,"火电":4.32},"stock":{"合计":3486.85,"风电":541.19,"太阳能发电":992.05,"水电":437.72,"核电":60.83,"火电":1455.0}},{"period":"2025-05","year":2025,"month":5,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":264.92,"风电":46.28,"太阳能发电":197.85,"水电":3.25,"核电":0.0,"火电":17.55},"add_month":{"合计":122.01,"风电":26.3,"太阳能发电":92.4,"水电":0.92,"核电":0.0,"火电":2.4},"stock":{"合计":3608.86,"风电":567.49,"太阳能发电":1084.45,"水电":438.64,"核电":60.83,"火电":1457.4}},{"period":"2025-06","year":2025,"month":6,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":293.32,"风电":51.39,"太阳能发电":212.21,"水电":3.93,"核电":0.0,"火电":25.78},"add_month":{"合计":39.21,"风电":5.11,"太阳能发电":15.58,"水电":1.32,"核电":0.08,"火电":17.12},"stock":{"合计":3648.07,"风电":572.6,"太阳能发电":1100.03,"水电":439.96,"核电":60.91,"火电":1474.52}},{"period":"2025-07","year":2025,"month":7,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":324.8,"风电":53.67,"太阳能发电":223.25,"水电":5.89,"核电":0.0,"火电":41.98},"add_month":{"合计":25.6,"风电":2.27,"太阳能发电":9.57,"水电":1.65,"核电":0.03,"火电":12.08},"stock":{"合计":3673.67,"风电":574.87,"太阳能发电":1109.6,"水电":441.61,"核电":60.94,"火电":1486.6}},{"period":"2025-08","year":2025,"month":8,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":345.16,"风电":57.84,"太阳能发电":230.61,"水电":6.84,"核电":0.0,"火电":49.87},"add_month":{"合计":20.12,"风电":4.14,"太阳能发电":7.63,"水电":0.58,"核电":0.0,"火电":7.76},"stock":{"合计":3693.79,"风电":579.01,"太阳能发电":1117.23,"水电":442.19,"核电":60.94,"火电":1494.36}},{"period":"2025-09","year":2025,"month":9,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":366.73,"风电":61.09,"太阳能发电":240.27,"水电":7.16,"核电":1.53,"火电":56.68},"add_month":{"合计":23.1,"风电":2.58,"太阳能发电":9.28,"水电":0.64,"核电":1.54,"火电":9.07},"stock":{"合计":3716.89,"风电":581.59,"太阳能发电":1126.51,"水电":442.83,"核电":62.48,"火电":1503.43}},{"period":"2025-10","year":2025,"month":10,"kind":"ytd","source":"NEA:html","derived":false,"add_ytd":{"合计":397.84,"风电":70.01,"太阳能发电":252.87,"水电":8.35,"核电":1.53,"火电":65.08},"add_month":{"合计":34.82,"风电":8.8,"太阳能发电":13.67,"水电":1.05,"核电":0.0,"火电":11.3},"stock":{"合计":3751.71,"风电":590.39,"太阳能发电":1140.18,"水电":443.88,"核电":62.48,"火电":1514.73}},{"period":"2025-11","year":2025,"month":11,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":445.57,"风电":82.5,"太阳能发电":274.89,"水电":9.12,"核电":1.53,"火电":77.52},"add_month":{"合计":41.8,"风电":12.25,"太阳能发电":21.02,"水电":1.02,"核电":0.0,"火电":7.52},"stock":{"合计":3793.51,"风电":602.64,"太阳能发电":1161.2,"水电":444.9,"核电":62.48,"火电":1522.25}},{"period":"2025-12","year":2025,"month":12,"kind":"year","source":"NEA:image-manual","derived":true,"add_ytd":{"合计":542.72,"风电":119.33,"太阳能发电":315.07,"水电":12.07,"核电":1.65,"火电":94.59},"add_month":{"合计":97.15,"风电":36.83,"太阳能发电":40.18,"水电":2.95,"核电":0.12,"火电":17.07},"stock":{"合计":3891.34,"风电":640.01,"太阳能发电":1201.73,"水电":448.02,"核电":62.48,"火电":1539.04}},{"period":"2026-02","year":2026,"month":2,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":65.91,"风电":11.04,"太阳能发电":32.48,"水电":1.22,"核电":1.21,"火电":19.96},"add_month":{"合计":56.69,"风电":10.65,"太阳能发电":32.09,"水电":1.19,"核电":1.25,"火电":11.51},"stock":{"合计":3948.03,"风电":650.66,"太阳能发电":1233.82,"水电":449.21,"核电":63.73,"火电":1550.55}},{"period":"2026-03","year":2026,"month":3,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":83.82,"风电":15.77,"太阳能发电":41.39,"水电":1.42,"核电":1.21,"火电":24.03},"add_month":{"合计":16.8,"风电":4.57,"太阳能发电":8.9,"水电":0.46,"核电":0.0,"火电":2.88},"stock":{"合计":3964.83,"风电":655.23,"太阳能发电":1242.72,"水电":449.67,"核电":63.73,"火电":1553.43}},{"period":"2026-04","year":2026,"month":4,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":106.24,"风电":21.26,"太阳能发电":50.91,"水电":2.45,"核电":3.62,"火电":28.0},"add_month":{"合计":20.64,"风电":5.39,"太阳能发电":9.53,"水电":0.94,"核电":2.41,"火电":2.36},"stock":{"合计":3985.47,"风电":660.62,"太阳能发电":1252.25,"水电":450.61,"核电":66.14,"火电":1555.79}},{"period":"2026-05","year":2026,"month":5,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":124.73,"风电":25.05,"太阳能发电":59.59,"水电":4.09,"核电":3.62,"火电":32.38},"add_month":{"合计":21.98,"风电":3.65,"太阳能发电":9.47,"水电":1.7,"核电":0.0,"火电":7.16},"stock":{"合计":4007.45,"风电":664.27,"太阳能发电":1261.72,"水电":452.31,"核电":66.14,"火电":1562.95}},{"period":"2026-06","year":2026,"month":6,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":158.7,"风电":38.62,"太阳能发电":72.07,"水电":6.03,"核电":3.62,"火电":38.36},"add_month":{"合计":35.07,"风电":14.48,"太阳能发电":12.39,"水电":2.18,"核电":0.0,"火电":6.03},"stock":{"合计":4042.52,"风电":678.75,"太阳能发电":1274.11,"水电":454.49,"核电":66.14,"火电":1568.98}},{"period":"2026-07","year":2026,"month":7,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":193.97,"风电":47.07,"太阳能发电":86.15,"水电":6.84,"核电":3.62,"火电":50.3},"add_month":{"合计":35.68,"风电":8.45,"太阳能发电":13.93,"水电":1.01,"核电":0.0,"火电":12.28},"stock":{"合计":4078.2,"风电":687.2,"太阳能发电":1288.04,"水电":455.5,"核电":66.14,"火电":1581.26}},{"period":"2026-08","year":2026,"month":8,"kind":"ytd","source":"NEA:image-manual","derived":false,"add_ytd":{"合计":221.49,"风电":53.26,"太阳能发电":97.19,"水电":7.51,"核电":4.82,"火电":58.71},"add_month":{"合计":24.82,"风电":5.52,"太阳能发电":11.2,"水电":0.66,"核电":1.2,"火电":6.24},"stock":{"合计":4103.02,"风电":692.72,"太阳能发电":1299.24,"水电":456.16,"核电":67.34,"火电":1587.5}}]};
+
+// 「总计」含未单列电源，恒大于五分项之和，堆叠会重复计算 → 始终独立成线
+const TOTAL = "合计";
+// 堆叠自下而上的顺序按各表自身的主体量级定：
+// 表三（累计装机）火 1588 > 光 1299 > 风 693 > 水 456 > 核 67 GW。
+// 表一/表二不堆叠（分项与总计口径不同，相加会重复计算），仅用此顺序排图例。
+const STACK_T3 = ["火电", "太阳能发电", "风电", "水电", "核电"];
+const PARTS = STACK_T3;
+// 年份配色（表一/表二以此为系列色），7 色需在浅底与深底均可辨且彼此区分
+const YEAR_COLOR = {
+  2020: "#94a3b8", 2021: "#64748b", 2022: "#0ea5e9", 2023: "#14b8a6",
+  2024: "#f59e0b", 2025: "#ef4444", 2026: "#8b5cf6"
+};
+// 类型以线型区分（颜色留给年份）
+const TYPE_DASH = {
+  "合计": [], "太阳能发电": [7, 4], "火电": [2, 3], "风电": [11, 4, 2, 4],
+  "水电": [5, 3, 1, 3], "核电": [1, 3]
+};
+// X 轴为月份：NEA 序列自「1-2 月」起，无 1 月
+const MONTHS = ["02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const MONTH_LABEL = {"02": "1-2月", "03": "3月", "04": "4月", "05": "5月", "06": "6月",
+  "07": "7月", "08": "8月", "09": "9月", "10": "10月", "11": "11月", "12": "12月"};
+// 「总计」用中性色，需同时在浅底与深底可见，故取中灰而非近黑
+const COLOR = {
+  "合计": "#6b7280", "风电": "#0ea5e9", "太阳能发电": "#f59e0b",
+  "火电": "#ef4444", "水电": "#22c55e", "核电": "#a855f7"
+};
+const NAME = {"合计": "总计", "风电": "风电", "太阳能发电": "太阳能",
+  "火电": "火电", "水电": "水电", "核电": "核电"};
+
+const periods = DATA.periods;
+const YEARS = [...new Set(periods.map(p => p.year))].sort();
+// 默认只勾「总计」：6 类型 × 7 年 = 42 条线在单图内无法辨读，
+// 先给出可读的基线（各年总走势），其余类型由用户按需勾选。
+const sel = { years: new Set(YEARS), types: new Set([TOTAL]) };
+
+const ink = () => getComputedStyle(document.body).getPropertyValue("--ink").trim();
+const muted = () => getComputedStyle(document.body).getPropertyValue("--muted").trim();
+const border = () => getComputedStyle(document.body).getPropertyValue("--card-border").trim();
+// 画布底色：推算点画空心圈时需要填成背景色，否则深色模式下是白圈
+const bg = () => getComputedStyle(document.body).getPropertyValue("--bg").trim();
+
+/* ---------- 筛选控件 ---------- */
+function buildChips(host, items, set, onChange) {
+  host.innerHTML = "";
+  items.forEach(it => {
+    const b = document.createElement("button");
+    b.className = "chip" + (set.has(it.key) ? " on" : "");
+    b.textContent = it.label;
+    b.onclick = () => {
+      if (set.has(it.key)) set.delete(it.key); else set.add(it.key);
+      b.classList.toggle("on");
+      onChange();
+    };
+    host.appendChild(b);
+  });
+}
+function setAll(host, set, items, on, onChange) {
+  items.forEach(i => on ? set.add(i.key) : set.delete(i.key));
+  [...host.children].forEach(c => c.classList.toggle("on", on));
+  onChange();
+}
+
+const yearItems = YEARS.map(y => ({key: y, label: y + " 年"}));
+const typeItems = DATA.series.map(s => ({key: s, label: NAME[s]}));
+const yHost = document.getElementById("years");
+const tHost = document.getElementById("types");
+buildChips(yHost, yearItems, sel.years, redraw);
+buildChips(tHost, typeItems, sel.types, redraw);
+// 注意：setAll 的第 5 个参数是重绘回调，漏传会导致点击「全选/清空」静默失效
+document.getElementById("yAll").onclick = () => setAll(yHost, sel.years, yearItems, true, redraw);
+document.getElementById("yNone").onclick = () => setAll(yHost, sel.years, yearItems, false, redraw);
+document.getElementById("tAll").onclick = () => setAll(tHost, sel.types, typeItems, true, redraw);
+document.getElementById("tNone").onclick = () => setAll(tHost, sel.types, typeItems, false, redraw);
+
+/* ---------- 取数 ---------- */
+function rows() { return periods.filter(p => sel.years.has(p.year)); }
+function axisPeriods() { return rows().map(p => p.period); }
+function activeYears() { return YEARS.filter(y => sel.years.has(y)); }
+const byYMM = new Map(periods.map(p => [p.year + "-" + String(p.month).padStart(2, "0"), p]));
+function cell(y, m, field, type) {
+  const r = byYMM.get(y + "-" + m);
+  return r ? r[field][type] : null;
+}
+// 2023—2025 的年度行由累计装机差分推算（原表不公布「新增」行），
+// 精度低于官方值，图上以空心点单独标出，避免与实测点同权。
+function isDerived(y, m) {
+  const r = byYMM.get(y + "-" + m);
+  return !!(r && r.derived);
+}
+function activeTypes() { return DATA.series.filter(s => sel.types.has(s)); }
+function hasData() { return sel.years.size > 0 && sel.types.size > 0; }
+
+/* ---------- 图表配置 ---------- */
+function baseOption(stackOrder) {
+  return {
+    animationDuration: 400,
+    grid: { left: 8, right: 18, top: 58, bottom: 8, containLabel: true },
+    legend: {
+      // 42 项图例（6 类型 × 7 年份）单行放不下，type:"scroll" 会退化成 1/5 翻页、
+      // 遮住绘图区。改为多行平铺，grid.top 由 legendRows() 按行数动态抬高。
+      type: "plain", top: 6, left: 0, right: 40, itemGap: 12,
+      padding: [2, 0, 2, 0],
+      // 图例顺序随图而变：与该图堆叠自下而上一致，「总计」恒排最后
+      data: activeTypes().slice().sort((a, b) => {
+        const rank = x => (x === TOTAL ? 99 : stackOrder.indexOf(x));
+        return rank(a) - rank(b);
+      }).map(s => NAME[s]),
+      textStyle: { color: muted(), fontSize: 12.5 }
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "cross" },
+      backgroundColor: "rgba(255,255,255,.97)",
+      borderColor: border(), textStyle: { color: "#1a1d21", fontSize: 12.5 },
+      extraCssText: "box-shadow:0 4px 18px rgba(0,0,0,.14);border-radius:8px;"
+    },
+    xAxis: {
+      type: "category", boundaryGap: true,
+      data: axisPeriods(),
+      axisLine: { lineStyle: { color: border() } },
+      axisTick: { show: false },
+      // 72 个类目无法逐个标月份（会糊成一片）：只在每年 1-2 月处标出年份，
+      // 年内具体位置由竖向网格线（interval:1）给出，跨年处的回落即为年界。
+      // 窄屏下「2020-02」七个字样首尾相接，改用两位年份（20-02）。
+      axisLabel: { color: muted(), fontSize: 11, rotate: 0, interval: 0,
+        formatter: v => {
+          if (v.slice(5) !== "02") return "";
+          return currentWidth() < 520 ? v.slice(2) : v;
+        } },
+      splitLine: { show: true, interval: 1,
+        lineStyle: { color: border(), type: "solid", width: 1, opacity: .9 } }
+    },
+    yAxis: {
+      type: "value", name: "GW", nameTextStyle: { color: muted(), fontSize: 12, padding: [0, 0, 0, 24] },
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: muted(), fontSize: 11.5 },
+      splitLine: { lineStyle: { color: border(), type: "dashed" } }
+    },
+    series: []
+  };
+}
+
+function tipHeader(a, label) {
+  // 2 月数据点名前缀注明含 1 月，避免误读为单月值
+  const t = a[0] && a[0].axisValue;
+  return (t && t.slice(-2) === "-02") ? t + "（含 1 月）" : (t || label || "");
+}
+
+function seriesRows(p) { return rows().map(p => p.period); }
+
+/* ============ 表一 / 表二：X 轴 = 月份，各年份并列 ============ */
+// 年内相接、跨年不相接：表一是「1-X 月累计」，每年从 1 月重新起算，
+// 若把 2020-12（全年 190.87）连到 2021-02（1-2月 81.96），那道断崖是年界假象。
+// 窄屏放不下 11 个月份标签，按可视宽度抽稀（1 月含在「1-2月」里，优先保留）。
+function monthAxisOption() {
+  const o = baseOption([]);
+  const w = currentWidth();
+  const step = w < 480 ? 2 : 1;          // 390px 手机：隔月一标
+  o.xAxis = {
+    type: "category", data: MONTHS, boundaryGap: true,
+    axisLine: { lineStyle: { color: border() } },
+    axisTick: { show: false },
+    axisLabel: { color: muted(), fontSize: 11, rotate: 0,
+      interval: (idx, v) => idx % step === 0,
+      formatter: v => MONTH_LABEL[v] },
+    splitLine: { show: true, interval: 1,
+      lineStyle: { color: border(), type: "dashed" } }
+  };
+  o.tooltip.formatter = null;
+  return o;
+}
+// 当前图容器宽度（optTable* 在 redraw 里按序调用，此时取 c1 宽度即可，各图等宽）
+function currentWidth() {
+  const el = document.querySelector(".chart");
+  return (el && el.clientWidth) || 900;
+}
+// 每个系列名 = 类型×年份，颜色按年份、线型按类型
+function typedSeries(type, field) {
+  const isT = type === TOTAL;
+  const dash = TYPE_DASH[type] || [];
+  return activeYears().map(y => {
+    // 总计同样按年份着色，否则 7 条线同色无法区分年份
+    const color = YEAR_COLOR[y];
+    const s = {
+      name: NAME[type] + " " + y,
+      type: "line",
+      smooth: false,
+      connectNulls: false,
+      color,
+      symbol: "circle",
+      symbolSize: 3.5,
+      showSymbol: false,
+      lineStyle: { width: isT ? 2.6 : 1.9, color, type: dash.length ? "dashed" : "solid",
+        dashArray: dash.length ? dash : undefined },
+      itemStyle: { color },
+      emphasis: { focus: "series" },
+      data: MONTHS.map(m => {
+        const v = cell(y, m, field, type);
+        if (v == null) return null;
+        // 2 月为「1-2 月」合并值（1 月 NEA 不发），加紫边防误读
+        if (field === "add_month" && m === "02") {
+          return { value: v, symbol: "circle", symbolSize: 7,
+                   itemStyle: { color, borderColor: "#7c3aed", borderWidth: 2 } };
+        }
+        // 推算点用空心圈标出（图注承诺过此视觉区分）
+        if (isDerived(y, m)) {
+          return { value: v, symbol: "circle", symbolSize: 8,
+                   itemStyle: { color: bg(), borderColor: color, borderWidth: 2 } };
+        }
+        return v;
+      })
+    };
+    // 整条线只有 1 个数据点时（2020 年太阳能：2—11 月原表无此分项，
+    // 仅 12 月年度行有值），折线无从画起，showSymbol:false 会让它彻底不可见，
+    // 图注承诺的「自 2020-12 起才有线」就成了空话。此类系列强制显示符号。
+    const nonNull = s.data.filter(v => v != null).length;
+    if (nonNull === 1) s.showSymbol = true;
+    return s;
+  });
+}
+// 图例：按类型分组，每个类型下排各年份
+function typedLegend() {
+  return activeTypes().flatMap(t =>
+    activeYears().map(y => NAME[t] + " " + y));
+}
+
+function optTable1() {
+  const o = monthAxisOption();
+  o.xAxis.boundaryGap = false;
+  o.series = activeTypes().flatMap(t => typedSeries(t, "add_ytd"));
+  o.legend.data = typedLegend();
+  o.tooltip.formatter = ps => {
+    if (!ps.length) return "";
+    const m = ps[0].axisValue;
+    let h = "<b>" + (MONTH_LABEL[m] || m) + "（各年同一月对比）</b>";
+    ps.slice().sort((a, b) => (b.value ?? -1e9) - (a.value ?? -1e9)).forEach(p => {
+      const v = p.value;
+      h += "<br>" + p.marker + p.seriesName + "：" + (v == null ? "—" : v.toFixed(2) + " GW");
+    });
+    return h;
+  };
+  return o;
+}
+
+function optTable2() {
+  const o = monthAxisOption();
+  const sel_t = activeTypes();
+  const hasParts = sel_t.some(t => t !== TOTAL);
+  // 分项与总计同为折线：口径不同故不能相加，用线型区分（总计加粗、虚线为分项），
+  // 颜色仍按年份以便与表一、表三横向对读。
+  o.series = activeTypes().flatMap(t => typedSeries(t, "add_month"));
+  o.legend.data = typedLegend();
+  o.tooltip.formatter = ps => {
+    if (!ps.length) return "";
+    const m = ps[0].axisValue;
+    let h = "<b>" + (MONTH_LABEL[m] || m) + "</b>";
+    ps.slice().sort((a, b) => (b.value ?? -1e9) - (a.value ?? -1e9)).forEach(p => {
+      const v = p.value;
+      h += "<br>" + p.marker + p.seriesName + "：" + (v == null ? "—" : v.toFixed(2) + " GW");
+    });
+    if (hasParts) {
+      h += "<br><span style='color:" + muted() + "'>（分项之和 ≠ 总计，合计含未单列电源）</span>";
+    }
+    return h;
+  };
+  return o;
+}
+
+function optTable3() {
+  const rs = rows();
+  const o = baseOption(STACK_T3);
+  o.xAxis.boundaryGap = false;
+  const sel_t = activeTypes();
+  const stack = STACK_T3.filter(s => sel_t.includes(s));
+  o.series = [];
+  stack.forEach(s => o.series.push({
+    name: NAME[s], type: "line", stack: "a", smooth: false,
+    connectNulls: false, symbol: "none", lineStyle: { width: 1, color: COLOR[s] },
+    areaStyle: { color: COLOR[s], opacity: .72 },
+    emphasis: { focus: "series" },
+    data: rs.map(p => p.stock[s])
+  }));
+  if (sel.types.has(TOTAL)) {
+    o.series.push({
+      name: NAME[TOTAL], type: "line", smooth: false, connectNulls: false,
+      symbol: "none", lineStyle: { width: 3, color: COLOR[TOTAL] },
+      itemStyle: { color: COLOR[TOTAL] }, z: 5,
+      data: rs.map(p => p.stock[TOTAL])
+    });
+  }
+  o.tooltip.order = "valueDesc";
+  o.tooltip.formatter = ps => {
+    if (!ps.length) return "";
+    let h = "<b>" + tipHeader(ps) + "</b>";
+    ps.forEach(p => {
+      const v = p.value;
+      h += "<br>" + p.marker + p.seriesName + "：" +
+        (v == null ? "—" : (typeof v === "object" ? v.value : v).toFixed(2) + " GW");
+    });
+    return h;
+  };
+  return o;
+}
+
+/* ---------- 初始化 ---------- */
+const charts = [
+  echarts.init(document.getElementById("c1")),
+  echarts.init(document.getElementById("c2")),
+  echarts.init(document.getElementById("c3"))
+];
+const opts = [optTable1, optTable2, optTable3];
+
+function redraw() {
+  const ok = hasData();
+  // 空态：隐藏画布、显示提示。必须先清掉旧 option，否则上次渲染的图形
+  // 仍留在 canvas 上，看起来像"筛选无效"。
+  document.querySelectorAll(".chartbox .chart").forEach(e => e.style.display = ok ? "" : "none");
+  document.querySelectorAll(".chartbox .empty").forEach(e => e.style.display = ok ? "none" : "block");
+  if (!ok) {
+    charts.forEach(c => c.clear());
+    return;
+  }
+  // 先把三个 option 全部基于同一份筛选快照构造完，再逐个提交，
+  // 避免构造过程中读到被 setOption 副作用影响的状态。
+  const built = opts.map(f => f());
+  const els = [...document.querySelectorAll(".chartbox .chart")];
+  // 两趟渲染：图例行数与行高无法可靠预估（实测行距 24~25px 随字号与
+  // 容器宽度浮动，按常数 21 算必然预留不足，末行图例会压进绘图区）。
+  // 故先按小 top 渲染一次，量出图例真实包围盒，再据此定稿 grid.top。
+  built.forEach(o => { o.grid.top = 8; });
+  charts.forEach((c, i) => {
+    els[i].style.height = "300px";
+    c.resize();
+    c.setOption(built[i], true);
+  });
+  built.forEach((o, i) => {
+    const c = charts[i];
+    const view = c.getViewOfComponentModel(c.getModel().getComponent("legend"));
+    let bottom = 0;
+    if (view && view.group) {
+      const r = view.group.getBoundingRect();
+      // r 已是图表画布坐标（左上角为原点，legend.left=0 时 r.x≈0），
+      // 不可再减页面坐标 box.y，否则会得到上千像素的负值。
+      if (r && r.height > 0) bottom = r.y + r.height;
+    }
+    // y 轴名「GW」渲染在 grid.top 上方：实测其像素区间为
+    // [grid.top-27, grid.top-16]（nameLocation 默认 'end'，12px 字高）。
+    // 图例下沿须落在这之上，故预留 30px 净空。
+    const AXIS_NAME_BAND = 30;
+    o.grid.top = Math.max(36, Math.ceil(bottom) + AXIS_NAME_BAND);
+    els[i].style.height = 300 + o.grid.top + 40 + "px";
+  });
+  charts.forEach((c, i) => {
+    c.resize();
+    c.setOption(built[i], true);
+  });
+}
+redraw();
+
+// 宽度变化会改变图例折行数，故须整体重绘而非仅 resize
+addEventListener("resize", () => redraw());
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => redraw());
+
+if (typeof echarts === "undefined") {
+  document.getElementById("cdnerr").style.display = "block";
+}
+</script>
+</body>
+</html>
