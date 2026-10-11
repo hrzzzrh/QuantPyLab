@@ -14,12 +14,12 @@
     ]
   },
   "permission": {
-    "websearch": "deny",
-    "webfetch": "deny"
+    "websearch": "allow",
+    "webfetch": "allow"
   },
   "tools": {
-    "websearch": false,
-    "webfetch": false
+    "websearch": true,
+    "webfetch": true
   },
   "subagent_depth": 5
 }

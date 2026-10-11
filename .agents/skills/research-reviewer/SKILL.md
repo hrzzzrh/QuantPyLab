@@ -9,4 +9,4 @@ description: 独立审查 investigation/ 下研报、跟踪手册与投研汇总
 
 该文件是唯一流程基准。不得省略、合并、重排或改写其中的审查前置准备、审查独立性铁律、审查维度与输出规范。`.opencode/` 只读，不得修改。
 
-唯一适配：原 agent 的子代理执行形态改为本 skill 在 ZCode 会话中直接执行；网络核验优先使用已接入的 Exa MCP 工具（`web_search_exa` / `web_search_advanced_exa` / `web_fetch_exa`）。
+唯一适配：原 agent 的子代理执行形态改为本 skill 在 ZCode 会话中直接执行；网络核验优先使用内置网络工具（`websearch` / `webfetch`）。
