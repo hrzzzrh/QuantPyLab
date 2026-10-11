@@ -278,26 +278,26 @@ uv run main.py diagnose-factor-liquidity-capacity \
 
 结果写入 `workspace/factor_liquidity_capacity/`，包含 `liquidity_signal_summary.csv`、`liquidity_buckets.csv`、`liquidity_trades.csv`、`liquidity_capacity_summary.csv`、`liquidity_targets.csv`、正式策略基线和 `summary.md`。默认滚动窗口为 20 个交易日，实际窗口会写入 `parameters.json`；默认参与率上限为 5%、10%、20%，可以用 `--participation-limits` 传入其他 `(0, 1]` 小数。该容量是单笔订单参与率近似，不是市场冲击、盘口深度或成交概率模型；缺失流动性、无效名义金额、跳过调仓和退市清算单独审计，诊断不会删除目标或修改正式策略。
 
-### 3.4 定时调度 (每日凌晨 03:00 sync-all)
+### 3.4 定时调度 (每周六凌晨 03:00 sync-all)
 
-基于 **launchd LaunchAgent** 实现每日自动同步，入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。
+基于 **launchd LaunchAgent** 实现每周六自动同步（`StartCalendarInterval` 的 `Weekday=6`，launchd 星期约定 0=周日、1..6=周一..周六），入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。若周六凌晨机器睡眠，launchd 会在唤醒后补跑错过的触发；若周六处于关机/断电状态，launchd 不承诺补触发，本周留空，数据由下周六的增量同步自动覆盖整周缺失区间。
 
-**触发与判定逻辑**（每日 03:00 触发一次 wrapper）：
+**触发与判定逻辑**（每周六 03:00 触发一次 wrapper）：
 1. 项目根目录不存在（外置卷未挂载）→ 记日志并以失败退出
 2. 安装新浪源请求保护层（幂等，覆盖交易日历请求）
-3. 前一天 (today-1) 非交易日 → 退出（零同步请求）
-4. 前一天是交易日 且 已记录 sync-all 成功（`last_sync_date >= 前一天`）→ 退出
-5. 执行 sync-all 流水线；整体重试次数由 `SYNC_ALL_MAX_RETRIES` 控制，当前配置为 `0`，因此本次调度只执行一次
-6. 全部成功 → 记录状态 `sync_status` 表 (`dataset='sync_all', symbol='ALL'`, **日期=前一天数据日**)，保证每个交易日数据在次日凌晨入库、无延迟；SQLite 状态读写由独立的 `SYNC_STATUS_MAX_RETRIES` 控制，当前配置为 `3`；流水线失败/中止 → 不记录，次日自动补跑
+3. 数据日 = 最近一个交易日（周六凌晨即上周五；若周五为节假日休市，则取节前最后一个交易日）；交易日历不可用 → 判定失败（退出码 1）
+4. 已记录 sync-all 成功（`last_sync_date >= 数据日`）→ 退出（零同步请求；同日重复触发或失败后手动补跑同样跳过）
+5. 执行 sync-all 流水线；整体重试次数由 `SYNC_ALL_MAX_RETRIES` 控制，当前配置为 `0`，因此每次调度只执行一次
+6. 全部成功 → 记录状态 `sync_status` 表 (`dataset='sync_all', symbol='ALL'`, **日期=数据日**)，每周末一次补齐该周全部缺失交易日（各环节按各自库内最新日期增量抓取，一次运行覆盖整个缺失区间，无穿越）；SQLite 状态读写由独立的 `SYNC_STATUS_MAX_RETRIES` 控制，当前配置为 `3`；流水线失败/中止 → 不记录，下周六自动补跑（期间任意时刻手动执行 `tools/schedule_sync_all.py` 亦可补跑）
 
 **成功判定（三态）**：`sync_all_data_flow` 汇总 8 个环节（stocks/metadata/indicators/financial/ttm/share/holder/kline）的失败计数：
 - `success`：全部环节失败数为 0
 - `retryable`：任一环节存在失败；仅当 `SYNC_ALL_MAX_RETRIES > 0` 时按配置次数与 `SYNC_ALL_RETRY_INTERVAL_SECONDS` 间隔整体重试，当前配置为 `0`，失败留待下次调度或人工重跑
-- `blocked`：新浪 IP 风控（含 kline/share 环节传播）→ 不重试（等待解封），次日补跑
+- `blocked`：新浪 IP 风控（含 kline/share 环节传播）→ 不重试（等待解封），下周六补跑
 
 **CLI 退出码**：手动执行 `uv run main.py sync-all` 时，`blocked` 和 `retryable` 状态均退出码为 1；全部成功才退出码为 0。`retryable` 可重跑，增量逻辑会自动补缺。
 
-**耗时**：`holder` 环节全市场约 +2~2.5 小时（逐股串行；巨潮季度快照同批次内共享缓存，缺数股首轮回填约 +1~2 分钟）。顺序上 holder 置于 kline 之前：行情遇新浪风控中止时户数已落袋；反之 holder 失败也会使整单判 `retryable`（次日补跑只补失败部分）。
+**耗时**：每周六一次全市场同步的总耗时构成：`holder` 环节约 +2~2.5 小时（逐股串行；巨潮季度快照同批次内共享缓存，缺数股首轮回填约 +1~2 分钟）。顺序上 holder 置于 kline 之前：行情遇新浪风控中止时户数已落袋；反之 holder 失败也会使整单判 `retryable`（下周六补跑只补失败部分）。由于 sync-all 同时承载财报披露日历驱动的增量同步，周调度意味着财报数据最晚到周六才入库，需要更及时的数据时应手动执行 `uv run main.py sync-all`。
 
 **安装**：
 ```bash
@@ -319,11 +319,11 @@ tail -f logs/app.log                     # 流水线日志
 sqlite3 data/metadata.db "SELECT * FROM sync_status WHERE dataset='sync_all'"
 ```
 
-**手动试跑**（安全：非交易日或已成功会直接退出）：
+**手动补跑**（已同步过最近交易日时零请求退出；未同步时会真实执行数小时流水线）：
 ```bash
 uv run python tools/schedule_sync_all.py
 ```
-（`tools/` 为项目核心脚本目录，此写法与 `uv run main.py` 同类，不违反"禁止命令行 uv run 包裹临时代码"规范；或直接执行 `/Volumes/wdblack/some_project/QuantPyLab/.venv/bin/python tools/schedule_sync_all.py`，与 launchd 调用方式一致。）
+（周六 03:00 触发失败、机器错过触发，或需要提前获取本周数据时使用，数据日仍取最近交易日。`tools/` 为项目核心脚本目录，此写法与 `uv run main.py` 同类，不违反"禁止命令行 uv run 包裹临时代码"规范；或直接执行 `/Volumes/wdblack/some_project/QuantPyLab/.venv/bin/python tools/schedule_sync_all.py`，与 launchd 调用方式一致。）
 
 > **注意**：launchd 的 stdout/stderr 管道为始终存在的 `/dev/null`；本地 `/bin/sh` 只负责确认项目外置卷和 `logs/` 可用，再以绝对路径启动 Python。卷未挂载时记录到 `~/Library/Logs/QuantPyLab/launcher.log` 并失败退出；正常运行的流水线日志由项目日志器写入 `logs/app.log` / `logs/error.log`。
 

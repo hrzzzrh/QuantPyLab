@@ -1,14 +1,21 @@
-"""launchd 定时调度入口: 每日凌晨 03:00 执行 sync-all 全流程数据同步。
+"""launchd 定时调度入口: 每周六凌晨 03:00 执行 sync-all 全流程数据同步。
 
 判定与执行逻辑:
 1. 项目根目录不存在 (外置卷未挂载) -> 记日志退出
 2. 安装新浪源请求保护层 (幂等, 含交易日历请求)
-3. 前一天 (today-1) 非交易日 -> 退出 (零同步请求)
-4. 前一天是交易日且已记录 sync-all 成功 (last_sync_date >= 前一天) -> 退出
+3. 数据日 = 最近一个交易日 (周六凌晨触发即取上周五; 周五休市取节前最后
+   交易日); 交易日历不可用 -> 判定失败
+4. 已记录 sync-all 成功 (last_sync_date >= 数据日) -> 退出
+   (含同日重复触发与手动补跑)
 5. 执行 sync-all 流水线; 未全部成功时整体重试, 重试次数与间隔可配置
-   (增量机制自愈: 重跑只补失败部分, 成功部分自动跳过/续传)
-6. 全部成功 -> 记录成功 (sync_status 表, 日期=前一天数据日);
-   失败/中止/异常 -> 不记录, 次日补跑
+   (增量机制自愈: 重跑只补失败部分, 成功部分自动跳过/续传; 各环节按各自
+   库内最新日期增量抓取, 一次运行即可补齐整个缺失区间)
+6. 全部成功 -> 记录成功 (sync_status 表, 日期=数据日);
+   失败/中止/异常 -> 不记录, 下周六补跑 (期间可随时手动执行本脚本补跑)
+
+数据日只用于"是否需要执行"的判定与同步状态账本记录, 不传入流水线:
+sync_all_data_flow() 的各环节自行决定抓取区间, 行情环节以最近交易日为
+抓取终点、以库内单股最新日期为起点。
 
 由 launchd 以项目 venv 的 python 绝对路径启动, 故本脚本自行把项目根加入 sys.path。
 """
@@ -16,7 +23,6 @@
 import sys
 import time
 from collections.abc import Callable
-from datetime import date, timedelta
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -40,7 +46,7 @@ from utils.logger import logger  # noqa: E402
 from utils.requests_protection import install_requests_protection  # noqa: E402
 from utils.trade_date import (  # noqa: E402
     TradeCalendarUnavailableError,
-    is_trade_date,
+    get_latest_trade_date,
 )
 
 
@@ -54,15 +60,14 @@ def run_sync_all_with_retry() -> int:
     # 置于交易日历判定之前, 使交易日历请求同样受保护
     install_requests_protection()
 
-    prev_day = date.today() - timedelta(days=1)
+    # 数据日 = 最近一个交易日: 周六凌晨触发即取上周五收盘数据; 若周五休市,
+    # 取节前最后一个交易日, 避免整周漏采 (旧实现按 today-1 判定会直接退出)。
+    # 各环节按各自库内最新日期增量抓取, 一次运行即可补齐至抓取终点的全部缺失。
     try:
-        prev_day_is_trade_day = is_trade_date(prev_day)
+        data_day = get_latest_trade_date()
     except TradeCalendarUnavailableError:
         logger.exception("交易日历不可用, 本轮 sync-all 判定失败")
         return 1
-    if not prev_day_is_trade_day:
-        logger.info(f"前一天 {prev_day} 非交易日, 跳过本轮 sync-all")
-        return 0
 
     status_read_ok, last = _execute_sync_status_with_retry(
         lambda: get_last_sync_date(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL),
@@ -70,8 +75,8 @@ def run_sync_all_with_retry() -> int:
     )
     if not status_read_ok:
         return 1
-    if last is not None and last >= prev_day:
-        logger.info(f"前一天 {prev_day} 已记录 sync-all 成功 ({last}), 本轮跳过")
+    if last is not None and last >= data_day:
+        logger.info(f"最近交易日 {data_day} 已记录 sync-all 成功 ({last}), 本轮跳过")
         return 0
 
     max_attempts = SYNC_ALL_MAX_RETRIES + 1
@@ -83,11 +88,11 @@ def run_sync_all_with_retry() -> int:
             logger.exception("sync-all 流水线异常中止 (视为未成功)")
             status = None
         if status == sync_main.SYNC_ALL_SUCCESS:
-            # 记录数据日 (前一天): 保证下一个交易日定时判定时 last < 新 prev_day,
-            # 每日数据零延迟入库; 同日重复触发时 last == prev_day 正常跳过
+            # 记录数据日 (最近交易日): 保证下一次调度判定时 last < 新数据日,
+            # 每周末一次补齐全部缺失交易日; 同日重复触发时 last == 数据日 正常跳过
             status_write_ok, _ = _execute_sync_status_with_retry(
                 lambda: record_sync_success(
-                    DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, prev_day
+                    DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, data_day
                 ),
                 "记录 sync-all 同步状态",
             )
@@ -111,7 +116,8 @@ def run_sync_all_with_retry() -> int:
             time.sleep(SYNC_ALL_RETRY_INTERVAL_SECONDS)
         else:
             logger.error(
-                ">>> 已达最大重试次数, 本轮 sync-all 判定失败, 未记录成功 (次日补跑) <<<"
+                f">>> 已达最大尝试次数 (共 {max_attempts} 次尝试), 本轮 sync-all 判定失败,"
+                " 未记录成功 (下周六补跑, 期间可手动执行本脚本补跑) <<<"
             )
             return 1
     return 1

@@ -1,7 +1,7 @@
 """单元测试: tools/schedule_sync_all.py 定时调度入口 (mock 全部外部依赖)"""
 
 import types
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -9,16 +9,22 @@ import tools.schedule_sync_all as sched
 from main import SYNC_ALL_BLOCKED, SYNC_ALL_RETRYABLE, SYNC_ALL_SUCCESS
 from storage.database.sync_status import DATASET_SYNC_ALL, SYMBOL_SYNC_ALL
 
+# 模拟周六凌晨触发时 get_latest_trade_date() 的返回值: 上周五 (周五休市场景单独覆盖)
+DATA_DAY = date(2026, 10, 9)
+# 周末(周六/周日)与节假日(周五休市)两种数据日下的"上一轮"记录日期
+LAST_WEEK_DATA_DAY = DATA_DAY - timedelta(days=7)
+FRIDAY_HOLIDAY_DATA_DAY = date(2026, 10, 8)  # 周四: 周五为节假日休市
+
 
 @pytest.fixture(autouse=True)
 def _isolate(monkeypatch):
-    """默认环境: 固定重试参数、禁用真实 sleep、卷已挂载、前一天是交易日、未记录成功"""
+    """默认环境: 固定重试参数、禁用真实 sleep、卷已挂载、最近交易日未记录成功"""
     monkeypatch.setattr(sched, "SYNC_ALL_MAX_RETRIES", 2)
     monkeypatch.setattr(sched, "SYNC_STATUS_MAX_RETRIES", 2)
     monkeypatch.setattr(sched, "SYNC_ALL_RETRY_INTERVAL_SECONDS", 0)
     # 仅替换 sched 命名空间内的 time 引用, 不影响全局 time 模块
     monkeypatch.setattr(sched, "time", types.SimpleNamespace(sleep=lambda _: None))
-    monkeypatch.setattr(sched, "is_trade_date", lambda d: True)
+    monkeypatch.setattr(sched, "get_latest_trade_date", lambda: DATA_DAY)
     monkeypatch.setattr(sched, "get_last_sync_date", lambda d, s: None)
     monkeypatch.setattr(sched, "record_sync_success", lambda *a: None)
     monkeypatch.setattr(sched, "install_requests_protection", lambda: None)
@@ -91,31 +97,34 @@ def test_pipeline_and_sync_status_use_independent_retry_limits(monkeypatch):
     assert flow_calls == [1]
 
 
-def test_prev_day_not_trade_day_exits(monkeypatch):
-    monkeypatch.setattr(sched, "is_trade_date", lambda d: False)
+def test_friday_holiday_uses_previous_trade_day(monkeypatch):
+    """周五为节假日休市: 数据日取节前最后交易日 (周四), 仍执行并记录该日
+
+    周调度下若沿用 today-1 判定会整周退出, 导致该周数据延迟两周 (回归防护)。
+    """
+    monkeypatch.setattr(sched, "get_latest_trade_date", lambda: FRIDAY_HOLIDAY_DATA_DAY)
     flow_calls = []
     monkeypatch.setattr(
         sched.sync_main,
         "sync_all_data_flow",
         lambda: flow_calls.append(1) or SYNC_ALL_SUCCESS,
     )
-    installed = []
+    recorded = []
     monkeypatch.setattr(
-        sched, "install_requests_protection", lambda: installed.append(1)
+        sched, "record_sync_success", lambda d, s, dt: recorded.append((d, s, dt))
     )
     assert sched.run_sync_all_with_retry() == 0
-    assert flow_calls == []
-    assert installed == [1]
+    assert flow_calls == [1]
+    assert recorded == [(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, FRIDAY_HOLIDAY_DATA_DAY)]
 
 
 def test_trade_calendar_unavailable_is_failure(monkeypatch):
     from utils.trade_date import TradeCalendarUnavailableError
 
-    monkeypatch.setattr(
-        sched,
-        "is_trade_date",
-        lambda d: (_ for _ in ()).throw(TradeCalendarUnavailableError("无缓存")),
-    )
+    def raise_calendar_error():
+        raise TradeCalendarUnavailableError("无缓存")
+
+    monkeypatch.setattr(sched, "get_latest_trade_date", raise_calendar_error)
     flow_calls = []
     monkeypatch.setattr(
         sched.sync_main,
@@ -126,8 +135,9 @@ def test_trade_calendar_unavailable_is_failure(monkeypatch):
     assert flow_calls == []
 
 
-def test_already_synced_prev_day_exits(monkeypatch):
-    monkeypatch.setattr(sched, "get_last_sync_date", lambda d, s: date.today())
+def test_already_synced_data_day_exits(monkeypatch):
+    """记录日期 >= 数据日 (最近交易日) → 跳过, 零同步请求"""
+    monkeypatch.setattr(sched, "get_last_sync_date", lambda d, s: DATA_DAY)
     flow_calls = []
     monkeypatch.setattr(
         sched.sync_main,
@@ -144,89 +154,14 @@ def test_already_synced_prev_day_exits(monkeypatch):
     assert installed == [1]
 
 
-def test_prev_day_synced_exits(monkeypatch):
-    """记录日期等于前一天 (含跨周末场景) 时跳过"""
-    yesterday = date.today() - sched.timedelta(days=1)
-    monkeypatch.setattr(sched, "get_last_sync_date", lambda d, s: yesterday)
-    flow_calls = []
-    monkeypatch.setattr(
-        sched.sync_main,
-        "sync_all_data_flow",
-        lambda: flow_calls.append(1) or SYNC_ALL_SUCCESS,
-    )
-    monkeypatch.setattr(sched, "record_sync_success", lambda *a: flow_calls.append(2))
-    installed = []
-    monkeypatch.setattr(
-        sched, "install_requests_protection", lambda: installed.append(1)
-    )
-    assert sched.run_sync_all_with_retry() == 0
-    assert flow_calls == []
-    assert installed == [1]
+def test_after_friday_holiday_week_next_saturday_runs(monkeypatch):
+    """周五休市周之后的下一个周六: 数据日推进到新周五, 必须继续执行
 
-
-def test_stale_sync_record_triggers_run(monkeypatch):
-    """记录日期早于前一天 (前一天未同步成功) 时执行流水线"""
-    monkeypatch.setattr(
-        sched,
-        "get_last_sync_date",
-        lambda d, s: date.today() - sched.timedelta(days=3),
-    )
-    flow_calls = []
-    monkeypatch.setattr(
-        sched.sync_main,
-        "sync_all_data_flow",
-        lambda: flow_calls.append(1) or SYNC_ALL_SUCCESS,
-    )
-    installed = []
-    monkeypatch.setattr(
-        sched, "install_requests_protection", lambda: installed.append(1)
-    )
-    assert sched.run_sync_all_with_retry() == 0
-    assert flow_calls == [1]
-    assert installed == [1]
-
-
-def test_success_records_prev_day(monkeypatch):
-    """流水线成功时应记录数据日 (前一天), 保证每日数据零延迟"""
-    monkeypatch.setattr(
-        sched.sync_main,
-        "sync_all_data_flow",
-        lambda *args, **kwargs: SYNC_ALL_SUCCESS,
-    )
-    recorded = []
-    monkeypatch.setattr(
-        sched, "record_sync_success", lambda d, s, dt: recorded.append((d, s, dt))
-    )
-    installed = []
-    monkeypatch.setattr(
-        sched, "install_requests_protection", lambda: installed.append(1)
-    )
-    assert sched.run_sync_all_with_retry() == 0
-    expected = (
-        DATASET_SYNC_ALL,
-        SYMBOL_SYNC_ALL,
-        date.today() - sched.timedelta(days=1),
-    )
-    assert recorded == [expected]
-    assert installed == [1]
-
-
-def test_consecutive_days_no_data_lag(monkeypatch):
-    """跨两日连续触发: 记录数据日使次日正常执行, 数据零延迟 (回归防护)
-
-    旧实现记录运行日: D1 记录 08-11 后, D2 判定 prev=08-11 >= last=08-11 会
-    错误跳过, 导致 08-11 的数据延迟一个交易日入库。本测试显式覆盖该场景:
-    D2 必须执行流水线且记录新的数据日。
+    覆盖数据日不固定的场景: D1 因周五休市记录周四, D2 数据日为新周五,
+    last(周四) < data_day(周五) → 正常执行, 不会因数据日跳变而永久跳过。
     """
-
-    class _FakeDate(date):
-        current = date(2026, 8, 11)
-
-        @classmethod
-        def today(cls):
-            return cls.current
-
-    monkeypatch.setattr(sched, "date", _FakeDate)
+    data_days = iter([FRIDAY_HOLIDAY_DATA_DAY, DATA_DAY + timedelta(days=7)])
+    monkeypatch.setattr(sched, "get_latest_trade_date", lambda: next(data_days))
 
     last_recorded = {}
 
@@ -245,20 +180,123 @@ def test_consecutive_days_no_data_lag(monkeypatch):
         lambda *a, **k: flow_calls.append(1) or SYNC_ALL_SUCCESS,
     )
 
-    # D1 (08-11): prev=08-10, 未记录 → 执行, 记录数据日 08-10
+    # D1 (周五休市的那个周六): data_day=10-08 (周四), 未记录 → 执行, 记录 10-08
     assert sched.run_sync_all_with_retry() == 0
     assert flow_calls == [1]
-    assert last_recorded["date"] == date(2026, 8, 10)
+    assert last_recorded["date"] == FRIDAY_HOLIDAY_DATA_DAY
 
-    # D2 (08-12): prev=08-11, last(08-10) < prev → 必须执行, 记录 08-11
-    _FakeDate.current = date(2026, 8, 12)
+    # D2 (下周六): data_day=10-16 (周五), last(10-08) < data_day → 必须执行
     assert sched.run_sync_all_with_retry() == 0
     assert flow_calls == [1, 1]
-    assert last_recorded["date"] == date(2026, 8, 11)
+    assert last_recorded["date"] == DATA_DAY + timedelta(days=7)
 
 
-def test_retryable_then_success_records_prev_day(monkeypatch):
-    """重试成功后同样记录数据日 (前一天)"""
+def test_stale_sync_record_triggers_run(monkeypatch):
+    """记录日期早于数据日 (最近交易日未同步成功) 时执行流水线"""
+    monkeypatch.setattr(
+        sched,
+        "get_last_sync_date",
+        lambda d, s: LAST_WEEK_DATA_DAY,
+    )
+    flow_calls = []
+    monkeypatch.setattr(
+        sched.sync_main,
+        "sync_all_data_flow",
+        lambda: flow_calls.append(1) or SYNC_ALL_SUCCESS,
+    )
+    installed = []
+    monkeypatch.setattr(
+        sched, "install_requests_protection", lambda: installed.append(1)
+    )
+    assert sched.run_sync_all_with_retry() == 0
+    assert flow_calls == [1]
+    assert installed == [1]
+
+
+def test_manual_run_outside_saturday_syncs_latest_data_day(monkeypatch):
+    """非周六 (如失败次日/周中) 手动执行: 数据日仍是最近交易日, 同样补跑
+
+    注入周三数据日以区别于默认的周五触发场景: 验证 scheduler 的判定不依赖
+    星期几, 失败后任意一天手动执行都能推进账本并补齐缺失交易日。
+    """
+    mid_week_data_day = DATA_DAY - timedelta(days=2)  # 周三
+    monkeypatch.setattr(sched, "get_latest_trade_date", lambda: mid_week_data_day)
+    flow_calls = []
+    monkeypatch.setattr(
+        sched.sync_main,
+        "sync_all_data_flow",
+        lambda: flow_calls.append(1) or SYNC_ALL_SUCCESS,
+    )
+    recorded = []
+    monkeypatch.setattr(
+        sched, "record_sync_success", lambda d, s, dt: recorded.append((d, s, dt))
+    )
+    assert sched.run_sync_all_with_retry() == 0
+    assert flow_calls == [1]
+    assert recorded == [(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, mid_week_data_day)]
+
+
+def test_success_records_data_day(monkeypatch):
+    """流水线成功时应记录数据日 (最近交易日), 保证下一次调度的判定基线推进"""
+    monkeypatch.setattr(
+        sched.sync_main,
+        "sync_all_data_flow",
+        lambda *args, **kwargs: SYNC_ALL_SUCCESS,
+    )
+    recorded = []
+    monkeypatch.setattr(
+        sched, "record_sync_success", lambda d, s, dt: recorded.append((d, s, dt))
+    )
+    installed = []
+    monkeypatch.setattr(
+        sched, "install_requests_protection", lambda: installed.append(1)
+    )
+    assert sched.run_sync_all_with_retry() == 0
+    assert recorded == [(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, DATA_DAY)]
+    assert installed == [1]
+
+
+def test_consecutive_weeks_no_data_lag(monkeypatch):
+    """跨两周连续触发: 记录数据日使下一周正常执行, 每周补齐全部缺失 (回归防护)
+
+    旧实现记录运行日: D1 记录周六后, D2 判定 data_day == last 会错误跳过,
+    导致整周数据延迟一周。本测试显式覆盖该场景: D2 必须执行流水线且记录
+    新的数据日。
+    """
+    data_day_by_week = [DATA_DAY, LAST_WEEK_DATA_DAY + timedelta(days=14)]
+    data_day_iter = iter(data_day_by_week)
+    monkeypatch.setattr(sched, "get_latest_trade_date", lambda: next(data_day_iter))
+
+    last_recorded = {}
+
+    def fake_get(d, s):
+        return last_recorded.get("date")
+
+    def fake_record(d, s, dt):
+        last_recorded["date"] = dt
+
+    monkeypatch.setattr(sched, "get_last_sync_date", fake_get)
+    monkeypatch.setattr(sched, "record_sync_success", fake_record)
+    flow_calls = []
+    monkeypatch.setattr(
+        sched.sync_main,
+        "sync_all_data_flow",
+        lambda *a, **k: flow_calls.append(1) or SYNC_ALL_SUCCESS,
+    )
+
+    # D1 (周六): data_day=10-09, 未记录 → 执行, 记录数据日 10-09
+    assert sched.run_sync_all_with_retry() == 0
+    assert flow_calls == [1]
+    assert last_recorded["date"] == DATA_DAY
+
+    # D2 (下周六): data_day=10-16, last(10-09) < data_day → 必须执行, 记录 10-16
+    assert sched.run_sync_all_with_retry() == 0
+    assert flow_calls == [1, 1]
+    assert last_recorded["date"] == LAST_WEEK_DATA_DAY + timedelta(days=14)
+
+
+def test_retryable_then_success_records_data_day(monkeypatch):
+    """重试成功后同样记录数据日 (最近交易日)"""
     statuses = iter([SYNC_ALL_RETRYABLE, SYNC_ALL_SUCCESS])
     calls = []
 
@@ -273,12 +311,7 @@ def test_retryable_then_success_records_prev_day(monkeypatch):
     )
     assert sched.run_sync_all_with_retry() == 0
     assert len(calls) == 2
-    expected = (
-        DATASET_SYNC_ALL,
-        SYMBOL_SYNC_ALL,
-        date.today() - sched.timedelta(days=1),
-    )
-    assert recorded == [expected]
+    assert recorded == [(DATASET_SYNC_ALL, SYMBOL_SYNC_ALL, DATA_DAY)]
 
 
 def test_retry_exhausted_not_recorded(monkeypatch):
