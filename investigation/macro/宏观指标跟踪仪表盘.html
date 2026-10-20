@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>宏观指标跟踪仪表盘</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;--text:#e0e0e0;--text2:#8b8fa3;--accent:#4f8cff;--up:#ef5350;--down:#26a69a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;padding:20px;max-width:1720px;margin:0 auto}
+.header{text-align:center;padding:20px 0 18px}
+.header h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,#4f8cff,#9b59b6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.header .sub{color:var(--text2);margin-top:8px;font-size:13px;line-height:1.8}
+.toolbar{position:sticky;top:8px;z-index:10;background:rgba(15,17,23,.94);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:6px 0 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.year-btns{display:flex;flex-wrap:wrap;gap:6px}
+.year-btns button{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:20px;padding:5px 13px;font-size:12px;cursor:pointer;transition:all .15s}
+.year-btns button:hover{border-color:var(--accent);color:var(--text)}
+.year-btns button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.year-btns button.shortcut{border-style:dashed}
+.toolbar .hint{width:100%;font-size:11px;color:var(--text2)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;text-align:center}
+.kpi .label{font-size:12px;color:var(--text2);margin-bottom:6px}
+.kpi .value{font-size:22px;font-weight:700}
+.kpi .change{font-size:11px;margin-top:4px}
+.kpi .period{font-size:10px;color:var(--text2);margin-top:2px}
+.kpi-y{font-size:12px;display:flex;justify-content:space-between;gap:8px;padding:2px 4px}
+.section-title{font-size:18px;font-weight:600;margin:30px 0 16px;padding-left:12px;border-left:3px solid var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(620px,1fr));gap:20px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;min-width:0}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;min-width:0}
+.card-head h3{font-size:14px;color:var(--text2);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mpills{display:flex;gap:4px;flex-shrink:0}
+.mpills button{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:12px;padding:2px 10px;font-size:11px;cursor:pointer;white-space:nowrap}
+.mpills button:hover{border-color:var(--accent);color:var(--text)}
+.mpills button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.chart{width:100%;height:340px}
+.footer{color:var(--text2);font-size:11px;text-align:center;padding:24px 0 8px;line-height:1.8}
+@media (max-width:768px){.grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>宏观指标跟踪仪表盘</h1>
+  <div class="sub">数据截至：月度 2026-09 ｜ 季度 2026Q2 ｜ 构建日期 2026年10月20日<br>一手来源：国家统计局 / 中国人民银行 / 海关总署 ｜ 口径与核实状态以《宏观指标跟踪手册》为准</div>
+</div>
+
+<div class="toolbar">
+  <div class="year-btns" id="yearBtns"></div>
+  <div class="hint" id="hint">点选年份叠加对比（可多选，最多5个，如 2022＋2024＋2026）；「全部」查看全历史。叠加模式下每张图只显示一个指标（右上角药丸切换），每条线颜色唯一代表一个年份。悬停看数值与备注，右上角可存图。</div>
+</div>
+
+<div class="kpi-row" id="kpis"></div>
+
+<div class="section-title">增长与景气</div>
+<div class="grid">
+  <div class="card"><div class="card-head"><h3>规模以上工业增加值同比（%）</h3></div><div class="chart" id="chart_gongzeng"></div></div>
+  <div class="card"><div class="card-head"><h3>制造业PMI</h3><div class="mpills" data-for="chart_pmi"></div></div><div class="chart" id="chart_pmi"></div></div>
+  <div class="card"><div class="card-head"><h3>GDP当季同比</h3><div class="mpills" data-for="chart_gdp"></div></div><div class="chart" id="chart_gdp"></div></div>
+</div>
+
+<div class="section-title">投资（第一优先级）</div>
+<div class="grid">
+  <div class="card"><div class="card-head"><h3>固定资产投资累计同比（%）</h3></div><div class="chart" id="chart_guitou"></div></div>
+  <div class="card"><div class="card-head"><h3>基建 / 制造业 / 地产投资累计同比（%）</h3><div class="mpills" data-for="chart_invest3"></div></div><div class="chart" id="chart_invest3"></div></div>
+</div>
+
+<div class="section-title">对外贸易（第二优先级）</div>
+<div class="grid">
+  <div class="card"><div class="card-head"><h3>出口 / 进口同比（%，美元计价）</h3><div class="mpills" data-for="chart_trade"></div></div><div class="chart" id="chart_trade"></div></div>
+  <div class="card"><div class="card-head"><h3>贸易差额（亿美元）</h3></div><div class="chart" id="chart_chae"></div></div>
+</div>
+
+<div class="section-title">金融货币（第三优先级）</div>
+<div class="grid">
+  <div class="card"><div class="card-head"><h3>新增社会融资规模（亿元）</h3><div class="mpills" data-for="chart_sheirong"></div></div><div class="chart" id="chart_sheirong"></div></div>
+  <div class="card"><div class="card-head"><h3>M2 / M1 同比（%）&amp; M1-M2剪刀差</h3><div class="mpills" data-for="chart_m2m1"></div></div><div class="chart" id="chart_m2m1"></div></div>
+</div>
+
+<div class="section-title">价格与政策</div>
+<div class="grid">
+  <div class="card"><div class="card-head"><h3>CPI / PPI 同比（%）</h3><div class="mpills" data-for="chart_cpippi"></div></div><div class="chart" id="chart_cpippi"></div></div>
+  <div class="card"><div class="card-head"><h3>政策利率（LPR / MLF）</h3></div><div class="chart" id="chart_rates"></div></div>
+</div>
+
+<div class="footer">QuantPyLab 宏观仪表盘 ｜ 数据:《宏观指标跟踪手册》 ｜ 悬停图表查看当期备注/政策事件 ｜ 各图右上角可导出 PNG</div>
+
+<script>
+'use strict';
+/* 数据由 workspace/build_macro_dashboard.py 从跟踪手册生成，请勿手工改 */
+const monthly = [{"period": "2016-01", "gongzeng": "—", "pmi": "49.4", "fei_pmi": "53.5（57.8）", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "34200", "m2": "14.0", "m1": "18.6", "zhongchangdai": "10600", "cpi": "1.8", "ppi": "-5.3", "note": "基建/制造投资2016—2017年未检得（见第五节）"}, {"period": "2016-02", "gongzeng": "5.4", "pmi": "49.0", "fei_pmi": "52.7（55.2）", "guitou": "10.2", "jijian": "—", "zhizao": "—", "dichan": "3.0", "chukou": "-17.8※", "jinkou": "-16.7※", "chae": "95.9", "sheirong": "7802", "m2": "13.3", "m1": "17.4", "zhongchangdai": "5022", "cpi": "2.3", "ppi": "-4.9", "note": "外贸合并同比初步检得（单源，待二源）；差额加总无误（美元口径单月值加总）"}, {"period": "2016-03", "gongzeng": "6.8", "pmi": "50.2", "fei_pmi": "53.8（58.0）", "guitou": "10.7", "jijian": "—", "zhizao": "—", "dichan": "6.2", "chukou": "+11.5", "jinkou": "-7.6", "chae": "29.9", "sheirong": "23400", "m2": "13.4", "m1": "22.1", "zhongchangdai": "—", "cpi": "2.3", "ppi": "-4.3", "note": "—"}, {"period": "2016-04", "gongzeng": "6.0", "pmi": "50.1", "fei_pmi": "53.5（59.4）", "guitou": "10.5", "jijian": "—", "zhizao": "—", "dichan": "7.2", "chukou": "-1.8", "jinkou": "-10.9", "chae": "45.6", "sheirong": "8100", "m2": "12.8", "m1": "22.9", "zhongchangdai": "-430", "cpi": "2.3", "ppi": "-3.4", "note": "—"}, {"period": "2016-05", "gongzeng": "6.0", "pmi": "50.1", "fei_pmi": "53.1（59.4）", "guitou": "9.6", "jijian": "—", "zhizao": "—", "dichan": "7.0", "chukou": "-4.1", "jinkou": "-0.4", "chae": "50.0", "sheirong": "7000", "m2": "11.8", "m1": "23.7", "zhongchangdai": "1825", "cpi": "2.0", "ppi": "-2.8", "note": "—"}, {"period": "2016-06", "gongzeng": "6.2", "pmi": "50.0", "fei_pmi": "53.7（62.0）", "guitou": "9.0", "jijian": "—", "zhizao": "—", "dichan": "6.1", "chukou": "-4.8", "jinkou": "-8.4", "chae": "48.1", "sheirong": "16300", "m2": "11.8", "m1": "24.6", "zhongchangdai": "—", "cpi": "1.9", "ppi": "-2.6", "note": "—"}, {"period": "2016-07", "gongzeng": "6.0", "pmi": "49.9", "fei_pmi": "53.9（61.1）", "guitou": "8.1", "jijian": "—", "zhizao": "—", "dichan": "5.3", "chukou": "-4.4", "jinkou": "-12.5", "chae": "52.3", "sheirong": "5500", "m2": "10.2", "m1": "25.4", "zhongchangdai": "1514", "cpi": "1.8", "ppi": "-1.7", "note": "非制造业为重庆统计局官网转载国家统计局通稿（正文直接值）"}, {"period": "2016-08", "gongzeng": "6.3", "pmi": "50.4", "fei_pmi": "53.5（58.2）", "guitou": "8.1", "jijian": "—", "zhizao": "—", "dichan": "5.4", "chukou": "-2.8", "jinkou": "+1.5", "chae": "52.1", "sheirong": "14500", "m2": "11.4", "m1": "25.3", "zhongchangdai": "-80", "cpi": "1.3", "ppi": "-0.8", "note": "—"}, {"period": "2016-09", "gongzeng": "6.1", "pmi": "50.4", "fei_pmi": "53.7（61.9）", "guitou": "8.2", "jijian": "—", "zhizao": "—", "dichan": "5.8", "chukou": "-10.0", "jinkou": "-1.9", "chae": "42.0", "sheirong": "17200", "m2": "11.5", "m1": "24.7", "zhongchangdai": "—", "cpi": "1.9", "ppi": "0.1", "note": "—"}, {"period": "2016-10", "gongzeng": "6.1", "pmi": "51.2", "fei_pmi": "54.0（61.8）", "guitou": "8.3", "jijian": "—", "zhizao": "—", "dichan": "6.6", "chukou": "-7.3", "jinkou": "-1.4", "chae": "49.1", "sheirong": "8800", "m2": "11.6", "m1": "23.9", "zhongchangdai": "728", "cpi": "2.1", "ppi": "1.2", "note": "—"}, {"period": "2016-11", "gongzeng": "6.2", "pmi": "51.7", "fei_pmi": "54.7（60.4）", "guitou": "8.3", "jijian": "—", "zhizao": "—", "dichan": "6.5", "chukou": "+0.1", "jinkou": "+6.7", "chae": "44.6", "sheirong": "17300", "m2": "11.4", "m1": "22.7", "zhongchangdai": "2018", "cpi": "2.3", "ppi": "3.3", "note": "—"}, {"period": "2016-12", "gongzeng": "6.0", "pmi": "51.4", "fei_pmi": "54.5（61.9）", "guitou": "8.1", "jijian": "—", "zhizao": "—", "dichan": "6.9", "chukou": "-6.1", "jinkou": "+3.1", "chae": "40.8", "sheirong": "17200", "m2": "11.3", "m1": "21.4", "zhongchangdai": "—", "cpi": "2.1", "ppi": "5.5", "note": "全年基建+17.4%、制造业+4.2%（贾海解读 stats.gov.cn 2017-01-22）；月度拆分未披露"}, {"period": "2017-01", "gongzeng": "—", "pmi": "51.3", "fei_pmi": "54.6（61.1）※", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "20300", "m2": "11.3", "m1": "14.5", "zhongchangdai": "15200", "cpi": "2.5", "ppi": "6.9", "note": "非制造业建筑业分项为中新社正文直接值（单源，gov.cn原链已失效）"}, {"period": "2017-02", "gongzeng": "6.3", "pmi": "51.6", "fei_pmi": "54.2（60.1）", "guitou": "8.9", "jijian": "—", "zhizao": "—", "dichan": "8.9", "chukou": "+4.0", "jinkou": "+26.4", "chae": "37.8※", "sheirong": "11700", "m2": "11.1", "m1": "21.4", "zhongchangdai": "6018", "cpi": "0.8", "ppi": "7.8", "note": "外贸差额倒推值与单月加总矛盾（42.2），修订序列前维持※"}, {"period": "2017-03", "gongzeng": "7.6", "pmi": "51.8", "fei_pmi": "55.1（60.5）", "guitou": "9.2", "jijian": "—", "zhizao": "—", "dichan": "9.1", "chukou": "+16.4", "jinkou": "+20.3", "chae": "23.9", "sheirong": "21200", "m2": "10.6", "m1": "18.8", "zhongchangdai": "—", "cpi": "0.9", "ppi": "7.6", "note": "—"}, {"period": "2017-04", "gongzeng": "6.5", "pmi": "51.2", "fei_pmi": "54.0（61.6）", "guitou": "8.9", "jijian": "—", "zhizao": "—", "dichan": "9.3", "chukou": "+8.0", "jinkou": "+11.9", "chae": "38.1", "sheirong": "13900", "m2": "10.5", "m1": "18.5", "zhongchangdai": "5226", "cpi": "1.2", "ppi": "6.4", "note": "工增官网原文核验（+6.5%，stats.gov.cn 2017-05-15）"}, {"period": "2017-05", "gongzeng": "6.5", "pmi": "51.2", "fei_pmi": "54.5（60.4）", "guitou": "8.6", "jijian": "—", "zhizao": "—", "dichan": "8.8", "chukou": "+8.7", "jinkou": "+14.8", "chae": "40.8", "sheirong": "10600", "m2": "9.6", "m1": "17.0", "zhongchangdai": "4396", "cpi": "1.5", "ppi": "5.5", "note": "—"}, {"period": "2017-06", "gongzeng": "7.6", "pmi": "51.7", "fei_pmi": "54.9（61.4）", "guitou": "8.6", "jijian": "—", "zhizao": "—", "dichan": "8.5", "chukou": "+11.3", "jinkou": "+17.2", "chae": "42.8", "sheirong": "17900", "m2": "9.4", "m1": "15.0", "zhongchangdai": "—", "cpi": "1.5", "ppi": "5.5", "note": "—"}, {"period": "2017-07", "gongzeng": "6.4", "pmi": "51.4", "fei_pmi": "54.5（62.5）", "guitou": "8.3", "jijian": "—", "zhizao": "—", "dichan": "7.9", "chukou": "+7.2", "jinkou": "+11.0", "chae": "46.7", "sheirong": "12200", "m2": "9.2", "m1": "15.3", "zhongchangdai": "4332", "cpi": "1.4", "ppi": "5.5", "note": "—"}, {"period": "2017-08", "gongzeng": "6.0", "pmi": "51.7", "fei_pmi": "53.4（58.0）", "guitou": "7.8", "jijian": "—", "zhizao": "—", "dichan": "7.9", "chukou": "+5.5", "jinkou": "+13.3", "chae": "42.0", "sheirong": "14800", "m2": "8.9", "m1": "14.0", "zhongchangdai": "3639", "cpi": "1.8", "ppi": "6.3", "note": "—"}, {"period": "2017-09", "gongzeng": "6.6", "pmi": "52.4", "fei_pmi": "55.4（61.1）", "guitou": "7.5", "jijian": "—", "zhizao": "—", "dichan": "8.1", "chukou": "+8.1", "jinkou": "+18.7", "chae": "28.6", "sheirong": "18200", "m2": "9.2", "m1": "14.0", "zhongchangdai": "—", "cpi": "1.6", "ppi": "6.9", "note": "—"}, {"period": "2017-10", "gongzeng": "6.2", "pmi": "51.6", "fei_pmi": "54.3（58.5）", "guitou": "7.3", "jijian": "—", "zhizao": "—", "dichan": "7.8", "chukou": "+6.9", "jinkou": "+17.2", "chae": "38.2", "sheirong": "10400", "m2": "8.8", "m1": "13.0", "zhongchangdai": "2367", "cpi": "1.9", "ppi": "6.9", "note": "—"}, {"period": "2017-11", "gongzeng": "6.1", "pmi": "51.8", "fei_pmi": "54.8（61.4）", "guitou": "7.2", "jijian": "—", "zhizao": "—", "dichan": "7.5", "chukou": "+12.3", "jinkou": "+17.7", "chae": "40.2", "sheirong": "16000", "m2": "9.1", "m1": "12.7", "zhongchangdai": "5727", "cpi": "1.7", "ppi": "5.8", "note": "—"}, {"period": "2017-12", "gongzeng": "6.2", "pmi": "51.6", "fei_pmi": "55.0（63.9）", "guitou": "7.2", "jijian": "—", "zhizao": "—", "dichan": "7.0", "chukou": "+10.9", "jinkou": "+4.5", "chae": "54.7", "sheirong": "11300", "m2": "8.2", "m1": "11.8", "zhongchangdai": "—", "cpi": "1.8", "ppi": "4.9", "note": "全年基建+19%、制造业+4.8%（赵培亚解读 stats.gov.cn 2018-01-19）；月度拆分未披露"}, {"period": "2018-01", "gongzeng": "—", "pmi": "51.3", "fei_pmi": "55.3", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "29000", "m2": "8.6", "m1": "15.0", "zhongchangdai": "15600", "cpi": "1.5", "ppi": "4.3", "note": "2018年起非制造业建筑业分项仅12月与部分月份披露"}, {"period": "2018-02", "gongzeng": "7.2", "pmi": "50.3", "fei_pmi": "54.4", "guitou": "7.9", "jijian": "16.1", "zhizao": "4.3", "dichan": "9.9", "chukou": "+24.4", "jinkou": "+21.7", "chae": "54.3", "sheirong": "8393", "m2": "8.8", "m1": "13.1", "zhongchangdai": "3415", "cpi": "2.9", "ppi": "3.7", "note": "—"}, {"period": "2018-03", "gongzeng": "6.0", "pmi": "51.5", "fei_pmi": "54.6", "guitou": "7.5", "jijian": "13.0", "zhizao": "3.8", "dichan": "10.4", "chukou": "-2.7", "jinkou": "+14.4", "chae": "-5.0", "sheirong": "11207", "m2": "8.2", "m1": "7.1", "zhongchangdai": "—", "cpi": "2.1", "ppi": "3.1", "note": "外贸逆差（2017年2月以来首次）"}, {"period": "2018-04", "gongzeng": "7.0", "pmi": "51.4", "fei_pmi": "54.8", "guitou": "7.0", "jijian": "12.4", "zhizao": "4.8", "dichan": "10.3", "chukou": "+12.9", "jinkou": "+21.5", "chae": "28.8", "sheirong": "11800", "m2": "8.3", "m1": "7.2", "zhongchangdai": "5968", "cpi": "1.8", "ppi": "3.4", "note": "—"}, {"period": "2018-05", "gongzeng": "6.8", "pmi": "51.9", "fei_pmi": "54.9", "guitou": "6.1", "jijian": "9.4", "zhizao": "5.2", "dichan": "10.2", "chukou": "+12.6", "jinkou": "+26.0", "chae": "24.9", "sheirong": "11500", "m2": "8.3", "m1": "6.0", "zhongchangdai": "4035", "cpi": "1.8", "ppi": "4.1", "note": "—"}, {"period": "2018-06", "gongzeng": "6.0", "pmi": "51.5", "fei_pmi": "55.0", "guitou": "6.0", "jijian": "7.3", "zhizao": "6.8", "dichan": "9.7", "chukou": "+11.3", "jinkou": "+14.1", "chae": "41.6", "sheirong": "18400", "m2": "8.0", "m1": "6.6", "zhongchangdai": "—", "cpi": "1.9", "ppi": "4.7", "note": "—"}, {"period": "2018-07", "gongzeng": "6.0", "pmi": "51.2", "fei_pmi": "54.0", "guitou": "5.5", "jijian": "5.7", "zhizao": "7.3", "dichan": "10.2", "chukou": "+12.2", "jinkou": "+27.3", "chae": "28.1", "sheirong": "14500", "m2": "8.5", "m1": "5.1", "zhongchangdai": "4875", "cpi": "2.1", "ppi": "4.6", "note": "—"}, {"period": "2018-08", "gongzeng": "6.1", "pmi": "51.3", "fei_pmi": "54.2", "guitou": "5.3", "jijian": "4.2", "zhizao": "7.5", "dichan": "10.1", "chukou": "+9.8", "jinkou": "+20.0", "chae": "27.9", "sheirong": "12800", "m2": "8.2", "m1": "3.9", "zhongchangdai": "3427", "cpi": "2.3", "ppi": "4.1", "note": "工增官网原文核验（+6.1%，stats.gov.cn/人民网 2018-09-15）"}, {"period": "2018-09", "gongzeng": "5.8", "pmi": "50.8", "fei_pmi": "54.9", "guitou": "5.4", "jijian": "3.3", "zhizao": "8.7", "dichan": "9.9", "chukou": "+14.5", "jinkou": "+14.3", "chae": "31.7", "sheirong": "22100", "m2": "8.3", "m1": "4.0", "zhongchangdai": "—", "cpi": "2.5", "ppi": "3.6", "note": "—"}, {"period": "2018-10", "gongzeng": "5.9", "pmi": "50.2", "fei_pmi": "53.9", "guitou": "5.7", "jijian": "3.7", "zhizao": "9.1", "dichan": "9.7", "chukou": "+15.6", "jinkou": "+21.4", "chae": "34.0", "sheirong": "6970", "m2": "8.0", "m1": "2.7", "zhongchangdai": "3286", "cpi": "2.5", "ppi": "3.3", "note": "工增NBS英文稿原文核验（+5.9%，stats.gov.cn/english 2018-11-15）"}, {"period": "2018-11", "gongzeng": "5.4", "pmi": "50.0", "fei_pmi": "53.4", "guitou": "5.9", "jijian": "3.7", "zhizao": "9.5", "dichan": "9.7", "chukou": "+5.4", "jinkou": "+3.0", "chae": "44.7", "sheirong": "12500", "m2": "8.0", "m1": "1.5", "zhongchangdai": "6643", "cpi": "2.2", "ppi": "2.7", "note": "—"}, {"period": "2018-12", "gongzeng": "5.7", "pmi": "49.4", "fei_pmi": "53.8（62.6）", "guitou": "5.9", "jijian": "3.8", "zhizao": "9.5", "dichan": "9.5", "chukou": "-4.4", "jinkou": "-7.6", "chae": "57.1", "sheirong": "16412", "m2": "8.1", "m1": "1.5", "zhongchangdai": "—", "cpi": "1.9", "ppi": "0.9", "note": "社融12月为全年倒轧，含7月/9月口径调整一次性因素"}, {"period": "2019-01", "gongzeng": "—", "pmi": "49.5", "fei_pmi": "54.7", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "32300", "m2": "8.4", "m1": "0.4", "zhongchangdai": "14400", "cpi": "1.7", "ppi": "0.1", "note": "—"}, {"period": "2019-02", "gongzeng": "5.3", "pmi": "49.2", "fei_pmi": "54.3", "guitou": "6.1", "jijian": "4.3", "zhizao": "5.9", "dichan": "11.6", "chukou": "-4.6", "jinkou": "-3.1", "chae": "43.7", "sheirong": "8856", "m2": "8.0", "m1": "2.0", "zhongchangdai": "5121", "cpi": "1.5", "ppi": "0.1", "note": "工增1-2月累计官网原文核验（+5.3%，stats.gov.cn 2019-03-14）"}, {"period": "2019-03", "gongzeng": "8.5", "pmi": "50.5", "fei_pmi": "54.8", "guitou": "6.3", "jijian": "4.4", "zhizao": "4.6", "dichan": "11.8", "chukou": "+14.2", "jinkou": "-7.6", "chae": "32.7", "sheirong": "10600", "m2": "8.6", "m1": "4.6", "zhongchangdai": "—", "cpi": "2.3", "ppi": "0.4", "note": "—"}, {"period": "2019-04", "gongzeng": "5.4", "pmi": "50.1", "fei_pmi": "54.3", "guitou": "6.1", "jijian": "4.4", "zhizao": "2.5", "dichan": "11.9", "chukou": "-2.7", "jinkou": "+4.0", "chae": "13.8", "sheirong": "10200", "m2": "8.5", "m1": "2.9", "zhongchangdai": "2823", "cpi": "2.5", "ppi": "0.9", "note": "—"}, {"period": "2019-05", "gongzeng": "5.0", "pmi": "49.4", "fei_pmi": "54.3", "guitou": "5.6", "jijian": "4.0", "zhizao": "2.7", "dichan": "11.2", "chukou": "+1.1", "jinkou": "-8.5", "chae": "41.7", "sheirong": "11800", "m2": "8.5", "m1": "3.4", "zhongchangdai": "2524", "cpi": "2.7", "ppi": "0.6", "note": "—"}, {"period": "2019-06", "gongzeng": "6.3", "pmi": "49.4", "fei_pmi": "54.2", "guitou": "5.8", "jijian": "4.1", "zhizao": "3.0", "dichan": "10.9", "chukou": "-1.3", "jinkou": "-7.3", "chae": "51.0", "sheirong": "14400", "m2": "8.5", "m1": "4.4", "zhongchangdai": "—", "cpi": "2.7", "ppi": "0.0", "note": "—"}, {"period": "2019-07", "gongzeng": "4.8", "pmi": "49.7", "fei_pmi": "53.7", "guitou": "5.7", "jijian": "3.8", "zhizao": "3.3", "dichan": "10.6", "chukou": "+3.3", "jinkou": "-5.6", "chae": "45.1", "sheirong": "10600", "m2": "8.1", "m1": "3.1", "zhongchangdai": "-30", "cpi": "2.8", "ppi": "-0.3", "note": "外贸差额采信45.1（44.6无来源支持）"}, {"period": "2019-08", "gongzeng": "4.4", "pmi": "49.5", "fei_pmi": "53.8", "guitou": "5.5", "jijian": "4.2", "zhizao": "2.6", "dichan": "10.5", "chukou": "-1.0", "jinkou": "-5.6", "chae": "34.8", "sheirong": "12100", "m2": "8.2", "m1": "3.4", "zhongchangdai": "4285", "cpi": "2.8", "ppi": "-0.8", "note": "—"}, {"period": "2019-09", "gongzeng": "5.8", "pmi": "49.8", "fei_pmi": "53.7", "guitou": "5.4", "jijian": "4.5", "zhizao": "2.5", "dichan": "10.5", "chukou": "-3.2", "jinkou": "-8.5", "chae": "39.7", "sheirong": "13500", "m2": "8.4", "m1": "3.4", "zhongchangdai": "—", "cpi": "3.0", "ppi": "-1.2", "note": "社融口径调整月（企业债券纳入交易所企业ABS）"}, {"period": "2019-10", "gongzeng": "4.7", "pmi": "49.3", "fei_pmi": "52.8", "guitou": "5.2", "jijian": "4.2", "zhizao": "2.6", "dichan": "10.3", "chukou": "-0.9", "jinkou": "-6.4", "chae": "42.8", "sheirong": "6613", "m2": "8.4", "m1": "3.3", "zhongchangdai": "2123", "cpi": "3.8", "ppi": "-1.6", "note": "—"}, {"period": "2019-11", "gongzeng": "6.2", "pmi": "50.2", "fei_pmi": "54.4", "guitou": "5.2", "jijian": "4.0", "zhizao": "2.5", "dichan": "10.2", "chukou": "-1.1", "jinkou": "+0.3", "chae": "38.7", "sheirong": "13900", "m2": "8.2", "m1": "3.5", "zhongchangdai": "4209", "cpi": "4.5", "ppi": "-1.4", "note": "外贸差额采信38.7（37.9无来源支持）"}, {"period": "2019-12", "gongzeng": "6.9", "pmi": "50.2", "fei_pmi": "53.5（56.7）", "guitou": "5.4", "jijian": "3.8", "zhizao": "3.1", "dichan": "9.9", "chukou": "+7.6", "jinkou": "+16.3", "chae": "46.8", "sheirong": "11400", "m2": "8.7", "m1": "4.4", "zhongchangdai": "—", "cpi": "4.5", "ppi": "-0.5", "note": "—"}, {"period": "2020-01", "gongzeng": "—", "pmi": "50.0", "fei_pmi": "54.1", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "33400", "m2": "8.4", "m1": "0.0", "zhongchangdai": "16600", "cpi": "5.4", "ppi": "0.1", "note": "—"}, {"period": "2020-02", "gongzeng": "-13.5", "pmi": "35.7", "fei_pmi": "29.6", "guitou": "-24.5", "jijian": "-30.3", "zhizao": "-31.5", "dichan": "-16.3", "chukou": "-17.2", "jinkou": "-4.0", "chae": "-7.1", "sheirong": "9000", "m2": "8.8", "m1": "4.8", "zhongchangdai": "—", "cpi": "5.2", "ppi": "-0.4", "note": "工增1-2月累计官网原文核验（-13.5%，stats.gov.cn 2020-03-16）；外贸逆差；疫情冲击月"}, {"period": "2020-03", "gongzeng": "-1.1", "pmi": "52.0", "fei_pmi": "52.3", "guitou": "-16.1", "jijian": "-19.7", "zhizao": "-25.2", "dichan": "-7.7", "chukou": "-6.6", "jinkou": "-0.9", "chae": "19.9", "sheirong": "28500", "m2": "10.1", "m1": "5.0", "zhongchangdai": "—", "cpi": "4.3", "ppi": "-1.5", "note": "—"}, {"period": "2020-04", "gongzeng": "3.9", "pmi": "50.8", "fei_pmi": "53.2", "guitou": "-10.3", "jijian": "-11.8", "zhizao": "-18.8", "dichan": "-3.3", "chukou": "+3.5", "jinkou": "-14.2", "chae": "45.3", "sheirong": "17000", "m2": "11.1", "m1": "5.5", "zhongchangdai": "4773", "cpi": "3.3", "ppi": "-3.1", "note": "—"}, {"period": "2020-05", "gongzeng": "4.4", "pmi": "50.6", "fei_pmi": "53.6", "guitou": "-6.3", "jijian": "-6.3", "zhizao": "-14.8※", "dichan": "-0.3", "chukou": "-3.3", "jinkou": "-16.7", "chae": "62.9", "sheirong": "18900", "m2": "11.1", "m1": "6.8", "zhongchangdai": "5305", "cpi": "2.4", "ppi": "-3.7", "note": "制造投资链条自洽但无二源直接陈述（按放宽标准仍维持※）"}, {"period": "2020-06", "gongzeng": "4.8", "pmi": "50.9", "fei_pmi": "54.4", "guitou": "-3.1", "jijian": "-2.7", "zhizao": "-11.7", "dichan": "1.9", "chukou": "+0.5", "jinkou": "+2.7", "chae": "46.4", "sheirong": "18100", "m2": "11.1", "m1": "6.5", "zhongchangdai": "—", "cpi": "2.5", "ppi": "-3.0", "note": "—"}, {"period": "2020-07", "gongzeng": "4.8", "pmi": "51.1", "fei_pmi": "54.2", "guitou": "-1.6", "jijian": "-1.0", "zhizao": "-10.2", "dichan": "3.4", "chukou": "+7.2", "jinkou": "-1.4", "chae": "62.3", "sheirong": "9927", "m2": "10.7", "m1": "6.9", "zhongchangdai": "5968", "cpi": "2.7", "ppi": "-2.4", "note": "固投官网原文核验（-1.6%，stats.gov.cn 2020-08-14）"}, {"period": "2020-08", "gongzeng": "5.6", "pmi": "51.0", "fei_pmi": "55.2", "guitou": "-0.3", "jijian": "-0.3", "zhizao": "-8.1", "dichan": "4.6", "chukou": "+9.5", "jinkou": "-2.1", "chae": "58.9", "sheirong": "12800", "m2": "10.4", "m1": "8.0", "zhongchangdai": "5211", "cpi": "2.4", "ppi": "-2.0", "note": "固投官网原文核验（-0.3%，stats.gov.cn 2020-09-15）"}, {"period": "2020-09", "gongzeng": "6.9", "pmi": "51.5", "fei_pmi": "55.9", "guitou": "0.8", "jijian": "0.2", "zhizao": "-6.5", "dichan": "5.6", "chukou": "+9.9", "jinkou": "+13.2", "chae": "37.0", "sheirong": "17300", "m2": "10.9", "m1": "8.1", "zhongchangdai": "—", "cpi": "1.7", "ppi": "-2.1", "note": "—"}, {"period": "2020-10", "gongzeng": "6.9", "pmi": "51.4", "fei_pmi": "56.2", "guitou": "1.8", "jijian": "0.7", "zhizao": "-5.3", "dichan": "6.3", "chukou": "+11.4", "jinkou": "+4.7", "chae": "58.4", "sheirong": "6898", "m2": "10.5", "m1": "9.1", "zhongchangdai": "4052", "cpi": "0.5", "ppi": "-2.1", "note": "制造投资NBS英文稿≥2轮一致采信"}, {"period": "2020-11", "gongzeng": "7.0", "pmi": "52.1", "fei_pmi": "56.4", "guitou": "2.6", "jijian": "1.0", "zhizao": "-3.5", "dichan": "6.8", "chukou": "+21.1", "jinkou": "+4.5", "chae": "75.4", "sheirong": "14300", "m2": "10.7", "m1": "9.4", "zhongchangdai": "3942", "cpi": "-0.5", "ppi": "-1.5", "note": "\"-1.3\"系跨年串入，已排除"}, {"period": "2020-12", "gongzeng": "7.3", "pmi": "51.9", "fei_pmi": "55.7（60.7）", "guitou": "2.9", "jijian": "0.9", "zhizao": "-2.2", "dichan": "7.0", "chukou": "+18.1", "jinkou": "+6.5", "chae": "78.2", "sheirong": "12500", "m2": "10.1", "m1": "8.6", "zhongchangdai": "—", "cpi": "0.2", "ppi": "-0.4", "note": "—"}, {"period": "2021-01", "gongzeng": "—", "pmi": "51.3", "fei_pmi": "52.4", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "35800", "m2": "9.4", "m1": "14.7", "zhongchangdai": "20400", "cpi": "-0.3", "ppi": "0.3", "note": "PPI官网原文核验（+0.3%，stats.gov.cn/sj/zxfb/202302/t20230203_1900993.html）"}, {"period": "2021-02", "gongzeng": "35.1", "pmi": "50.6", "fei_pmi": "51.4", "guitou": "35.0", "jijian": "36.6", "zhizao": "37.3", "dichan": "38.3", "chukou": "+60.6", "jinkou": "+22.2", "chae": "103.3", "sheirong": "13500", "m2": "10.1", "m1": "7.4", "zhongchangdai": "3416", "cpi": "-0.2", "ppi": "-0.2", "note": "PPI董莉娟解读核验（-0.2%，stats.gov.cn 2021-03-10）；低基数月"}, {"period": "2021-03", "gongzeng": "14.1", "pmi": "51.9", "fei_pmi": "56.3", "guitou": "25.6", "jijian": "29.7", "zhizao": "29.8", "dichan": "25.6", "chukou": "+30.6", "jinkou": "+38.1", "chae": "13.8", "sheirong": "24200", "m2": "9.4", "m1": "7.1", "zhongchangdai": "—", "cpi": "0.4", "ppi": "4.4", "note": "—"}, {"period": "2021-04", "gongzeng": "9.8", "pmi": "51.1", "fei_pmi": "54.9", "guitou": "19.9", "jijian": "18.4", "zhizao": "23.8", "dichan": "21.6", "chukou": "+32.3", "jinkou": "+43.1", "chae": "42.9", "sheirong": "14700", "m2": "8.1", "m1": "6.2", "zhongchangdai": "7551", "cpi": "0.9", "ppi": "6.8", "note": "固投官网原文核验（+19.9%）；PPI NBS英文稿原文核验（+6.8%）；制造投资NBS英文稿≥2轮一致采信"}, {"period": "2021-05", "gongzeng": "8.8", "pmi": "51.0", "fei_pmi": "55.2", "guitou": "15.4", "jijian": "11.8", "zhizao": "20.4", "dichan": "18.3", "chukou": "+27.9", "jinkou": "+51.1", "chae": "45.5", "sheirong": "15000", "m2": "8.3", "m1": "6.1", "zhongchangdai": "6528", "cpi": "1.3", "ppi": "9.0", "note": "—"}, {"period": "2021-06", "gongzeng": "8.3", "pmi": "50.9", "fei_pmi": "53.5", "guitou": "12.6", "jijian": "7.8", "zhizao": "19.2", "dichan": "15.0", "chukou": "+32.2", "jinkou": "+36.7", "chae": "51.5", "sheirong": "21200", "m2": "8.6", "m1": "5.5", "zhongchangdai": "—", "cpi": "1.1", "ppi": "8.8", "note": "—"}, {"period": "2021-07", "gongzeng": "6.4", "pmi": "50.4", "fei_pmi": "53.3", "guitou": "10.3", "jijian": "4.6", "zhizao": "17.3", "dichan": "12.7", "chukou": "+19.3", "jinkou": "+28.1", "chae": "56.6", "sheirong": "10800", "m2": "8.3", "m1": "4.9", "zhongchangdai": "4937", "cpi": "1.0", "ppi": "9.0", "note": "PPI董莉娟解读核验（+9.0%，stats.gov.cn 2021-08-09）"}, {"period": "2021-08", "gongzeng": "5.3", "pmi": "50.1", "fei_pmi": "47.5", "guitou": "8.9", "jijian": "2.9", "zhizao": "15.7", "dichan": "10.9", "chukou": "+25.6", "jinkou": "+33.1", "chae": "58.3", "sheirong": "12200", "m2": "8.2", "m1": "4.2", "zhongchangdai": "5218", "cpi": "0.8", "ppi": "9.5", "note": "基建投资NBS英文稿≥2轮一致采信"}, {"period": "2021-09", "gongzeng": "3.1", "pmi": "49.6", "fei_pmi": "53.2", "guitou": "7.3", "jijian": "1.5", "zhizao": "14.8", "dichan": "8.8", "chukou": "+28.1", "jinkou": "+17.6", "chae": "66.8", "sheirong": "16600", "m2": "8.3", "m1": "3.7", "zhongchangdai": "—", "cpi": "0.7", "ppi": "10.7", "note": "基建/制造投资NBS英文稿≥2轮一致采信"}, {"period": "2021-10", "gongzeng": "3.5", "pmi": "49.2", "fei_pmi": "52.4", "guitou": "6.1", "jijian": "1.0", "zhizao": "14.2", "dichan": "7.2", "chukou": "+27.1", "jinkou": "+20.6", "chae": "84.5", "sheirong": "8262", "m2": "8.7", "m1": "2.8", "zhongchangdai": "2476", "cpi": "1.5", "ppi": "13.5", "note": "基建投资NBS英文稿≥2轮一致采信"}, {"period": "2021-11", "gongzeng": "3.8", "pmi": "50.1", "fei_pmi": "52.3", "guitou": "5.2", "jijian": "0.5", "zhizao": "13.7", "dichan": "6.0", "chukou": "+22.0", "jinkou": "+31.7", "chae": "71.7", "sheirong": "12700", "m2": "8.5", "m1": "3.0", "zhongchangdai": "4530", "cpi": "2.3", "ppi": "12.9", "note": "PPI新华社/财新/路透≥2源一致采信"}, {"period": "2021-12", "gongzeng": "4.3", "pmi": "50.3", "fei_pmi": "52.7（56.3）", "guitou": "4.9", "jijian": "0.4", "zhizao": "13.5", "dichan": "4.4", "chukou": "+20.9", "jinkou": "+19.5", "chae": "94.5", "sheirong": "11300", "m2": "9.0", "m1": "3.5", "zhongchangdai": "—", "cpi": "1.5", "ppi": "10.3", "note": "—"}, {"period": "2022-01", "gongzeng": "—", "pmi": "50.1", "fei_pmi": "51.1", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "39800", "m2": "9.8", "m1": "6.1", "zhongchangdai": "21000", "cpi": "0.9", "ppi": "9.1", "note": "—"}, {"period": "2022-02", "gongzeng": "7.5", "pmi": "50.2", "fei_pmi": "51.6", "guitou": "12.2", "jijian": "8.1", "zhizao": "20.9", "dichan": "3.7", "chukou": "+16.3", "jinkou": "+15.5", "chae": "116.0", "sheirong": "12300", "m2": "9.2", "m1": "4.7", "zhongchangdai": "5052", "cpi": "0.9", "ppi": "8.8", "note": "基建/制造多源一致采信（未达官网原文标准）"}, {"period": "2022-03", "gongzeng": "5.0", "pmi": "49.5", "fei_pmi": "48.4", "guitou": "9.3", "jijian": "8.5", "zhizao": "15.6", "dichan": "0.7", "chukou": "+14.7", "jinkou": "-0.1", "chae": "47.4", "sheirong": "31300", "m2": "9.7", "m1": "4.7", "zhongchangdai": "—", "cpi": "1.5", "ppi": "8.3", "note": "基建/制造官网原文核验（1-3月基建+8.5%、制造业+15.6%，stats.gov.cn 2022-04-18）"}, {"period": "2022-04", "gongzeng": "-2.9", "pmi": "47.4", "fei_pmi": "41.9", "guitou": "6.8", "jijian": "6.5", "zhizao": "12.2", "dichan": "-2.7", "chukou": "+3.9", "jinkou": "0.0", "chae": "51.1", "sheirong": "6454", "m2": "10.5", "m1": "5.1", "zhongchangdai": "2652", "cpi": "2.1", "ppi": "8.0", "note": "工增官网原文核验（-2.9%）；基建/制造罗毅飞解读原文核验（1-4月基建+6.5%、制造业+12.2%，stats.gov.cn 2022-05-16）；疫情冲击月"}, {"period": "2022-05", "gongzeng": "0.7", "pmi": "49.6", "fei_pmi": "47.8", "guitou": "6.2", "jijian": "6.7", "zhizao": "10.6", "dichan": "-4.0", "chukou": "+16.9", "jinkou": "+4.1", "chae": "78.8", "sheirong": "18900", "m2": "11.1", "m1": "4.6", "zhongchangdai": "5551", "cpi": "2.1", "ppi": "6.4", "note": "基建/制造官网原文核验（1-5月基建+6.7%、制造业+10.6%，stats.gov.cn 2022-06-15）"}, {"period": "2022-06", "gongzeng": "3.9", "pmi": "50.2", "fei_pmi": "54.7", "guitou": "6.1", "jijian": "7.1", "zhizao": "10.4", "dichan": "-5.4", "chukou": "+17.9", "jinkou": "+1.0", "chae": "97.9", "sheirong": "28100", "m2": "11.4", "m1": "5.8", "zhongchangdai": "—", "cpi": "2.5", "ppi": "6.1", "note": "基建/制造官网原文核验（1-6月基建+7.1%由7月解读反推、制造业+10.4%，stats.gov.cn 2022-07-15）"}, {"period": "2022-07", "gongzeng": "3.8", "pmi": "49.0", "fei_pmi": "53.8", "guitou": "5.7", "jijian": "7.4", "zhizao": "9.9", "dichan": "-6.4", "chukou": "+18.0", "jinkou": "+2.3", "chae": "101.3", "sheirong": "6790", "m2": "12.0", "m1": "6.7", "zhongchangdai": "3459", "cpi": "2.7", "ppi": "4.2", "note": "基建/制造官网原文核验（1-7月基建+7.4%、制造业+9.9%，stats.gov.cn 2022-08-15）"}, {"period": "2022-08", "gongzeng": "4.2", "pmi": "49.4", "fei_pmi": "52.6", "guitou": "5.8", "jijian": "8.3", "zhizao": "10.0", "dichan": "-7.4", "chukou": "+7.1", "jinkou": "+0.3", "chae": "79.4", "sheirong": "12500", "m2": "12.2", "m1": "6.1", "zhongchangdai": "7353", "cpi": "2.5", "ppi": "2.3", "note": "基建/制造官网原文核验（1-8月基建+8.3%、制造业+10.0%，stats.gov.cn 2022-09-16）"}, {"period": "2022-09", "gongzeng": "6.3", "pmi": "50.1", "fei_pmi": "50.6", "guitou": "5.9", "jijian": "8.6", "zhizao": "10.1", "dichan": "-8.0", "chukou": "+5.7", "jinkou": "+0.3", "chae": "84.7", "sheirong": "16000", "m2": "12.1", "m1": "6.4", "zhongchangdai": "—", "cpi": "2.8", "ppi": "0.9", "note": "基建/制造官网原文核验（1-9月基建+8.6%、制造业+10.1%，stats.gov.cn 2022-10-24）"}, {"period": "2022-10", "gongzeng": "5.0", "pmi": "49.2", "fei_pmi": "48.7", "guitou": "5.8", "jijian": "8.7", "zhizao": "9.7", "dichan": "-8.8", "chukou": "-0.3", "jinkou": "-0.7", "chae": "85.2", "sheirong": "6152", "m2": "11.8", "m1": "5.8", "zhongchangdai": "4623", "cpi": "2.1", "ppi": "-1.3", "note": "基建由1-11月解读反推核验（8.9-0.2=8.7%）；制造业官网原文核验（1-10月+9.7%，stats.gov.cn 2022-11-15）"}, {"period": "2022-11", "gongzeng": "2.2", "pmi": "48.0", "fei_pmi": "46.7", "guitou": "5.3", "jijian": "8.9", "zhizao": "9.0", "dichan": "-9.8", "chukou": "-8.7", "jinkou": "-10.6", "chae": "69.8", "sheirong": "12100", "m2": "12.4", "m1": "4.6", "zhongchangdai": "7367", "cpi": "1.6", "ppi": "-1.3", "note": "基建/制造官网解读原文核验（1-11月基建+8.9%、制造业+9.0%，罗毅飞解读 stats.gov.cn 2022-12-15）"}, {"period": "2022-12", "gongzeng": "1.3", "pmi": "47.0", "fei_pmi": "41.6（54.4）", "guitou": "5.1", "jijian": "9.4", "zhizao": "9.1", "dichan": "-10.0", "chukou": "-9.9", "jinkou": "-7.5", "chae": "78.0", "sheirong": "14000", "m2": "11.8", "m1": "3.7", "zhongchangdai": "—", "cpi": "1.8", "ppi": "-0.7", "note": "基建/制造官网解读原文核验（2022全年基建+9.4%、制造业+9.1%，翟善清解读 stats.gov.cn 2023-01-18）；疫情冲击月"}, {"period": "2023-01", "gongzeng": "—", "pmi": "50.1", "fei_pmi": "54.4", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "49000", "m2": "12.6", "m1": "6.7", "zhongchangdai": "35000", "cpi": "2.1", "ppi": "-0.8", "note": "—"}, {"period": "2023-02", "gongzeng": "2.4", "pmi": "52.6", "fei_pmi": "56.3", "guitou": "5.5", "jijian": "9.0", "zhizao": "8.1", "dichan": "-5.7", "chukou": "-6.8", "jinkou": "-10.2", "chae": "116.9", "sheirong": "18100", "m2": "12.9", "m1": "5.8", "zhongchangdai": "11100", "cpi": "1.0", "ppi": "-1.4", "note": "—"}, {"period": "2023-03", "gongzeng": "3.9", "pmi": "51.9", "fei_pmi": "58.2", "guitou": "5.1", "jijian": "8.8", "zhizao": "7.0", "dichan": "-5.8", "chukou": "+14.8", "jinkou": "-1.4", "chae": "88.2", "sheirong": "38900", "m2": "12.7", "m1": "5.1", "zhongchangdai": "—", "cpi": "0.7", "ppi": "-2.5", "note": "—"}, {"period": "2023-04", "gongzeng": "5.6", "pmi": "49.2", "fei_pmi": "56.4", "guitou": "4.7", "jijian": "8.5", "zhizao": "6.4", "dichan": "-6.2", "chukou": "+8.5", "jinkou": "-7.9", "chae": "90.2", "sheirong": "7188", "m2": "12.4", "m1": "5.3", "zhongchangdai": "6669", "cpi": "0.1", "ppi": "-3.6", "note": "—"}, {"period": "2023-05", "gongzeng": "3.5", "pmi": "48.8", "fei_pmi": "54.5", "guitou": "4.0", "jijian": "7.5", "zhizao": "6.0", "dichan": "-7.2", "chukou": "-7.5", "jinkou": "-4.5", "chae": "65.8", "sheirong": "13600", "m2": "11.6", "m1": "4.7", "zhongchangdai": "7698", "cpi": "0.2", "ppi": "-4.6", "note": "—"}, {"period": "2023-06", "gongzeng": "4.4", "pmi": "49.0", "fei_pmi": "53.2", "guitou": "3.8", "jijian": "7.2", "zhizao": "6.0", "dichan": "-7.9", "chukou": "-12.4", "jinkou": "-6.8", "chae": "70.6", "sheirong": "20600", "m2": "11.3", "m1": "3.1", "zhongchangdai": "—", "cpi": "0.0", "ppi": "-5.4", "note": "—"}, {"period": "2023-07", "gongzeng": "3.7", "pmi": "49.3", "fei_pmi": "51.5", "guitou": "3.4", "jijian": "6.8", "zhizao": "5.7", "dichan": "-8.5", "chukou": "-14.5", "jinkou": "-12.4", "chae": "80.6", "sheirong": "3459", "m2": "10.7", "m1": "2.3", "zhongchangdai": "2712", "cpi": "-0.3", "ppi": "-4.4", "note": "—"}, {"period": "2023-08", "gongzeng": "4.5", "pmi": "49.7", "fei_pmi": "51.0", "guitou": "3.2", "jijian": "6.4", "zhizao": "5.9", "dichan": "-8.8", "chukou": "-8.8", "jinkou": "-7.3", "chae": "68.4", "sheirong": "13600", "m2": "10.6", "m1": "2.2", "zhongchangdai": "6444", "cpi": "0.1", "ppi": "-3.0", "note": "—"}, {"period": "2023-09", "gongzeng": "4.5", "pmi": "50.2", "fei_pmi": "51.7", "guitou": "3.1", "jijian": "6.2", "zhizao": "6.2", "dichan": "-9.1", "chukou": "-6.2", "jinkou": "-6.2", "chae": "77.7", "sheirong": "41200", "m2": "10.3", "m1": "2.1", "zhongchangdai": "—", "cpi": "0.0", "ppi": "-2.5", "note": "—"}, {"period": "2023-10", "gongzeng": "4.6", "pmi": "49.5", "fei_pmi": "50.6", "guitou": "2.9", "jijian": "5.9", "zhizao": "6.2", "dichan": "-9.3", "chukou": "-6.4", "jinkou": "+3.0", "chae": "56.5", "sheirong": "7384", "m2": "10.3", "m1": "1.9", "zhongchangdai": "3828", "cpi": "-0.2", "ppi": "-2.6", "note": "—"}, {"period": "2023-11", "gongzeng": "6.6", "pmi": "49.4", "fei_pmi": "50.2", "guitou": "2.9", "jijian": "5.8", "zhizao": "6.3", "dichan": "-9.4", "chukou": "+0.5", "jinkou": "-0.6", "chae": "68.4", "sheirong": "10900", "m2": "10.0", "m1": "1.3", "zhongchangdai": "4460", "cpi": "-0.5", "ppi": "-3.0", "note": "—"}, {"period": "2023-12", "gongzeng": "6.8", "pmi": "49.0", "fei_pmi": "50.4（56.9）", "guitou": "3.0", "jijian": "5.9", "zhizao": "6.5", "dichan": "-9.6", "chukou": "+2.3", "jinkou": "+0.2", "chae": "75.3", "sheirong": "19400", "m2": "9.7", "m1": "1.3", "zhongchangdai": "—", "cpi": "-0.3", "ppi": "-2.7", "note": "—"}, {"period": "2024-01", "gongzeng": "—", "pmi": "49.2", "fei_pmi": "50.7", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "49200", "m2": "8.7", "m1": "5.9", "zhongchangdai": "33100", "cpi": "-0.8", "ppi": "-2.5", "note": "2024年起贷款拆分仅1月有当月值，其余月份只有累计口径"}, {"period": "2024-02", "gongzeng": "7.0", "pmi": "49.1", "fei_pmi": "51.4", "guitou": "4.2", "jijian": "6.3", "zhizao": "9.4", "dichan": "-9.0", "chukou": "+7.1", "jinkou": "+3.5", "chae": "125.2", "sheirong": "14500", "m2": "8.7", "m1": "1.2", "zhongchangdai": "—", "cpi": "0.7", "ppi": "-2.7", "note": "—"}, {"period": "2024-03", "gongzeng": "4.5", "pmi": "50.8", "fei_pmi": "53.0", "guitou": "4.5", "jijian": "6.5", "zhizao": "9.9", "dichan": "-9.5", "chukou": "-7.5", "jinkou": "-1.9", "chae": "58.6", "sheirong": "30900", "m2": "8.3", "m1": "1.1", "zhongchangdai": "—", "cpi": "0.1", "ppi": "-2.8", "note": "—"}, {"period": "2024-04", "gongzeng": "6.7", "pmi": "50.4", "fei_pmi": "51.2", "guitou": "4.2", "jijian": "6.0", "zhizao": "9.7", "dichan": "-9.8", "chukou": "+1.5", "jinkou": "+8.4", "chae": "72.4", "sheirong": "-2000", "m2": "7.2", "m1": "-1.4", "zhongchangdai": "—", "cpi": "0.3", "ppi": "-2.5", "note": "社融官网累计环比减少，如实记录（方向与历史记载一致）"}, {"period": "2024-05", "gongzeng": "5.6", "pmi": "49.5", "fei_pmi": "51.1", "guitou": "4.0", "jijian": "5.7", "zhizao": "9.6", "dichan": "-10.1", "chukou": "+7.6", "jinkou": "+1.8", "chae": "82.6", "sheirong": "9500", "m2": "7.0", "m1": "-4.2", "zhongchangdai": "—", "cpi": "0.3", "ppi": "-1.4", "note": "—"}, {"period": "2024-06", "gongzeng": "5.3", "pmi": "49.5", "fei_pmi": "50.5", "guitou": "3.9", "jijian": "5.4", "zhizao": "9.5", "dichan": "-10.1", "chukou": "+8.6", "jinkou": "-2.3", "chae": "99.1", "sheirong": "21300", "m2": "6.2", "m1": "—", "zhongchangdai": "—", "cpi": "0.2", "ppi": "-0.8", "note": "M1季报未披露"}, {"period": "2024-07", "gongzeng": "5.1", "pmi": "49.4", "fei_pmi": "50.2", "guitou": "3.6", "jijian": "4.9", "zhizao": "9.3", "dichan": "-10.2", "chukou": "+7.0", "jinkou": "+7.2", "chae": "84.7", "sheirong": "7700", "m2": "6.3", "m1": "-6.6", "zhongchangdai": "—", "cpi": "0.5", "ppi": "-0.8", "note": "—"}, {"period": "2024-08", "gongzeng": "4.5", "pmi": "49.1", "fei_pmi": "50.3", "guitou": "3.4", "jijian": "4.4", "zhizao": "9.1", "dichan": "-10.2", "chukou": "+8.7", "jinkou": "+0.5", "chae": "91.0", "sheirong": "9000", "m2": "6.3", "m1": "-7.3", "zhongchangdai": "—", "cpi": "0.6", "ppi": "-1.8", "note": "—"}, {"period": "2024-09", "gongzeng": "5.4", "pmi": "49.8", "fei_pmi": "50.0", "guitou": "3.4", "jijian": "4.1", "zhizao": "9.2", "dichan": "-10.1", "chukou": "+2.4", "jinkou": "+0.3", "chae": "81.7", "sheirong": "37600", "m2": "6.8", "m1": "—", "zhongchangdai": "—", "cpi": "0.4", "ppi": "-2.8", "note": "M1季报未披露"}, {"period": "2024-10", "gongzeng": "5.3", "pmi": "50.1", "fei_pmi": "50.2", "guitou": "3.4", "jijian": "4.3", "zhizao": "9.3", "dichan": "-10.3", "chukou": "+12.7", "jinkou": "-2.3", "chae": "95.7", "sheirong": "14000", "m2": "7.5", "m1": "-6.1", "zhongchangdai": "—", "cpi": "0.3", "ppi": "-2.9", "note": "外贸差额采信95.7（另有修订95.27，差0.4属初值/修订差异）"}, {"period": "2024-11", "gongzeng": "5.4", "pmi": "50.3", "fei_pmi": "50.0", "guitou": "3.3", "jijian": "4.2", "zhizao": "9.3", "dichan": "-10.4", "chukou": "+6.7", "jinkou": "-3.9", "chae": "97.4", "sheirong": "5800", "m2": "7.1", "m1": "-3.7", "zhongchangdai": "—", "cpi": "0.2", "ppi": "-2.5", "note": "—"}, {"period": "2024-12", "gongzeng": "6.2", "pmi": "50.1", "fei_pmi": "52.2（53.2）", "guitou": "3.2", "jijian": "4.4", "zhizao": "9.2", "dichan": "-10.6", "chukou": "+10.7", "jinkou": "+1.0", "chae": "104.8", "sheirong": "9900", "m2": "7.3", "m1": "—", "zhongchangdai": "—", "cpi": "0.1", "ppi": "-2.3", "note": "M1年报未披露"}, {"period": "2025-01", "gongzeng": "—", "pmi": "49.1", "fei_pmi": "50.2", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "51300", "m2": "7.0", "m1": "0.4", "zhongchangdai": "34600", "cpi": "0.5", "ppi": "-2.3", "note": "M1新口径生效（含个人活期存款等）；2025年起贷款拆分仅1月有当月值"}, {"period": "2025-02", "gongzeng": "5.9", "pmi": "50.2", "fei_pmi": "50.4", "guitou": "4.1", "jijian": "5.6", "zhizao": "9.0", "dichan": "-9.8", "chukou": "+2.3", "jinkou": "-8.4", "chae": "170.5", "sheirong": "10100", "m2": "7.0", "m1": "0.1", "zhongchangdai": "—", "cpi": "-0.7", "ppi": "-2.2", "note": "—"}, {"period": "2025-03", "gongzeng": "7.7", "pmi": "50.5", "fei_pmi": "50.8", "guitou": "4.2", "jijian": "5.8", "zhizao": "9.1", "dichan": "-9.9", "chukou": "+12.4", "jinkou": "-4.3", "chae": "102.6", "sheirong": "36400", "m2": "7.0", "m1": "1.6", "zhongchangdai": "—", "cpi": "-0.1", "ppi": "-2.5", "note": "—"}, {"period": "2025-04", "gongzeng": "6.1", "pmi": "49.0", "fei_pmi": "50.4", "guitou": "4.0", "jijian": "5.8", "zhizao": "8.8", "dichan": "-10.3", "chukou": "+8.1", "jinkou": "-0.2※", "chae": "96.2", "sheirong": "2800", "m2": "8.0", "m1": "1.5", "zhongchangdai": "—", "cpi": "-0.1", "ppi": "-2.7", "note": "外贸进口-0.2%为美元口径（人民币口径+0.8%）；维持※待二源"}, {"period": "2025-05", "gongzeng": "5.8", "pmi": "49.5", "fei_pmi": "50.3", "guitou": "3.7", "jijian": "5.6", "zhizao": "8.5", "dichan": "-10.7", "chukou": "+4.8", "jinkou": "-3.4※", "chae": "103.2", "sheirong": "6200", "m2": "7.9", "m1": "2.3", "zhongchangdai": "—", "cpi": "-0.1", "ppi": "-3.3", "note": "外贸进口-3.4%为美元口径（人民币口径-2.1%）；维持※待二源"}, {"period": "2025-06", "gongzeng": "6.8", "pmi": "49.7", "fei_pmi": "50.5", "guitou": "2.8", "jijian": "4.6", "zhizao": "7.5", "dichan": "-11.2", "chukou": "+5.8", "jinkou": "+1.1", "chae": "114.8", "sheirong": "22400", "m2": "8.3", "m1": "4.6", "zhongchangdai": "—", "cpi": "0.1", "ppi": "-3.6", "note": "—"}, {"period": "2025-07", "gongzeng": "5.7", "pmi": "49.3", "fei_pmi": "50.1", "guitou": "1.6", "jijian": "3.2", "zhizao": "6.2", "dichan": "-12.0", "chukou": "+7.2", "jinkou": "+4.1", "chae": "98.2", "sheirong": "11600", "m2": "8.8", "m1": "5.6", "zhongchangdai": "—", "cpi": "0.0", "ppi": "-3.6", "note": "基建投资多源一致采信"}, {"period": "2025-08", "gongzeng": "5.2", "pmi": "49.4", "fei_pmi": "50.3", "guitou": "0.5", "jijian": "2.0", "zhizao": "5.1", "dichan": "-12.9", "chukou": "+4.4", "jinkou": "+1.3", "chae": "102.3", "sheirong": "5900", "m2": "8.8", "m1": "6.0", "zhongchangdai": "—", "cpi": "-0.4", "ppi": "-2.9", "note": "基建投资多源一致采信；外贸进口+1.3%为美元海关口径（AP+1.8%单源降级脚注）；PPI≥2大媒体一致采信"}, {"period": "2025-09", "gongzeng": "6.5", "pmi": "49.8", "fei_pmi": "50.0", "guitou": "-0.5", "jijian": "1.1", "zhizao": "4.0", "dichan": "-13.9", "chukou": "+8.3", "jinkou": "+7.4", "chae": "90.5※", "sheirong": "35300", "m2": "8.4", "m1": "7.2", "zhongchangdai": "—", "cpi": "-0.3", "ppi": "-2.3", "note": "基建投资多源一致采信；外贸差额初值90.5（修订88.7单源，维持※）"}, {"period": "2025-10", "gongzeng": "4.9", "pmi": "49.0", "fei_pmi": "50.1", "guitou": "-1.7", "jijian": "-0.1", "zhizao": "2.7", "dichan": "-14.7", "chukou": "-1.1", "jinkou": "+1.0", "chae": "90.1", "sheirong": "8100", "m2": "8.2", "m1": "6.2", "zhongchangdai": "—", "cpi": "0.2", "ppi": "-2.1", "note": "—"}, {"period": "2025-11", "gongzeng": "4.8", "pmi": "49.2", "fei_pmi": "49.5", "guitou": "-2.6", "jijian": "-1.1", "zhizao": "1.9", "dichan": "-15.9", "chukou": "+5.9", "jinkou": "+1.9", "chae": "111.7", "sheirong": "24900", "m2": "8.0", "m1": "4.9", "zhongchangdai": "—", "cpi": "0.7", "ppi": "-2.2", "note": "PPI新华社/中国政府英文网≥2源直接命中采信（环比+0.1%）"}, {"period": "2025-12", "gongzeng": "5.2", "pmi": "50.1", "fei_pmi": "50.2（52.8）", "guitou": "-3.8", "jijian": "-2.2", "zhizao": "0.6", "dichan": "-17.2", "chukou": "+6.6", "jinkou": "+5.7", "chae": "114.1", "sheirong": "22100", "m2": "8.5", "m1": "3.8", "zhongchangdai": "—", "cpi": "0.8", "ppi": "-1.9", "note": "—"}, {"period": "2026-01", "gongzeng": "—", "pmi": "49.3", "fei_pmi": "49.4", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "—", "jinkou": "—", "chae": "—", "sheirong": "47100", "m2": "9.0", "m1": "4.9", "zhongchangdai": "31800", "cpi": "0.2", "ppi": "-1.4", "note": "2026年起贷款拆分仅1月有当月值"}, {"period": "2026-02", "gongzeng": "6.3", "pmi": "49.0", "fei_pmi": "49.5", "guitou": "1.8", "jijian": "11.4", "zhizao": "3.1", "dichan": "-11.1", "chukou": "+21.8", "jinkou": "+19.8", "chae": "213.6", "sheirong": "9000", "m2": "9.0", "m1": "5.9", "zhongchangdai": "—", "cpi": "1.3", "ppi": "-0.9", "note": "—"}, {"period": "2026-03", "gongzeng": "5.7", "pmi": "50.4", "fei_pmi": "50.1", "guitou": "1.7", "jijian": "8.9", "zhizao": "4.1", "dichan": "-11.2", "chukou": "+2.5", "jinkou": "+27.8", "chae": "51.1", "sheirong": "29900", "m2": "8.5", "m1": "5.1", "zhongchangdai": "—", "cpi": "1.0", "ppi": "0.5", "note": "—"}, {"period": "2026-04", "gongzeng": "4.1", "pmi": "50.3", "fei_pmi": "49.4", "guitou": "-1.6", "jijian": "4.3", "zhizao": "1.2", "dichan": "-13.7", "chukou": "+14.1", "jinkou": "+25.3※", "chae": "84.8", "sheirong": "-100", "m2": "8.6", "m1": "5.0", "zhongchangdai": "—", "cpi": "1.2", "ppi": "2.8", "note": "工增官网原文核验（+4.1%，stats.gov.cn 2026-05-18）；外贸进口+25.3%算术勾稽强支持（+15.3%无法通过勾稽），维持※待二源"}, {"period": "2026-05", "gongzeng": "4.5", "pmi": "50.0", "fei_pmi": "50.1", "guitou": "-4.1", "jijian": "0.6", "zhizao": "-0.4", "dichan": "-16.2", "chukou": "+19.4", "jinkou": "+27.4", "chae": "105.4", "sheirong": "5200", "m2": "8.6", "m1": "5.5", "zhongchangdai": "—", "cpi": "1.2", "ppi": "3.9", "note": "—"}, {"period": "2026-06", "gongzeng": "5.3", "pmi": "50.3", "fei_pmi": "50.2", "guitou": "-5.7", "jijian": "-2.4", "zhizao": "-1.2", "dichan": "-18.0", "chukou": "+27.0", "jinkou": "+36.0", "chae": "125.6", "sheirong": "16100", "m2": "8.0", "m1": "4.0", "zhongchangdai": "—", "cpi": "1.0", "ppi": "4.1", "note": "固投官网原文核验（-5.7%按可比口径，stats.gov.cn 2026-07-15）；基建-2.4%、制造业-1.2%同原文"}, {"period": "2026-07", "gongzeng": "4.5", "pmi": "49.2", "fei_pmi": "49.0", "guitou": "-6.7", "jijian": "-3.6", "zhizao": "-1.7", "dichan": "-19.2", "chukou": "+23.9", "jinkou": "+27.5", "chae": "112.5", "sheirong": "14100", "m2": "7.7", "m1": "4.0", "zhongchangdai": "—", "cpi": "0.5", "ppi": "3.5※", "note": "地产投资-19.2为中新社/证券时报二源一致回补（按可比口径）；PPI单链条待二源"}, {"period": "2026-08", "gongzeng": "5.2", "pmi": "49.8", "fei_pmi": "49.0", "guitou": "-7.2", "jijian": "-4.0", "zhizao": "-2.3", "dichan": "-19.9", "chukou": "+25.0", "jinkou": "+28.2", "chae": "119.1", "sheirong": "16600", "m2": "7.3", "m1": "3.5", "zhongchangdai": "—", "cpi": "0.8", "ppi": "3.8", "note": "—"}, {"period": "2026-09", "gongzeng": "—", "pmi": "50.1", "fei_pmi": "50.2（50.3）", "guitou": "—", "jijian": "—", "zhizao": "—", "dichan": "—", "chukou": "+36.3", "jinkou": "+31.0", "chae": "133.5", "sheirong": "35500", "m2": "7.2", "m1": "3.2", "zhongchangdai": "—", "cpi": "0.9", "ppi": "5.0", "note": "9月工业/固投/基建/制造/地产尚未发布；CPI/PPI为官网原文逐字核验"}];
+const quarterly = [{"period": "2016Q1", "gdp": "6.7", "second_industry": "—", "note": "第二产业拆分待回补"}, {"period": "2016Q2", "gdp": "6.7", "second_industry": "—", "note": "—"}, {"period": "2016Q3", "gdp": "6.7", "second_industry": "—", "note": "—"}, {"period": "2016Q4", "gdp": "6.8", "second_industry": "—", "note": "—"}, {"period": "2017Q1", "gdp": "6.9", "second_industry": "—", "note": "—"}, {"period": "2017Q2", "gdp": "6.9", "second_industry": "—", "note": "—"}, {"period": "2017Q3", "gdp": "6.8", "second_industry": "—", "note": "—"}, {"period": "2017Q4", "gdp": "6.8", "second_industry": "—", "note": "—"}, {"period": "2018Q1", "gdp": "6.8", "second_industry": "—", "note": "—"}, {"period": "2018Q2", "gdp": "6.7", "second_industry": "—", "note": "—"}, {"period": "2018Q3", "gdp": "6.5", "second_industry": "—", "note": "—"}, {"period": "2018Q4", "gdp": "6.4", "second_industry": "—", "note": "—"}, {"period": "2019Q1", "gdp": "6.4", "second_industry": "—", "note": "—"}, {"period": "2019Q2", "gdp": "6.2", "second_industry": "—", "note": "—"}, {"period": "2019Q3", "gdp": "6.0", "second_industry": "—", "note": "—"}, {"period": "2019Q4", "gdp": "6.0", "second_industry": "—", "note": "—"}, {"period": "2020Q1", "gdp": "-6.8", "second_industry": "—", "note": "—"}, {"period": "2020Q2", "gdp": "3.2", "second_industry": "—", "note": "—"}, {"period": "2020Q3", "gdp": "4.9", "second_industry": "—", "note": "—"}, {"period": "2020Q4", "gdp": "6.5", "second_industry": "—", "note": "—"}, {"period": "2021Q1", "gdp": "18.3", "second_industry": "—", "note": "低基数季度"}, {"period": "2021Q2", "gdp": "7.9", "second_industry": "—", "note": "—"}, {"period": "2021Q3", "gdp": "4.9", "second_industry": "—", "note": "—"}, {"period": "2021Q4", "gdp": "4.0", "second_industry": "—", "note": "—"}, {"period": "2022Q1", "gdp": "4.8", "second_industry": "—", "note": "—"}, {"period": "2022Q2", "gdp": "0.4", "second_industry": "—", "note": "—"}, {"period": "2022Q3", "gdp": "3.9", "second_industry": "—", "note": "—"}, {"period": "2022Q4", "gdp": "2.9", "second_industry": "3.4", "note": "官网原文逐字核验（《2022年四季度和全年国内生产总值初步核算结果》）"}, {"period": "2023Q1", "gdp": "4.5", "second_industry": "—", "note": "—"}, {"period": "2023Q2", "gdp": "6.3", "second_industry": "—", "note": "—"}, {"period": "2023Q3", "gdp": "4.9", "second_industry": "—", "note": "—"}, {"period": "2023Q4", "gdp": "5.2", "second_industry": "—", "note": "—"}, {"period": "2024Q1", "gdp": "5.3", "second_industry": "6.0", "note": "官网原文逐篇抓取（表1第二产业行）"}, {"period": "2024Q2", "gdp": "4.7", "second_industry": "5.6", "note": "官网原文（二季度126684亿+5.6）"}, {"period": "2024Q3", "gdp": "4.6", "second_industry": "4.6", "note": "官网原文（三季度124832亿+4.6）"}, {"period": "2024Q4", "gdp": "5.4", "second_industry": "5.2", "note": "官网原文（四季度135595亿+5.2）"}, {"period": "2025Q1", "gdp": "5.4", "second_industry": "5.9", "note": "官网原文（111903亿+5.9）"}, {"period": "2025Q2", "gdp": "5.2", "second_industry": "4.8", "note": "官网原文核验（二季度127147亿+4.8%，stats.gov.cn/sj/zxfb/202507/t20250716_1960426.html）"}, {"period": "2025Q3", "gdp": "4.8", "second_industry": "4.2", "note": "官网原文（三季度124970亿+4.2）"}, {"period": "2025Q4", "gdp": "4.5", "second_industry": "3.4", "note": "官网原文（四季度136803亿+3.4）"}, {"period": "2026Q1", "gdp": "5.0", "second_industry": "4.9", "note": "官网原文核验（一季度116135亿+4.9%，stats.gov.cn/sj/zxfb/202604/t20260417_1963336.html）"}, {"period": "2026Q2", "gdp": "4.3", "second_industry": "3.0※", "note": "官网通稿转载级+新华社/澎湃三源一致（二季度361511亿+4.3、第二产业134338亿+3.0）；stats直链未定位，第二产业单源维持※"}];
+const rates = [{"date": "2016-01-01", "event": "期初状态（2016年全年MLF 1Y维持3.00%，旧LPR 1Y 4.30%）", "lpr1y": "4.30", "lpr5y": "—", "mlf1y": "3.00", "source": "中国人民银行", "note": "旧LPR无5年期"}, {"date": "2017-01-24", "event": "MLF操作利率上行10bp（6M至2.95%、1Y至3.10%）", "lpr1y": "4.30", "lpr5y": "—", "mlf1y": "3.10", "source": "中国人民银行", "note": "多源一致采信（UOB+英文财经转载+官网3月公告倒推；未见官网单条公告）"}, {"date": "2017-02-03", "event": "春节后逆回购利率上行10bp（7天2.35%）", "lpr1y": "4.30", "lpr5y": "—", "mlf1y": "3.10", "source": "中国人民银行", "note": "—"}, {"date": "2017-03-16", "event": "逆回购+MLF上行10bp", "lpr1y": "4.30", "lpr5y": "—", "mlf1y": "3.20", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2017-12-14", "event": "逆回购+MLF上行5bp", "lpr1y": "4.30", "lpr5y": "—", "mlf1y": "3.25", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2018-03-22", "event": "逆回购上行5bp（7天2.55%），MLF维持", "lpr1y": "4.30", "lpr5y": "—", "mlf1y": "3.30", "source": "中国人民银行", "note": "—"}, {"date": "2018-04-08", "event": "旧LPR 1Y 4.30→4.31", "lpr1y": "4.31", "lpr5y": "—", "mlf1y": "3.30", "source": "全国银行间同业拆借中心", "note": "报价行变化致1bp波动，非政策调整"}, {"date": "2019-08-20", "event": "LPR改革首报", "lpr1y": "4.25", "lpr5y": "4.85", "mlf1y": "3.30", "source": "全国银行间同业拆借中心", "note": "新LPR机制生效"}, {"date": "2019-09-20", "event": "LPR下调", "lpr1y": "4.20", "lpr5y": "4.85", "mlf1y": "3.30", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2019-11-05", "event": "MLF下调5bp", "lpr1y": "4.20", "lpr5y": "4.85", "mlf1y": "3.25", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2019-11-20", "event": "LPR下调", "lpr1y": "4.15", "lpr5y": "4.80", "mlf1y": "3.25", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2020-02-17", "event": "MLF下调10bp", "lpr1y": "4.15", "lpr5y": "4.80", "mlf1y": "3.15", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2020-02-20", "event": "LPR下调", "lpr1y": "4.05", "lpr5y": "4.75", "mlf1y": "3.15", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2020-03-30", "event": "7天逆回购下调20bp至2.20%", "lpr1y": "4.05", "lpr5y": "4.75", "mlf1y": "3.15", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2020-04-15", "event": "MLF下调20bp", "lpr1y": "4.05", "lpr5y": "4.75", "mlf1y": "2.95", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2020-04-20", "event": "LPR下调", "lpr1y": "3.85", "lpr5y": "4.65", "mlf1y": "2.95", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2021-12-20", "event": "LPR 1Y下调5bp", "lpr1y": "3.80", "lpr5y": "4.65", "mlf1y": "2.95", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2022-01-17", "event": "MLF+逆回购下调10bp", "lpr1y": "3.80", "lpr5y": "4.65", "mlf1y": "2.85", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2022-01-20", "event": "LPR下调", "lpr1y": "3.70", "lpr5y": "4.60", "mlf1y": "2.85", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2022-05-20", "event": "LPR 5Y下调15bp", "lpr1y": "3.70", "lpr5y": "4.45", "mlf1y": "2.85", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2022-08-15", "event": "MLF+逆回购下调10bp", "lpr1y": "3.70", "lpr5y": "4.45", "mlf1y": "2.75", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2022-08-22", "event": "LPR下调", "lpr1y": "3.65", "lpr5y": "4.30", "mlf1y": "2.75", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2023-06-13", "event": "7天逆回购下调10bp至1.90%", "lpr1y": "3.65", "lpr5y": "4.30", "mlf1y": "2.75", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2023-06-15", "event": "MLF下调10bp", "lpr1y": "3.65", "lpr5y": "4.30", "mlf1y": "2.65", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2023-06-20", "event": "LPR下调", "lpr1y": "3.55", "lpr5y": "4.20", "mlf1y": "2.65", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2023-08-15", "event": "MLF下调15bp+逆回购下调10bp至1.80%", "lpr1y": "3.55", "lpr5y": "4.20", "mlf1y": "2.50", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2023-08-21", "event": "LPR 1Y下调10bp", "lpr1y": "3.45", "lpr5y": "4.20", "mlf1y": "2.50", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2024-02-20", "event": "LPR 5Y下调25bp", "lpr1y": "3.45", "lpr5y": "3.95", "mlf1y": "2.50", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2024-07-22", "event": "7天逆回购下调10bp至1.70%+LPR下调", "lpr1y": "3.35", "lpr5y": "3.85", "mlf1y": "2.50", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2024-07-25", "event": "MLF下调20bp", "lpr1y": "3.35", "lpr5y": "3.85", "mlf1y": "2.30", "source": "中国人民银行", "note": "官网公告原文"}, {"date": "2024-09-24", "event": "14天逆回购1.85%（9-27起7天逆回购下调20bp至1.50%）", "lpr1y": "3.35", "lpr5y": "3.85", "mlf1y": "2.30", "source": "中国人民银行", "note": "—"}, {"date": "2024-09-25", "event": "MLF下调30bp（3000亿元，余额6.878万亿元）", "lpr1y": "3.35", "lpr5y": "3.85", "mlf1y": "2.00", "source": "中国人民银行", "note": "多源一致采信（路透+新华社英文稿；未见官网单条公告）"}, {"date": "2024-10-21", "event": "LPR下调25bp", "lpr1y": "3.10", "lpr5y": "3.60", "mlf1y": "2.00", "source": "全国银行间同业拆借中心", "note": "—"}, {"date": "2025-05-07", "event": "一揽子：降准0.5pp+7天逆回购下调10bp至1.40%", "lpr1y": "3.10", "lpr5y": "3.60", "mlf1y": "2.00", "source": "中国人民银行", "note": "多源一致采信（发布会口径：潘行长国新办发布会；未见官网新闻稿原文）"}, {"date": "2025-05-20", "event": "LPR下调10bp", "lpr1y": "3.00", "lpr5y": "3.50", "mlf1y": "2.00", "source": "全国银行间同业拆借中心", "note": "—"}];
+
+const MONTHS = [...Array(12)].map((_, i) => String(i + 1).padStart(2, '0'));
+const MONTH_CATS = MONTHS.map(m => m + '月');
+const QCATS = ['Q1', 'Q2', 'Q3', 'Q4'];
+/* 年份专属色：叠加模式下每条线颜色唯一，不用线型区分 */
+const YEAR_COLORS = ['#4f8cff', '#ffa726', '#26a69a', '#ef5350', '#9b59b6'];
+const MAX_YEARS = 5;
+
+/* ---------- 状态 ---------- */
+const state = { years: [] }; // 空=全历史；非空=多选年份在 01-12 月轴上叠加
+const cardMetric = {};       // chartId -> 叠加模式下该卡显示的指标名
+const inYearMode = () => state.years.length > 0;
+const selectedYears = () => [...state.years].sort();
+const latestYear = () => selectedYears().slice(-1)[0];
+
+/* ---------- 取数 ---------- */
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function parseVal(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  v = String(v).trim().replace(/[※+]/g, '').replace(/%/g, '');
+  if (v === '' || v === '—') return null;
+  const n = parseFloat(v);
+  return Number.isNaN(n) ? null : n;
+}
+// 非制造业PMI括号内为建筑业商务活动指数，如 '53.5（57.8）'
+function parseJian(v) {
+  if (!v || v === '—') return null;
+  const m = String(v).match(/[（(]([\d.\-]+)/);
+  return m ? parseFloat(m[1]) : null;
+}
+const hasData = arr => Array.isArray(arr) && arr.some(x => x !== null && x !== undefined);
+
+const byPeriod = {};
+monthly.forEach(r => { byPeriod[r.period] = r; });
+function noteOf(period) {
+  const r = byPeriod[period];
+  const n = r && r.note ? String(r.note).trim() : '';
+  return (n === '' || n === '—') ? '' : n;
+}
+function monthNote(label) {
+  if (!inYearMode()) return noteOf(label);
+  const mm = label.replace('月', '');
+  return selectedYears()
+    .map(y => { const n = noteOf(`${y}-${mm}`); return n ? `${y}: ${n}` : ''; })
+    .filter(Boolean).join('\n');
+}
+function yearRows(y) { return monthly.filter(r => r.period.slice(0, 4) === y); }
+function metricFn(mt) {
+  if (mt.fn) return mt.fn;
+  if (mt.parse === 'jian') return r => parseJian(r[mt.key]);
+  return r => parseVal(r[mt.key]);
+}
+function metricRows(mt, y) {
+  const fn = metricFn(mt);
+  const m = {};
+  monthly.forEach(r => { if (r.period.slice(0, 4) === y) m[r.period.slice(5)] = fn(r); });
+  return MONTHS.map(mm => (m[mm] === undefined ? null : m[mm]));
+}
+const metricHist = mt => monthly.map(metricFn(mt));
+function qVals(mt, y) {
+  const fn = metricFn(mt);
+  const m = {};
+  quarterly.forEach(r => { if (r.period.slice(0, 4) === y) m[r.period.slice(4)] = fn(r); });
+  return QCATS.map(q => (m[q] === undefined ? null : m[q]));
+}
+function qNote(label) {
+  if (!inYearMode()) {
+    const r = quarterly.find(x => x.period === label);
+    const n = r && r.note ? String(r.note).trim() : '';
+    return (n === '' || n === '—') ? '' : n;
+  }
+  return selectedYears()
+    .map(y => {
+      const r = quarterly.find(x => x.period === y + label);
+      const n = r && r.note ? String(r.note).trim() : '';
+      return (n && n !== '—') ? `${y}: ${n}` : '';
+    }).filter(Boolean).join('\n');
+}
+
+/* ---------- echarts 基础 ---------- */
+const charts = {};
+function makeChart(id, option) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  if (!charts[id]) charts[id] = echarts.init(el);
+  charts[id].setOption(option, true);
+  return charts[id];
+}
+window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+
+function baseOpt(cats, overlay) {
+  const o = {
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1d27', borderColor: '#2a2d3a', textStyle: { color: '#e0e0e0' } },
+    legend: { type: 'scroll', textStyle: { color: '#8b8fa3', fontSize: 11 }, top: 0, left: 0, right: 70, pageIconColor: '#8b8fa3', pageTextStyle: { color: '#8b8fa3' } },
+    grid: { left: 56, right: 20, top: 46, bottom: overlay ? 36 : 64 },
+    toolbox: { right: 8, top: 0, iconStyle: { borderColor: '#8b8fa3' }, feature: { saveAsImage: { title: '存为图片', backgroundColor: '#0f1117', pixelRatio: 2 } } },
+    xAxis: { type: 'category', data: cats, axisLabel: { color: '#8b8fa3', fontSize: 10, rotate: cats.length > 24 ? 45 : 0 }, axisLine: { lineStyle: { color: '#2a2d3a' } } },
+    yAxis: { type: 'value', axisLabel: { color: '#8b8fa3', fontSize: 11 }, splitLine: { lineStyle: { color: '#23262f' } } }
+  };
+  if (!overlay) o.dataZoom = [{ type: 'inside' }, { type: 'slider', height: 20, bottom: 10, borderColor: '#2a2d3a', backgroundColor: 'transparent', fillerColor: 'rgba(79,140,255,0.2)' }];
+  return o;
+}
+
+function lineSerie(name, data, color, width, extra) {
+  return Object.assign({ name, type: 'line', smooth: true, connectNulls: true, symbol: 'circle', symbolSize: 4, showSymbol: false, data, lineStyle: { color, width: width || 2 }, itemStyle: { color }, emphasis: { focus: 'series' } }, extra || {});
+}
+const zeroMark = () => ({ silent: true, symbol: 'none', lineStyle: { color: '#3a3e52', type: 'dashed', width: 1 }, label: { show: false }, data: [{ yAxis: 0 }] });
+const fiftyMark = () => ({ silent: true, symbol: 'none', lineStyle: { color: '#ef5350', type: 'dashed', width: 1 }, label: { formatter: '荣枯线 50', color: '#8b8fa3', fontSize: 10, position: 'insideEndTop' }, data: [{ yAxis: 50 }] });
+
+function axisTooltip(unit, noteFn) {
+  return {
+    trigger: 'axis', backgroundColor: '#1a1d27', borderColor: '#2a2d3a', textStyle: { color: '#e0e0e0' },
+    formatter: params => {
+      if (!params || !params.length) return '';
+      let h = `<div style="font-weight:600;margin-bottom:4px;">${esc(params[0].axisValue)}</div>`;
+      params.forEach(p => {
+        const v = (p.value === null || p.value === undefined) ? '—' : `${p.value}${unit}`;
+        h += `${p.marker}${esc(p.seriesName)}: ${esc(v)}<br/>`;
+      });
+      const raw = noteFn ? noteFn(params[0].axisValue) : '';
+      if (raw) h += `<div style="max-width:300px;white-space:normal;color:#8b8fa3;font-size:11px;margin-top:4px;line-height:1.6;">${esc(raw).split('\n').join('<br/>')}</div>`;
+      return h;
+    }
+  };
+}
+
+/* ---------- 图表配置表 ---------- */
+const spreadOf = r => { const a = parseVal(r.m1), b = parseVal(r.m2); return (a !== null && b !== null) ? +(a - b).toFixed(1) : null; };
+
+const CHART_DEFS = [
+  { id: 'chart_gongzeng', title: '规模以上工业增加值同比', unit: '%', zero: true,
+    metrics: [{ name: '工增同比', key: 'gongzeng', color: '#4f8cff' }] },
+  { id: 'chart_pmi', title: 'PMI', unit: '', fifty: true, yAxis: { min: 35, max: 62 },
+    metrics: [
+      { name: '制造业PMI', key: 'pmi', color: '#4f8cff' },
+      { name: '非制造业PMI', key: 'fei_pmi', color: '#ffa726' },
+      { name: '建筑业商务活动', key: 'fei_pmi', parse: 'jian', color: '#26a69a', hidden: true }
+    ],
+    legendSelected: overlay => overlay ? {} : { '建筑业商务活动': false } },
+  { id: 'chart_gdp', title: 'GDP当季同比', unit: '%', quarterly: true,
+    metrics: [
+      { name: 'GDP当季同比', key: 'gdp', color: '#4f8cff' },
+      { name: '第二产业同比', key: 'second_industry', color: '#ef5350' }
+    ] },
+  { id: 'chart_guitou', title: '固定资产投资累计同比', unit: '%', zero: true,
+    metrics: [{ name: '固投累计同比', key: 'guitou', color: '#4f8cff' }] },
+  { id: 'chart_invest3', title: '投资', unit: '%', zero: true,
+    metrics: [
+      { name: '基建投资', key: 'jijian', color: '#4f8cff' },
+      { name: '制造业投资', key: 'zhizao', color: '#26a69a' },
+      { name: '地产投资', key: 'dichan', color: '#ef5350' }
+    ] },
+  { id: 'chart_trade', title: '出口/进口同比', unit: '%', zero: true,
+    metrics: [
+      { name: '出口同比', key: 'chukou', color: '#4f8cff' },
+      { name: '进口同比', key: 'jinkou', color: '#ffa726' }
+    ] },
+  { id: 'chart_chae', title: '贸易差额', unit: '亿美元',
+    metrics: [{ name: '贸易差额', key: 'chae', color: '#4f8cff', bar: true, barColor: p => (p.value >= 0 ? '#4f8cff' : '#ef5350') }] },
+  { id: 'chart_sheirong', title: '新增社融', unit: '亿元',
+    metrics: [
+      { name: '新增社融', key: 'sheirong', color: '#4f8cff', bar: true },
+      { name: '企业中长贷', key: 'zhongchangdai', color: '#26a69a', bar: true }
+    ] },
+  { id: 'chart_m2m1', title: 'M2/M1', unit: '%',
+    metrics: [
+      { name: 'M2同比', key: 'm2', color: '#4f8cff' },
+      { name: 'M1同比', key: 'm1', color: '#ffa726' },
+      { name: 'M1-M2剪刀差', color: '#9b59b6', fn: spreadOf, dash: true }
+    ] },
+  { id: 'chart_cpippi', title: 'CPI/PPI', unit: '%', zero: true,
+    metrics: [
+      { name: 'CPI同比', key: 'cpi', color: '#4f8cff' },
+      { name: 'PPI同比', key: 'ppi', color: '#ef5350' }
+    ] }
+];
+const DEF_BY_ID = {};
+CHART_DEFS.forEach(d => { DEF_BY_ID[d.id] = d; });
+const selMetric = def => def.metrics.find(m => m.name === cardMetric[def.id]) || def.metrics[0];
+
+/* ---------- 通用渲染 ---------- */
+function renderMetricChart(def) {
+  const overlay = inYearMode();
+  if (!overlay) {
+    const cats = monthly.map(r => r.period);
+    const series = def.metrics.map(mt => {
+      if (mt.bar) return { name: mt.name, type: 'bar', data: metricHist(mt), itemStyle: { color: mt.barColor || mt.color } };
+      const extra = mt.dash ? { lineStyle: { color: mt.color, type: 'dashed' } } : null;
+      return lineSerie(mt.name, metricHist(mt), mt.color, 2, extra);
+    });
+    finishRender(def, cats, series, false);
+    return;
+  }
+  const mt = selMetric(def);
+  const sys = selectedYears();
+  const series = sys.map((y, i) => {
+    const data = metricRows(mt, y);
+    if (!hasData(data)) return null;
+    return lineSerie(`${y} ${mt.name}`, data, YEAR_COLORS[i], y === latestYear() ? 3 : 2);
+  }).filter(Boolean);
+  finishRender(def, MONTH_CATS, series, true);
+}
+
+function renderGDP() {
+  const def = DEF_BY_ID['chart_gdp'];
+  const overlay = inYearMode();
+  if (!overlay) {
+    const cats = quarterly.map(r => r.period);
+    const series = [
+      { name: 'GDP当季同比', type: 'bar', data: quarterly.map(r => parseVal(r.gdp)), itemStyle: { color: '#4f8cff' } },
+      lineSerie('第二产业同比', quarterly.map(r => parseVal(r.second_industry)), '#ef5350')
+    ];
+    finishRender(def, cats, series, false);
+    return;
+  }
+  const mt = selMetric(def);
+  const sys = selectedYears();
+  const series = sys.map((y, i) => {
+    const data = qVals(mt, y);
+    if (!hasData(data)) return null;
+    return lineSerie(`${y} ${mt.name}`, data, YEAR_COLORS[i], y === latestYear() ? 3 : 2);
+  }).filter(Boolean);
+  finishRender(def, QCATS, series, true);
+}
+
+function finishRender(def, cats, series, overlay) {
+  if (def.zero) series.forEach(s => { if (s.type !== 'bar') s.markLine = zeroMark(); });
+  if (def.fifty) { const t = series.find(s => s.type !== 'bar'); if (t) t.markLine = fiftyMark(); }
+  const o = baseOpt(cats, overlay);
+  o.tooltip = axisTooltip(def.unit, overlay ? (def.id === 'chart_gdp' ? qNote : monthNote) : (label => (def.id === 'chart_gdp' ? qNote(label) : noteOf(label))));
+  if (def.yAxis) o.yAxis = Object.assign(o.yAxis, def.yAxis);
+  if (def.legendSelected) o.legend = Object.assign(o.legend, { selected: def.legendSelected(overlay) });
+  o.toolbox.feature.saveAsImage.name = def.title;
+  o.series = series;
+  makeChart(def.id, o);
+}
+
+/* ---------- 政策利率（事件日志） ---------- */
+function renderRates() {
+  const o = baseOpt(rates.map(r => r.date), false);
+  o.tooltip = {
+    trigger: 'axis', backgroundColor: '#1a1d27', borderColor: '#2a2d3a', textStyle: { color: '#e0e0e0' },
+    formatter: params => {
+      if (!params || !params.length) return '';
+      const e = rates[params[0].dataIndex];
+      let h = `<div style="font-weight:600;margin-bottom:4px;">${esc(e.date)}</div>`;
+      params.forEach(p => {
+        const v = (p.value === null || p.value === undefined) ? '—' : `${p.value}%`;
+        h += `${p.marker}${esc(p.seriesName)}: ${esc(v)}<br/>`;
+      });
+      h += `<div style="max-width:320px;white-space:normal;color:#8b8fa3;font-size:11px;margin-top:4px;line-height:1.6;">${esc(e.event)}${e.source ? `<br/>来源：${esc(e.source)}` : ''}</div>`;
+      return h;
+    }
+  };
+  o.toolbox.feature.saveAsImage.name = '政策利率';
+  o.series = [
+    { name: 'LPR 1Y', type: 'line', step: 'middle', data: rates.map(r => parseVal(r.lpr1y)), lineStyle: { color: '#4f8cff' }, itemStyle: { color: '#4f8cff' }, connectNulls: true },
+    { name: 'LPR 5Y', type: 'line', step: 'middle', data: rates.map(r => parseVal(r.lpr5y)), lineStyle: { color: '#ffa726' }, itemStyle: { color: '#ffa726' }, connectNulls: true },
+    { name: 'MLF 1Y', type: 'line', step: 'middle', data: rates.map(r => parseVal(r.mlf1y)), lineStyle: { color: '#9b59b6' }, itemStyle: { color: '#9b59b6' }, connectNulls: true }
+  ];
+  makeChart('chart_rates', o);
+}
+
+/* ---------- KPI ---------- */
+function lastNonNull(key, endIdx) {
+  const end = (endIdx === undefined) ? monthly.length - 1 : endIdx;
+  for (let i = end; i >= 0; i--) {
+    const v = parseVal(monthly[i][key]);
+    if (v !== null) return { v, i };
+  }
+  return { v: null, i: -1 };
+}
+const KPI_DEFS = [
+  ['工增同比', 'gongzeng', '%'], ['制造业PMI', 'pmi', ''], ['固投累计同比', 'guitou', '%'],
+  ['出口同比', 'chukou', '%'], ['CPI同比', 'cpi', '%'], ['PPI同比', 'ppi', '%'],
+  ['M2同比', 'm2', '%'], ['新增社融', 'sheirong', '亿元']
+];
+function kpiCard(label, inner) {
+  return `<div class="kpi"><div class="label">${label}</div>${inner}</div>`;
+}
+function renderKPIs() {
+  const up = 'var(--up)', down = 'var(--down)', flat = 'var(--text2)';
+  const colOf = d => (d === null ? flat : (d > 0 ? up : d < 0 ? down : flat));
+  let html = '';
+  if (!inYearMode()) {
+    KPI_DEFS.forEach(([label, key, unit]) => {
+      const cur = lastNonNull(key, monthly.length - 1);
+      if (cur.v === null) { html += kpiCard(label, `<div class="value">—</div><div class="period">暂无数据</div>`); return; }
+      const p = lastNonNull(key, cur.i - 1);
+      const d = p.v === null ? null : +((cur.v - p.v).toFixed(1));
+      const chg = d === null ? '—' : `环比 ${(d > 0 ? '+' : '') + d}`;
+      html += kpiCard(label, `<div class="value">${cur.v}${unit}</div><div class="change" style="color:${colOf(d)}">${chg}</div><div class="period">${monthly[cur.i].period}</div>`);
+    });
+  } else {
+    KPI_DEFS.forEach(([label, key, unit]) => {
+      const lines = selectedYears().map(y => {
+        const rows = yearRows(y);
+        if (!rows.length) return '';
+        const cur = lastNonNull(key, monthly.indexOf(rows[rows.length - 1]));
+        if (cur.v === null || monthly[cur.i].period.slice(0, 4) !== y) return '';
+        const period = monthly[cur.i].period;
+        const ym = period.split('-');
+        const f = monthly.find(r => r.period === `${Number(ym[0]) - 1}-${ym[1]}`);
+        let ref = null;
+        if (f) { const v = parseVal(f[key]); if (v !== null) ref = v; }
+        const d = ref === null ? null : +((cur.v - ref).toFixed(1));
+        return `<div class="kpi-y"><span>${y}.${ym[1]} ${cur.v}${unit}</span><span style="color:${colOf(d)}">${d === null ? '—' : (d > 0 ? '+' : '') + d}</span></div>`;
+      }).filter(Boolean);
+      html += kpiCard(label, lines.join('') || '<div class="value">—</div>');
+    });
+  }
+  document.getElementById('kpis').innerHTML = html;
+}
+
+/* ---------- 标题 / 药丸 / 工具条 / 总渲染 ---------- */
+function renderTitles() {
+  const span = `${monthly[0].period.replace('-', '.')}—${monthly[monthly.length - 1].period.replace('-', '.')}`;
+  const suffix = !inYearMode() ? `｜${span} 全历史` : `｜${selectedYears().join(' / ')}逐月叠加`;
+  document.querySelectorAll('.card h3').forEach(h => {
+    const c = h.parentElement.querySelector('.chart');
+    const base = c ? (TITLE_TEXT[c.id] || '') : '';
+    if (c && c.id === 'chart_rates') { h.textContent = base + '｜事件日志'; return; }
+    if (c && inYearMode() && DEF_BY_ID[c.id]) {
+      const mt = selMetric(DEF_BY_ID[c.id]);
+      h.textContent = `${mt.name}${suffix}`;
+      return;
+    }
+    h.textContent = base + suffix;
+  });
+}
+const TITLE_TEXT = { chart_gongzeng: '规模以上工业增加值同比（%）', chart_pmi: 'PMI', chart_gdp: 'GDP', chart_guitou: '固定资产投资累计同比（%）', chart_invest3: '投资', chart_trade: '外贸', chart_chae: '贸易差额（亿美元）', chart_sheirong: '新增社融（亿元）', chart_m2m1: 'M2/M1', chart_cpippi: 'CPI/PPI', chart_rates: '政策利率（LPR / MLF）' };
+
+function renderPills() {
+  document.querySelectorAll('.mpills').forEach(box => {
+    const def = DEF_BY_ID[box.dataset.for];
+    box.innerHTML = '';
+    if (!def || !inYearMode()) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    def.metrics.forEach(mt => {
+      const b = document.createElement('button');
+      b.textContent = mt.name;
+      if (selMetric(def).name === mt.name) b.classList.add('active');
+      b.onclick = () => { cardMetric[def.id] = mt.name; renderPills(); renderAll(); };
+      box.appendChild(b);
+    });
+  });
+}
+
+const HINT_DEFAULT = '点选年份叠加对比（可多选，最多5个，如 2022＋2024＋2026）；「全部」查看全历史。叠加模式下每张图只显示一个指标（右上角药丸切换），每条线颜色唯一代表一个年份。悬停看数值与备注，右上角可存图。';
+let hintTimer = null;
+function flashHint(msg) {
+  const el = document.getElementById('hint');
+  el.textContent = msg;
+  if (hintTimer) clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { el.textContent = HINT_DEFAULT; }, 2500);
+}
+
+function buildToolbar() {
+  const box = document.getElementById('yearBtns');
+  box.innerHTML = '';
+  const mk = (label, active, onClick, cls) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    if (cls) b.className = cls;
+    if (active) b.classList.add('active');
+    b.onclick = onClick;
+    box.appendChild(b);
+  };
+  const last3 = YEARS.slice(-3);
+  mk('全部', !inYearMode(), () => { state.years = []; buildToolbar(); renderAll(); });
+  mk('近3年', inYearMode() && selectedYears().join() === last3.join(), () => { state.years = [...last3]; buildToolbar(); renderAll(); }, 'shortcut');
+  YEARS.forEach(y => mk(y + '年', state.years.includes(y), () => {
+    if (state.years.includes(y)) {
+      state.years = state.years.filter(x => x !== y);
+    } else {
+      if (state.years.length >= MAX_YEARS) { flashHint(`最多同时对比 ${MAX_YEARS} 个年份，请先取消一个`); return; }
+      state.years = [...state.years, y];
+    }
+    buildToolbar();
+    renderAll();
+  }));
+}
+
+const YEARS = [...new Set(monthly.map(r => r.period.slice(0, 4)))].sort();
+
+function renderAll() {
+  renderPills();
+  renderTitles();
+  renderKPIs();
+  CHART_DEFS.filter(d => d.id !== 'chart_gdp').forEach(renderMetricChart);
+  renderGDP();
+  renderRates();
+}
+
+buildToolbar();
+renderAll();
+</script>
+</body>
+</html>
