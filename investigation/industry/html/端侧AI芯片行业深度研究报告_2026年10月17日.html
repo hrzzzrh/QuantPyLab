@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>端侧AI芯片行业深度研究报告_2026年9月19日 · 精读版HTML(试点)</title>
+<title>端侧AI芯片行业深度研究报告_2026年10月17日 · 精读版HTML(试点)</title>
 <style>
 /* ===== 统一样式契约(总纲6.1/6.2,合并自各批次,前缀已归一) ===== */
 :root{--bg:#ffffff;--bg-soft:#f6f7f9;--ink:#1a1d21;--muted:#6b7280;--accent:#1d4ed8;--up:#15803d;--down:#dc2626;--warn:#d97706;--tier1:#1d4ed8;--tier2:#7c3aed;--tier3:#6b7280;--over:#1d4ed8;--std:#6b7280;--under:#d97706;--card-border:#e5e7eb;--radius:10px;--font:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;--mono:ui-monospace,"SF Mono",Consolas,monospace}
@@ -235,7 +235,7 @@ details.puml summary{color:var(--accent)}
 <main>
   <div class="topbar">
     <div class="topbar-inner">
-      <span class="doc-title">端侧AI芯片行业深度研究报告 · 精读版HTML（2026-09-19）</span>
+      <span class="doc-title">端侧AI芯片行业深度研究报告 · 精读版HTML（2026-10-17）</span>
       <button class="btn" id="btn-expand">全部展开</button>
       <button class="btn" id="btn-collapse">全部折叠</button>
       <button class="btn" onclick="window.print()">打印 / 存 PDF</button>
@@ -243,7 +243,7 @@ details.puml summary{color:var(--accent)}
   </div>
   <div class="wrap">
     <h1>端侧AI芯片行业深度研究报告：从云端算力外溢到端侧智能体爆发</h1>
-    <p class="footnote">报告日期 2026-09-19 · 数据截至 2026-09-19 · 源报告 <span class="mono">investigation/industry/端侧AI芯片行业深度研究报告_2026年9月19日.md</span>（965行/69标题/40表） · 本页为针对性编辑改写版：结论可视化 + 长难句重写（R1–R7），事实零丢失以F01–F40验收 · 改写总纲见 <span class="mono">workspace/industry_html_pilot/00_改写总纲.md</span></p>
+    <p class="footnote">报告日期 2026-10-17 · 数据截至 2026-10-17 · 源报告 <span class="mono">investigation/industry/端侧AI芯片行业深度研究报告_2026年10月17日.md</span>（965行/69标题/40表） · 本页为针对性编辑改写版：结论可视化 + 长难句重写（R1–R7），事实零丢失以F01–F40验收 · 改写总纲见 <span class="mono">workspace/industry_html_pilot/00_改写总纲.md</span></p>
     <section id="cockpit">
 <h2>驾驶舱（5分钟读完）</h2>
 
@@ -251,27 +251,27 @@ details.puml summary{color:var(--accent)}
 <div class="conclusion-cards">
 <div><h4><a href="#ch1-1">增速剪刀差确立</a></h4><p>端侧+45% vs 云端+12%</p><p>中低端+110% <span class="tier-badge t3">T3</span></p></div>
 <div><h4><a href="#ch1-1">推理判定标准切换</a></h4><p><dfn class="term" data-term="TOPS/W">TOPS/W</dfn> / 首token时延 / 成本</p><p>架构创新&gt;制程微缩 <span class="tier-badge t1">T1</span></p></div>
-<div><h4><a href="#ch1-1">总量下修增量转移</a></h4><p>手机-16.7% / PC-11.3%</p><p>增量在汽车与可穿戴 <span class="tier-badge t1">T1</span></p></div>
+<div><h4><a href="#ch1-1">总量下修增量转移</a></h4><p>Q3手机-22.0% / PC-20.1%</p><p>增量在汽车与可穿戴 <span class="tier-badge t1">T1</span></p></div>
 <div><h4><a href="#ch1-1">价值分配上移刚性</a></h4><p>IP占比12%→18%</p><p>制造+封装45–55% <span class="tier-badge t2">T2</span></p></div>
 <div><h4><a href="#ch1-1">格局一超多强分层</a></h4><p>CR5 62–67%</p><p>CR10持续下行 <span class="tier-badge t2">T2</span></p></div>
 <div><h4><a href="#ch1-1">业绩验证四象限分化</a></h4><p>寒武纪59.96亿+108.13%</p><p>瑞芯微28.77亿+40.60% <span class="tier-badge t1">T1</span></p></div>
-<div><h4><a href="#ch1-1">配置排序汽车居首</a></h4><p>汽车/智驾＞AIoT＞低功耗＞手机SoC</p><p>9-19复核维持 <span class="tier-badge t1">T1</span></p></div>
+<div><h4><a href="#ch1-1">配置排序汽车居首</a></h4><p>汽车/智驾＞AIoT＞低功耗＞手机SoC</p><p>10-17复核维持（Q3双杀已兑现） <span class="tier-badge t1">T1</span></p></div>
 </div>
 
-<h3>② P0十灯仪表盘（截至8-30）</h3>
+<h3>② P0十灯仪表盘（截至10-17）</h3>
 <div class="sig-board">
-<div><span class="sig-light red" title="P0-7存储/BOM成本：阈值=持续>2季度；权重60%×高，唯一高权重红灯"></span><strong>P0-7 存储/BOM成本 ↓</strong> 8月DRAM $25（+4.2%）/ NAND $30.5（+1.4%）续创高 <span class="tier-badge t2">T2</span> <em>权重60%×高，唯一红灯置顶</em></div>
-<div><span class="sig-light green" title="P0-1：阈值=跌破20%"></span><strong>P0-1 端侧增速 ↗</strong> Q1出货+45%（中低端+110%），云端12% <span class="tier-badge t3">T3</span> <em>待Q3检验</em></div>
-<div><span class="sig-light yellow" title="P0-2：中国端侧AI市场规模2026E 8661亿元：阈值=增速<30%"></span><strong>P0-2 中国市场规模 ◌验证中</strong> 2026E 8661亿元（CAGR 57.96%） <span class="tier-badge t2">T2</span></div>
-<div><span class="sig-light green" title="P0-3：阈值=跌破45%"></span><strong>P0-3 AI手机渗透率 ↗</strong> 中国53%（1.47亿部）；全球总量~10.2亿部（-16.7%） <span class="tier-badge t1">T1</span></div>
-<div><span class="sig-light green" title="P0-4：阈值=跌破40%"></span><strong>P0-4 AI PC渗透率 ↗</strong> 中国52%（待修订）；全球-11.3%（Q4 -20%） <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light red" title="P0-7存储/BOM成本：阈值=持续>2季度；权重60%×高，唯一高权重红灯，Q3再涨、Q4 NAND上修"></span><strong>P0-7 存储/BOM成本 ↓</strong> 8月DRAM $25（+4.2%）/ NAND $30.5（+1.4%）续创高；TrendForce Q4 NAND上修至+15–20% <span class="tier-badge t2">T2</span> <em>权重60%×高，唯一红灯置顶</em></div>
+<div><span class="sig-light red" title="P0-1：阈值=跌破20%；Q3手机-22.0%已触发需求警报"></span><strong>P0-1 端侧增速 ↘</strong> Q1出货+45%（中低端+110%）；Q3手机-22.0%创纪录 <span class="tier-badge t1">T1</span> <em>总量下行加速</em></div>
+<div><span class="sig-light yellow" title="P0-2：中国端侧AI市场规模2026E 8661亿元：阈值=增速<30%"></span><strong>P0-2 中国市场规模 ◌验证中</strong> 2026E 8661亿元（CAGR 57.96%）；全志/晶晨三季报预告高增 <span class="tier-badge t2">T2</span></div>
+<div><span class="sig-light red" title="P0-3：阈值=跌破45%；Q3中国-15.4%已触发"></span><strong>P0-3 AI手机渗透率 ↘</strong> 中国53%（1.47亿部）；Q3中国5790万台（-15.4%）、华为+17.3%居首 <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light red" title="P0-4：阈值=跌破40%；Q3 PC -20.1%已触发"></span><strong>P0-4 AI PC渗透率 ↘</strong> 中国52%（待修订）；Q3全球6270万台（-20.1%） <span class="tier-badge t1">T1</span></div>
 <div><span class="sig-light green" title="P0-5：阈值=<40 TOPS"></span><strong>P0-5 汽车座舱算力 ↗</strong> 单车56 TOPS（2025），较2023年32 TOPS +75% <span class="tier-badge t2">T2</span></div>
-<div><span class="sig-light green" title="P0-6：阈值=增速<30%"></span><strong>P0-6 可穿戴AI硬件 ↗</strong> 智能眼镜中国491.5万台 / 全球2368.7万台（2026E新预测） <span class="tier-badge t1">T1</span></div>
-<div><span class="sig-light yellow" title="P0-8旗舰SoC价格传导：阈值=涨价失败；落地验证中"></span><strong>P0-8 价格传导 ◌验证中</strong> 高通9-01全系两位数涨价已生效；天玑9600 Pro约216美元 <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light green" title="P0-6：阈值=增速<30%"></span><strong>P0-6 可穿戴AI硬件 ↗</strong> 智能眼镜中国491.5万台 / 全球2368.7万台（2026E新预测）；Q2增速回落至+35% <span class="tier-badge t1">T1</span></div>
+<div><span class="sig-light yellow" title="P0-8旗舰SoC价格传导：阈值=涨价失败；已全面落地但被Q3出货崩塌证伪"></span><strong>P0-8 价格传导 ◌验证中</strong> 高通9-01全系两位数涨价；小米18 Pro 5999元、vivo X500 Pro 6499元 <span class="tier-badge t1">T1</span></div>
 <div><span class="sig-light green" title="P0-9：阈值=跌破38%"></span><strong>P0-9 龙头毛利率 ↗</strong> 瑞芯微45.79%（+3.5pct）/ 乐鑫49.32%（+4.12pct）/ 恒玄42.47%（+3.19pct） <span class="tier-badge t1">T1</span></div>
 <div><span class="sig-light yellow" title="P0-10智驾投入强度：阈值=研发费用率>120%持续；当前持平"></span><strong>P0-10 智驾投入强度 →</strong> 地平线研发27.55亿（+21.9%）、<dfn class="term" data-term="经调亏损" title="剔除股份支付/公允价值等非经常损益后的亏损；地平线16.71亿/黑芝麻6.43亿">经调亏损</dfn>16.71亿；黑芝麻研发8.60亿 <span class="tier-badge t1">T1</span></div>
 </div>
-<p>十灯计数：6上行 / 1持平 / 1下行 / 2验证中。其中P0-7为唯一红灯（下行），P0-10持平，P0-2与P0-8落地验证中，其余6项上行。</p>
+<p>十灯计数：4上行 / 1持平 / 3下行（手机/PC总量、存储） / 2验证中。其中P0-7为唯一高权重红灯（下行），P0-1/P0-3/P0-4因Q3实际-22.0%/-15.4%/-20.1%转为下行，P0-10持平，P0-2与P0-8落地验证中。</p>
 
 <h3>③ 配置矩阵（5环节）</h3>
 <div class="config-matrix">
@@ -294,8 +294,8 @@ details.puml summary{color:var(--accent)}
 <div class="kpi-strip">
 <div class="kpi-card"><p>210亿元</p><p>中国端侧AI芯片（硬件）2026E <span>+38%</span></p></div>
 <div class="kpi-card"><p>8661亿元</p><p>中国端侧AI整体市场（系统）CAGR 57.96%</p></div>
-<div class="kpi-card"><p>10.2亿部</p><p>全球手机总量2026E <span>-16.7%</span></p></div>
-<div class="kpi-card"><p>-11.3%</p><p>全球PC出货2026E（Q4 -20%）</p></div>
+<div class="kpi-card"><p>10.2亿部</p><p>全球手机总量2026E <span>-16.7%</span>；Q3实际-22.0%</p></div>
+<div class="kpi-card"><p>-11.3%</p><p>全球PC出货2026E；Q3实际-20.1%</p></div>
 <div class="kpi-card"><p>1.47亿部·53%</p><p>中国AI手机2026E（+31.6%）</p></div>
 <div class="kpi-card"><p>54.7%</p><p>全球AI PC出货占比（约1.43亿台）</p></div>
 <div class="kpi-card"><p>56 TOPS</p><p>单车AI算力（2025，2023年32 TOPS）</p></div>
@@ -308,14 +308,14 @@ details.puml summary{color:var(--accent)}
 
 <h3>⑥ 综合读数引用框</h3>
 <div class="callout quote">
-<p><strong>结论：需求上行，但盈利弹性被存储成本红灯实质抵消。</strong></p>
+<p><strong>结论：Q3手机/PC双杀已兑现，存储红灯延续，"回避手机SoC"排序维持但已兑现。</strong></p>
 <ul>
-<li>十灯计数：6项上行 / 1项持平 / 1项下行 / 2项验证中。</li>
-<li>上行项：需求与渗透率、汽车算力、毛利率结构、可穿戴Q1验证；持平项：智驾投入；下行项：存储/BOM成本绝对值；验证中项：价格传导、端侧整体增速待Q3检验。</li>
-<li>唯一高权重红灯：P0-7存储/BOM成本（60%×高，见1.5与第九章），连续两月红灯则基准情景下修。</li>
-<li>总量修正：IDC 8月26日手机总量-16.7%（H2 -27.2%）与6月2日PC -11.3%（Q4 -20%），是总量分母对"AI化是唯一增长杠杆"旧表述的直接修正：2026年已不存在"总量微增+AI高增"组合，而是"总量双位数收缩+价值个位数增长（手机价值+6.3%至6130亿美元、PC收入+1.6%）"的以价补量格局。</li>
+<li>十灯计数：4项上行 / 1项持平 / 3项下行（手机/PC总量、存储） / 2项验证中。</li>
+<li>上行项：AIoT中报验证（全志/晶晨预告高增）、汽车算力、毛利率结构、可穿戴Q1验证；持平项：智驾投入；下行项：手机/PC总量（Q3 -22.0%/-20.1%）、存储/BOM成本（Q4 NAND上修）；验证中项：价格传导（已全面落地但被Q3出货崩塌证伪）、中国市场规模。</li>
+<li>唯一高权重红灯：P0-7存储/BOM成本（60%×高，见1.5与第九章），Q3再涨、Q4 NAND上修至+15–20%（TrendForce 9.30），连续两月红灯则基准情景下修。</li>
+<li>总量修正：IDC Q3手机-22.0%创纪录（10.14-15）与PC -20.1%（10.8）已大幅超原8月26日H2 -27.2%与6月2日PC Q4 -20%的预期轨迹——存储成本冲击从"预测"变为"既成事实"。</li>
 <li>结构≠总量：毛利率结构改善（P0-9）仅为"结构优化"而非"总量扩张"，高通毛利率53.05%同比-2.51pct、联发科46.2%同比-2.9pct即为明证。</li>
-<li>读数与基准情景（60%概率）一致：需求端"AI化"加速但供给端"成本挤压"主导短期盈利分化。</li>
+<li>读数与基准情景（60%概率）一致但已出现向悲观情景（15%）倾斜的信号：若Q4存储价格仍上行且手机/PC继续-20%级下降，基准情景概率需下修。</li>
 </ul>
 <p class="footnote">存储8月涨幅已收窄（DRAM +4.2% vs Q2 +45–50%、移动LPDDR仅+3–7%）但绝对值仍创高；若P0-7连续两月红灯（存储周度+2%×4周），基准情景将下修为保守情景（见A.4敏感性：存储再涨10%则AIoT毛利率-1.0–1.8pct、手机SoC -2.8pct，触发第十章悲观分支）。P0-7口径与A.4敏感性联动见第九章。</p>
 </div>
@@ -351,15 +351,15 @@ details.puml summary{color:var(--accent)}
 <div>
 <p><strong>结论3：总量双位数收缩，边际增量转向汽车与可穿戴。</strong></p>
 <ul>
-<li>手机：2026年全球总量~10.2亿部（-16.7%，历史最大降幅，H2 -27.2%）[IDC官网8-26 Tier1]；Counterpoint -14.3%同向交叉。 <span class="tier-badge t1">T1</span></li>
-<li>PC：2026年全球-11.3%（Q4 -20%）[IDC官网6-2 Tier1]。 <span class="tier-badge t1">T1</span></li>
+<li>手机：2026年全球总量~10.2亿部（-16.7%，历史最大降幅，H2 -27.2%）[IDC官网8-26 Tier1]；Counterpoint -14.3%同向交叉；Q3实际-22.0%创纪录（IDC 10.14-15）。 <span class="tier-badge t1">T1</span></li>
+<li>PC：2026年全球-11.3%（Q4 -20%）[IDC官网6-2 Tier1]；Q3实际-20.1%连降两季（IDC 10.8）。 <span class="tier-badge t1">T1</span></li>
 <li>AI渗透率：原AI手机7.22亿部按新分母机械换算约71–72%，<strong>不代表AI出货上修</strong>；中国1.47亿部（53%，分母2.78亿部中国总量假设待修订）。</li>
-<li>AI PC：中国渗透率52%（Canalys 2025年9月预测口径，截至2026-09-19的最新公开预测，待Canalys修订）；全球出货占比54.7%（约1.43亿台）。</li>
+<li>AI PC：中国渗透率52%（Canalys 2025年9月预测口径，截至2026-10-17的最新公开预测，待Canalys修订）；全球出货占比54.7%（约1.43亿台）。</li>
 <li>智能眼镜：中国491.5万台 / 全球2368.7万台（IDC 2026E新预测，2025年11月十大洞察口径，含AI与非AI智能眼镜，其中端侧支持AI占比超30%）。</li>
 <li>Q1验证：全球356.6万台（+130.1%）、中国61万台（+23.5%）；Q2全球XR头显+眼镜增速回落至+35.3%（高基数+产品周期空档，IDC 9月中旬披露，Q2–Q3智能眼镜单项绝对值待Tracker更新）。</li>
 <li>汽车：单车AI算力从2023年32 TOPS升至2025年56 TOPS，芯片价值量跃升最快。 <span class="tier-badge t2">T2</span></li>
 </ul>
-<p class="footnote">AI绝对值专项更新截至2026-09-19尚未发布，大概率随低端削减同步下修；下文以Counterpoint生成式AI手机45%窄口径与中国1.47亿部（53%）双锚互证。 <span class="tier-badge t1">T1</span> <span class="tier-badge t3">T3</span></p>
+<p class="footnote">AI绝对值专项更新截至2026-10-17尚未发布，大概率随低端削减同步下修；下文以Counterpoint生成式AI手机45%窄口径与中国1.47亿部（53%）双锚互证。 <span class="tier-badge t1">T1</span> <span class="tier-badge t3">T3</span></p>
 </div>
 
 <div>
@@ -395,14 +395,14 @@ details.puml summary{color:var(--accent)}
 </div>
 
 <div>
-<p><strong>结论7：配置排序汽车/智驾居首，手机SoC居末（9-19复核维持）。</strong></p>
+<p><strong>结论7：配置排序汽车/智驾居首，手机SoC居末（10-17复核维持，Q3双杀已兑现）。</strong></p>
 <ol>
 <li>汽车电子/智驾与工业视觉（高阶NPU+<dfn class="term" data-term="车规" title="车用可靠性认证（AEC-Q等），智驾芯片壁垒，上车周期长">车规</dfn>壁垒）。</li>
 <li>AIoT主控与协处理器（平台化放量）。</li>
 <li>低功耗音频/可穿戴（结构升级但需求疲软）。</li>
 <li>通用手机SoC（存量博弈+存储涨价挤压）。</li>
 </ol>
-<p>排序逻辑：订单能见度→毛利率与现金流→库存与跌价→估值容忍度。验证：IDC 8-26手机-16.7%/6-02PC-11.3%与Q2实际（全球手机-6.7%、中国-4.3%、全球PC-4.9%）同向；手机SoC两位数价格传导但毛利率仍承压（高通53.05%同比-2.51pct、联发科46.2%同比-2.9pct）；9-01涨价落地后跟踪传导成功率与Q4出货（手机H2 -27.2%、PC Q4 -20%）对存货的二次冲击；存储与晶圆成本拐点前不改变排序。</p>
+<p>排序逻辑：订单能见度→毛利率与现金流→库存与跌价→估值容忍度。验证：IDC 8-26手机-16.7%/6-02PC-11.3%与Q3实际（全球手机-22.0%、中国-15.4%、全球PC-20.1%）同向且超调——存储成本冲击从"预测"变为"既成事实"；手机SoC两位数价格传导但毛利率仍承压（高通53.05%同比-2.51pct、联发科46.2%同比-2.9pct）；9-01涨价全面落地（小米18 Pro 5999元/vivo X500 Pro 6499元/OPPO Find X10标准版5499元/苹果全系+100美元）但被Q3出货崩塌证伪——传导无法对冲存储涨价，Q4对存货的二次冲击风险显著上升；存储与晶圆成本拐点前不改变排序。</p>
 <p class="footnote">研判修订纪律见第十一章：不满足连续两期同向显著变化+多源交叉、结构性触发、关键公司指引改变三条件之一时仅更新数据不改研判，本次三条件均未触发。</p>
 </div>
 </section>
@@ -413,7 +413,7 @@ details.puml summary{color:var(--accent)}
 <p><strong>结论：端侧放量兑现期（2026–2027），但属于以价补量、总量收缩的兑现。</strong></p>
 <ul>
 <li>2026年是中国端侧AI从"技术验证"向"规模化落地"跨越的元年，同时是存储/基板/PCB全面紧缺与价格上行的供应链紧平衡期。</li>
-<li>IDC 8-26（手机-16.7%至10亿部出头、<dfn class="term" data-term="ASP">ASP</dfn> 581美元、价值+6.3%至6130亿美元）与6-02（PC -11.3%、Q4 -20%）确认本轮是"以价补量、总量收缩"的兑现期，而非总量扩张期。</li>
+<li>IDC 8-26（手机-16.7%至10亿部出头、<dfn class="term" data-term="ASP">ASP</dfn> 581美元、价值+6.3%至6130亿美元）与6-02（PC -11.3%、Q4 -20%）确认本轮是"以价补量、总量收缩"的兑现期，而非总量扩张期；Q3实际（手机-22.0%/PC -20.1%）已超调该轨迹，存储成本冲击从"预测"变为"既成事实"。</li>
 <li>主线从"云端算力"切换至"<dfn class="term" data-term="端侧智能体">端侧智能体</dfn>"：单设备AI价值从参数竞赛转向系统级协同。</li>
 </ul>
 <p><strong>当前立场：重智驾与AIoT平台、配低功耗龙头、回避手机SoC的盈利弹性透支。</strong>在供应链涨价背景下，优先选择具备定价权与结构优化能力的环节，等待存储价格与晶圆成本回落后再评估手机SoC的业绩弹性。</p>
@@ -424,7 +424,7 @@ details.puml summary{color:var(--accent)}
 <div><h4>AIoT主控+协处理器</h4><p>RK182X等协处理器数百客户导入，下半年放量</p><p><strong>超配（第一梯队）</strong></p><p class="footnote">验证：新品导入数、客户去重、渠道库存周转</p></div>
 <div><h4>低功耗音频/可穿戴</h4><p>短期需求疲软但产品结构与毛利率改善</p><p><strong>标配（选龙头）</strong></p><p class="footnote">验证：BES6100送样、AI眼镜客户拓展、毛利率环比</p></div>
 <div><h4>工业视觉/边缘一体机</h4><p>边缘一体机CAGR&gt;32%为最快赛道</p><p><strong>超配（结构性）</strong></p><p class="footnote">验证：一体机招标、项目备案量</p></div>
-<div><h4>手机SoC</h4><p>出货-16.7%（IDC 8-26）但价值+6.3%、存储涨价压毛利、竞价分化</p><p><strong>低配/等待</strong></p><p class="footnote">验证：存货/晶圆报价、旗舰SoC放量时点、9-01涨价传导与H2 -27.2%出货</p></div>
+<div><h4>手机SoC</h4><p>出货-16.7%（IDC 8-26）、Q3实际-22.0%创纪录；价值+6.3%、存储涨价压毛利、竞价分化</p><p><strong>低配/等待</strong></p><p class="footnote">验证：存货/晶圆报价、旗舰SoC放量时点、9-01涨价传导与Q3实际-22.0%出货</p></div>
 </div>
 <details><summary>T01原表备查（环节 / 当前判断 / 配置动作 / 验证指标）</summary>
 <table class="data-table">
@@ -434,7 +434,7 @@ details.puml summary{color:var(--accent)}
 <tr><td>AIoT主控+协处理器</td><td>RK182X等协处理器数百客户导入，下半年放量</td><td>超配（第一梯队）</td><td>新品导入数、客户去重、渠道库存周转</td></tr>
 <tr><td>低功耗音频/可穿戴</td><td>短期需求疲软但产品结构与毛利率改善</td><td>标配（选龙头）</td><td>BES6100送样、AI眼镜客户拓展、毛利率环比</td></tr>
 <tr><td>工业视觉/边缘一体机</td><td>边缘一体机CAGR&gt;32%为最快赛道</td><td>超配（结构性）</td><td>一体机招标、项目备案量</td></tr>
-<tr><td>手机SoC</td><td>出货-16.7%（IDC 8.26）但价值+6.3%、存储涨价压毛利、竞价分化</td><td>低配/等待</td><td>存货/晶圆报价、旗舰SoC放量时点、9.1涨价传导与H2 -27.2%出货</td></tr>
+<tr><td>手机SoC</td><td>出货-16.7%（IDC 8.26）、Q3实际-22.0%创纪录；价值+6.3%、存储涨价压毛利、竞价分化</td><td>低配/等待</td><td>存货/晶圆报价、旗舰SoC放量时点、9.1涨价传导与Q3实际-22.0%出货</td></tr>
 </tbody>
 </table>
 </details>
@@ -442,17 +442,17 @@ details.puml summary{color:var(--accent)}
 
 <section id="ch1-3">
 <h3>1.3 景气信号面板（P0，10项快照）</h3>
-<p>本面板为"当前是什么情况"的仪表盘，基准与跟踪方法详见第十一章。十灯计数：6上行 / 1持平 / 1下行 / 2验证中；P0-7存储/BOM为唯一红灯且置顶（60%×高）。方向定义：↗上行 / →持平 / ↓下行 / ◌落地验证中。</p>
+<p>本面板为"当前是什么情况"的仪表盘，基准与跟踪方法详见第十一章。十灯计数：4上行 / 1持平 / 3下行（手机/PC总量、存储） / 2验证中；P0-7存储/BOM为唯一高权重红灯且置顶（60%×高），P0-1/P0-3/P0-4因Q3实际（手机-22.0%/PC-20.1%）转为下行。方向定义：↗上行 / →持平 / ↓下行 / ◌落地验证中。</p>
 <ul>
-<li><strong>P0-1 全球端侧AI芯片增速 ↗</strong> <span class="sig-light green" title="阈值：跌破20%"></span> Q1出货+45%（中低端+110%）；增速差扩大（云端12%）。 <span class="tier-badge t3">T3</span></li>
-<li><strong>P0-2 中国端侧AI市场规模 ◌验证中</strong> <span class="sig-light yellow" title="阈值：增速<30%"></span> 2026E 8661亿元（+57.96% CAGR）；预测上修。 <span class="tier-badge t2">T2</span></li>
-<li><strong>P0-3 AI手机渗透率 ↗</strong> <span class="sig-light green" title="阈值：跌破45%"></span> 中国53%（1.47亿部，IDC 2026E，分母2.78亿部待修订）；全球总量~10.2亿部（-16.7%，IDC 8-26 Tier1，替代旧10.88亿假设；Counterpoint -14.3%交叉）；Q2中国6601万台（-4.3%）、全球2.775亿部（-6.7%）；H2全球-27.2%/中国约-20%。 <span class="tier-badge t1">T1</span></li>
-<li><strong>P0-4 AI PC渗透率 ↗</strong> <span class="sig-light green" title="阈值：跌破40%"></span> 中国52%（Canalys 2025.9预测，待修订）；全球-11.3%（IDC 6-2 Tier1）、Q4 -20%、ASP +17–18.3%；Q2全球6820万台（-4.9%）；AI PC短期增速放缓（IDC 7月）。 <span class="tier-badge t1">T1</span></li>
+<li><strong>P0-1 全球端侧AI芯片增速 ↘</strong> <span class="sig-light red" title="阈值：跌破20%；Q3手机-22.0%已触发需求警报"></span> Q1出货+45%（中低端+110%）；Q3手机-22.0%创纪录，总量下行加速。 <span class="tier-badge t1">T1</span></li>
+<li><strong>P0-2 中国端侧AI市场规模 ◌验证中</strong> <span class="sig-light yellow" title="阈值：增速<30%"></span> 2026E 8661亿元（+57.96% CAGR）；全志三季报预告归母+129.85–140.62%、晶晨预告归母+80.58–87.74%。 <span class="tier-badge t2">T2</span></li>
+<li><strong>P0-3 AI手机渗透率 ↘</strong> <span class="sig-light red" title="阈值：跌破45%；Q3中国-15.4%已触发"></span> 中国53%（1.47亿部，IDC 2026E，分母2.78亿部待修订）；全球总量~10.2亿部（-16.7%，IDC 8-26 Tier1，替代旧10.88亿假设；Counterpoint -14.3%交叉）；Q3中国5790万台（-15.4%）、全球2.553亿部（-22.0%）、华为+17.3%居首（21.1%）。 <span class="tier-badge t1">T1</span></li>
+<li><strong>P0-4 AI PC渗透率 ↘</strong> <span class="sig-light red" title="阈值：跌破40%；Q3 PC -20.1%已触发"></span> 中国52%（Canalys 2025.9预测，待修订）；全球-11.3%（IDC 6-2 Tier1）、Q3实际-20.1%、ASP +17–18.3%；AI PC短期增速放缓（IDC 7月）。 <span class="tier-badge t1">T1</span></li>
 <li><strong>P0-5 汽车座舱AI算力 ↗</strong> <span class="sig-light green" title="阈值：<40 TOPS"></span> 单车56 TOPS（2025）；+75% vs 2023年32 TOPS。 <span class="tier-badge t2">T2</span></li>
-<li><strong>P0-6 可穿戴AI硬件 ↗</strong> <span class="sig-light green" title="阈值：增速<30%"></span> 智能眼镜中国491.5万台/全球2368.7万台（IDC 2026E新预测，含全品类）；Q1全球356.6万台（+130.1%）、中国61万台（+23.5%）；Q2全球XR头显+眼镜+35.3%（增速回落，单项待更新）。 <span class="tier-badge t1">T1</span></li>
-<li><strong>P0-7 存储/BOM成本 ↓（唯一红灯）</strong> <span class="sig-light red" title="阈值：持续>2季度；权重60%×高"></span> 8月DRAM $25（+4.2%）/<dfn class="term" data-term="NAND/DRAM">NAND</dfn> $30.5（+1.4%）续创高但涨幅收窄；TrendForce Q3常规DRAM +13–18%/NAND +10–15%（vs Q2 +58–63%/+70–75%）、移动DRAM Q3 +8–13%（Q4料高位盘整）、NAND Q4预估+5–10%；9-01终端+芯片涨价及苹果9-09调价落地；上行斜率放缓、绝对红灯。 <span class="tier-badge t2">T2</span></li>
-<li><strong>P0-8 旗舰SoC价格传导 ◌验证中</strong> <span class="sig-light yellow" title="阈值：涨价失败"></span> 高通9月1日起全系两位数涨价已生效（旗舰10–15%/主流5–7%）；联发科天玑9600 Pro约216美元（+8–20%，9-15发布、vivo 9-21/OPPO 9-22首发待定价）；小米/华为/荣耀9-01终端+200–1000元、苹果9-09全系+100美元；落地验证中。 <span class="tier-badge t1">T1</span></li>
-<li><strong>P0-9 龙头毛利率 ↗</strong> <span class="sig-light green" title="阈值：跌破38%"></span> 瑞芯微45.79%（+3.5pct）、乐鑫49.32%（+4.12pct）、恒玄42.47%（+3.19pct）；结构改善。 <span class="tier-badge t1">T1</span></li>
+<li><strong>P0-6 可穿戴AI硬件 ↗</strong> <span class="sig-light green" title="阈值：增速<30%"></span> 智能眼镜中国491.5万台/全球2368.7万台（IDC 2026E新预测，含全品类）；Q1全球356.6万台（+130.1%）、中国61万台（+23.5%）；Q2全球XR头显+眼镜+35%（增速回落，单项待更新）。 <span class="tier-badge t1">T1</span></li>
+<li><strong>P0-7 存储/BOM成本 ↓（唯一红灯）</strong> <span class="sig-light red" title="阈值：持续>2季度；权重60%×高；Q3再涨、Q4 NAND上修"></span> 8月DRAM $25（+4.2%）/<dfn class="term" data-term="NAND/DRAM">NAND</dfn> $30.5（+1.4%）续创高但涨幅收窄；TrendForce Q4常规DRAM +10–15%/NAND +15–20%（9.30原文，NAND上修）、含HBM整体DRAM +15–20%、企业级SSD ~+20%；Counterpoint BOM分析旗舰BOM+100–150美元/终端需+150–200美元；9-01终端+芯片涨价及苹果9-09调价落地；绝对红灯延续。 <span class="tier-badge t2">T2</span></li>
+<li><strong>P0-8 旗舰SoC价格传导 ◌验证中</strong> <span class="sig-light yellow" title="阈值：涨价失败；已全面落地但被Q3出货崩塌证伪"></span> 高通9月1日起全系两位数涨价已生效（旗舰10–15%/主流5–7%）；联发科天玑9600 Pro约216–220美元（9-15发布、vivo X500 Pro 9-21首发6499元、OPPO Find X10标准版9-22首发5499元）；小米18 Pro 9-23首发5999元、苹果9-09全系+100美元；全面落地但Q3出货-22%证伪传导效果。 <span class="tier-badge t1">T1</span></li>
+<li><strong>P0-9 龙头毛利率 ↗</strong> <span class="sig-light green" title="阈值：跌破38%"></span> 瑞芯微45.79%（+3.5pct）、乐鑫49.32%（+4.12pct）、恒玄42.47%（+3.19pct）；结构改善；全志预告/晶晨预告延续高增。 <span class="tier-badge t1">T1</span></li>
 <li><strong>P0-10 智驾芯片投入强度 →</strong> <span class="sig-light yellow" title="阈值：研发费用率>120%持续"></span> 地平线正式中报研发27.55亿元（+21.9%）、<dfn class="term" data-term="经调亏损" title="剔除股份支付/公允价值等非经常损益后的亏损；地平线16.71亿/黑芝麻6.43亿">经调亏损</dfn>16.71亿元（+25.4%）；黑芝麻正式中报研发8.60亿元（+39.1%）、经调亏损6.43亿元；高位。 <span class="tier-badge t1">T1</span></li>
 </ul>
 <details><summary>T02原表备查（P0十灯全表，10行）</summary>
@@ -473,15 +473,15 @@ details.puml summary{color:var(--accent)}
 </table>
 </details>
 <div class="callout quote">
-<p><strong>综合读数（平衡表述）：需求上行，但盈利弹性被存储成本红灯实质抵消。</strong></p>
+<p><strong>综合读数（平衡表述，10月17日更新）：Q3手机/PC双杀已兑现，存储红灯延续，"回避手机SoC"排序维持但已兑现。</strong></p>
 <ul>
-<li>十灯计数：6项上行（需求与渗透率、汽车算力、毛利率结构、可穿戴Q1验证）/ 1项持平（智驾投入）/ 1项下行（存储/BOM成本绝对值）/ 2项落地验证中（价格传导、端侧整体增速待Q3检验）。</li>
-<li>唯一高权重红灯：P0-7存储/BOM成本（60%×高，见1.5与第九章），其下行已实质抵消需求上行的盈利弹性。</li>
-<li>总量修正：IDC 8月26日总量-16.7%（H2 -27.2%）与6月2日PC -11.3%（Q4 -20%），是总量分母对"AI化是唯一增长杠杆"旧表述的直接修正：2026年已不存在"总量微增+AI高增"组合，而是"总量双位数收缩+价值个位数增长（手机价值+6.3%至6130亿美元、PC收入+1.6%）"的以价补量格局。</li>
+<li>十灯计数：4项上行（AIoT中报验证、汽车算力、毛利率结构、可穿戴Q1验证）/ 1项持平（智驾投入）/ 3项下行（手机/PC总量Q3 -22.0%/-20.1%、存储/BOM成本Q4 NAND上修）/ 2项验证中（价格传导已全面落地但被Q3出货崩塌证伪、中国市场规模待三季报验证）。</li>
+<li>唯一高权重红灯：P0-7存储/BOM成本（60%×高，见1.5与第九章），Q3再涨、Q4 NAND上修至+15–20%（TrendForce 9.30），连续两月红灯则基准情景下修。</li>
+<li>总量修正：IDC Q3手机-22.0%创纪录（10.14-15）与PC -20.1%（10.8）已大幅超原8月26日H2 -27.2%与6月2日PC Q4 -20%的预期轨迹——存储成本冲击从"预测"变为"既成事实"。</li>
 <li>结构≠总量：毛利率结构改善（P0-9）仅为"结构优化"而非"总量扩张"，高通毛利率53.05%同比-2.51pct、联发科46.2%同比-2.9pct即为明证。</li>
-<li>读数与基准情景（60%概率）一致：需求端"AI化"加速但供给端"成本挤压"主导短期盈利分化。</li>
+<li>读数与基准情景（60%概率）一致但已出现向悲观情景（15%）倾斜的信号：若Q4存储价格仍上行且手机/PC继续-20%级下降，基准情景概率需下修。</li>
 </ul>
-<p class="footnote">存储8月涨幅已收窄（DRAM +4.2% vs Q2 +45–50%、移动LPDDR仅+3–7%）但绝对值仍创高；若P0-7连续两月红灯（存储周度+2%×4周），基准情景将下修为保守情景（见A.4敏感性：存储再涨10%则AIoT毛利率-1.0–1.8pct、手机SoC -2.8pct，触发第十章悲观分支）。P0-7口径与A.4敏感性联动见第九章。</p>
+<p class="footnote">存储8月涨幅已收窄（DRAM +4.2% vs Q2 +45–50%）但绝对值仍创高；TrendForce 9.30 Q4预测NAND上修至+15–20%（vs 原+5–10%）、常规DRAM +10–15%、含HBM整体DRAM +15–20%；Counterpoint BOM分析旗舰BOM+100–150美元/终端需+150–200美元；若Q4存储价格仍上行，基准情景将下修（见A.4敏感性：存储再涨10%则AIoT毛利率-1.0–1.8pct、手机SoC -2.8pct，触发第十章悲观分支）。P0-7口径与A.4敏感性联动见第九章。</p>
 </div>
 </section>
 
@@ -519,16 +519,18 @@ details.puml summary{color:var(--accent)}
 <table class="data-table">
 <thead><tr><th>指标</th><th>数据</th><th>时间节点</th><th>口径/来源</th><th>备注</th></tr></thead>
 <tbody>
-<tr><td>全球智能手机总量/ASP/价值</td><td>~10.2亿部（-16.7%，历史最大降幅）、ASP 581美元（+27.6%）、价值6130亿美元（+6.3%）</td><td>2026E</td><td>IDC官网8-26 Tier1</td><td>旧10.88亿假设（-13.9%版本）已替换，差值约0.8亿台；H2 -27.2%、NAND/DRAM +300%、sub-$100机型1.73亿部存续危机；Counterpoint 8-21 -14.3%同向交叉（差2.4pp，基数与方法论差异）</td></tr>
-<tr><td>全球AI手机出货</td><td>7.22亿部（旧66.4%分母已失效；按新分母算术约71–72%，仅作机械换算）</td><td>2026E</td><td>IDC转引 Tier3+IDC官网总量 Tier1</td><td>AI绝对值专项更新截至9月19日尚未发布，7.22亿<strong>不得视为</strong>上修；交叉：Counterpoint生成式AI手机45%窄口径（2026）/52%（2027E）、发改委AI渗透口径</td></tr>
-<tr><td>中国AI手机出货</td><td>1.47亿部（53%，+31.6%）</td><td>2026E</td><td>IDC转引 Tier3</td><td>需以idc.com为准；交叉：Counterpoint 45%（口径差异见3.3.1）</td></tr>
+<tr><td>全球智能手机总量/ASP/价值</td><td>~10.2亿部（-16.7%，历史最大降幅）、ASP 581美元（+27.6%）、价值6130亿美元（+6.3%）</td><td>2026E</td><td>IDC官网8-26 Tier1</td><td>旧10.88亿假设（-13.9%版本）已替换，差值约0.8亿台；H2 -27.2%、NAND/DRAM +300%、sub-$100机型1.73亿部存续危机；Counterpoint 8-21 -14.3%同向交叉（差2.4pp，基数与方法论差异）；Q3实际-22.0%（IDC 10.14-15）超原H2 -27.2%预期轨迹</td></tr>
+<tr><td>全球AI手机出货</td><td>7.22亿部（旧66.4%分母已失效；按新分母算术约71–72%，仅作机械换算）</td><td>2026E</td><td>IDC转引 Tier3+IDC官网总量 Tier1</td><td>AI绝对值专项更新截至2026-10-17尚未发布，7.22亿<strong>不得视为</strong>上修；交叉：Counterpoint生成式AI手机45%窄口径（2026）/52%（2027E）、发改委AI渗透口径</td></tr>
+<tr><td>中国AI手机出货</td><td>1.47亿部（53%，+31.6%）</td><td>2026E</td><td>IDC转引 Tier3</td><td>需以idc.com为准；交叉：Counterpoint 45%（口径差异见3.3.1）；Q3中国5790万台（-15.4%）、华为+17.3%逆势居首（IDC 10.14）</td></tr>
+<tr><td>Q3手机实际（全球/中国）</td><td>全球2.553亿部（-22.0%，有记录以来最大单季降幅）；中国5790万台（-15.4%）；三星5780万部（22.6%）、苹果5730万部（22.4%）、小米3070万部（12.0%）、OPPO 2560万部（10.0%）、vivo 1910万部（7.5%）；华为中国+17.3%居首（21.1%）</td><td>2026Q3</td><td>IDC官网10.14-15 Tier1</td><td>存储成本较去年涨约350%；IDC高级研究总监Nabila Popal警告"最坏尚未到来"，2027年前增长受限、恢复或推迟至2028年最早；Counterpoint -20%同向交叉（14年最低Q3）</td></tr>
 <tr><td>Q2手机实际（全球/中国）</td><td>全球2.775亿部（-6.7%，连降两季）、中国6601万台（-4.3%，连降五季，H1 1.34亿部-4.2%）；三星6270万部（+8.1%）、苹果5580万部（+15.3%）、华为全球+20.9%/中国22.6%居首</td><td>2026Q2</td><td>IDC官网7-14 Tier1</td><td>618大促中国-15%；IDC预计H2中国约-20%、苹果全年份额22%历史高位；交叉Counterpoint Q2 -7%</td></tr>
+<tr><td>Q3 PC实际（全球）</td><td>6270万台（-20.1%，连降两季、逆转正常季节性）；联想1490万台（-22.6%，23.8%居首）、惠普1030万台（-30.9%）、戴尔760万台（-25.0%）、苹果590万台（-11.3%）、华硕550万台（-8.6%）</td><td>2026Q3</td><td>IDC官网10.8 Tier1</td><td>提前采购透支+存储与零部件短缺+价格上涨+物流扰动；苹果降幅最小；IDC警告价格将维持高位、2026末-2027展望可能恶化</td></tr>
 <tr><td>Q2 PC实际（全球）</td><td>6820万台（-4.9%，连涨九季后首降）；联想1660万台（-2.1%，24.4%居首）、苹果670万台（+10.1%）、惠普-9.0%/戴尔-5.0%/其他-10.5%</td><td>2026Q2</td><td>IDC官网7-9 Tier1</td><td>出货量与收入背离（涨价快于需求下滑）；AI PC短期增速放缓；交叉Counterpoint 6500万台（-4%）</td></tr>
 <tr><td>全球生成式AI手机渗透率</td><td>45%（2026）、52%（2027E）；Counterpoint 8-21总量-14.3%（2027 -1.4%、2028 +4.8%），三星+0.8%重夺首位、苹果-2.1%、头部中国OEM -15%至-34%、华为+8%</td><td>2026E</td><td>Counterpoint官网8-21 Tier1</td><td>窄口径（生成式AI）与IDC新一代AI宽口径<strong>不可直接比较</strong>；总量方向与IDC -16.7%交叉</td></tr>
 <tr><td>全球AI PC出货占比</td><td>54.7%（约1.43亿台）</td><td>2026E</td><td>智源/头豹 Tier2</td><td>含Copilot+等宽口径</td></tr>
 <tr><td>中国AI PC渗透率</td><td>52%（2025年34%）</td><td>2026E</td><td>Canalys转引 Tier3</td><td>需以canalys.com为准</td></tr>
-<tr><td>全球PC出货/ASP</td><td>-11.3%（Q4 -20%）、ASP +17–18.3%（博客/Tracker口径区间）、收入+1.6%、Q1 +3%为提前采购透支</td><td>2026E</td><td>IDC官网6-2 Tier1</td><td>博客正文ASP +17%、promo页+18.3%，区间披露；无实质缓解前至2027年底；交叉：Omdia -11.4%至3.9亿台（含平板）、Q2全球6820万台（-4.9%，IDC）</td></tr>
-<tr><td>中国PC出货（不含平板）</td><td>1020万台（Q2 2025，+12%）；2026E +3%</td><td>2025Q2/2026E</td><td>Canalys转引 Tier3</td><td>2026E +3%为2025年9月预测口径，截至9月19日的最新公开值，明显滞后于IDC全球-11.3%，待Canalys修订，<strong>不得视为</strong>当前判断</td></tr>
+<tr><td>全球PC出货/ASP</td><td>-11.3%（Q4 -20%）、ASP +17–18.3%（博客/Tracker口径区间）、收入+1.6%、Q1 +3%为提前采购透支</td><td>2026E</td><td>IDC官网6-2 Tier1</td><td>博客正文ASP +17%、promo页+18.3%，区间披露；无实质缓解前至2027年底；交叉：Omdia -11.4%至3.9亿台（含平板）、Q3实际-20.1%（IDC 10.8）</td></tr>
+<tr><td>中国PC出货（不含平板）</td><td>1020万台（Q2 2025，+12%）；2026E +3%</td><td>2025Q2/2026E</td><td>Canalys转引 Tier3</td><td>2026E +3%为2025年9月预测口径，截至2026-10-17的最新公开值，明显滞后于IDC全球-11.3%，待Canalys修订，<strong>不得视为</strong>当前判断</td></tr>
 <tr><td>智能眼镜（中国/全球）</td><td>491.5万台/2368.7万台（IDC 2026E新预测，智能眼镜全品类，端侧AI占比超30%）；Q1全球356.6万台（+130.1%）、中国61万台（+23.5%）</td><td>2026E/Q1</td><td>IDC官网/Tracker Tier1–2</td><td>旧451万台/1700万副（AI窄口径转引）已被全口径新预测替代，口径差异见3.3.4；Q2–Q3实际待更新</td></tr>
 <tr><td>单车AI算力</td><td>32→56 TOPS（2023→2025）</td><td>2025</td><td>IIM Tier2</td><td>车规芯片单车价值</td></tr>
 <tr><td>边缘一体机CAGR</td><td>&gt;32%（2025–2030）</td><td>2026E</td><td>IDC转引 Tier3</td><td>需以idc.com为准</td></tr>
@@ -543,6 +545,9 @@ details.puml summary{color:var(--accent)}
 <tr><td>高通汽车/IoT营收</td><td>15.88亿美元（+61%）/18.30亿美元（+9%）</td><td>同上</td><td>同上 Tier1</td><td></td></tr>
 <tr><td>联发科Q2营收/净利</td><td>1521.83亿元新台币（+1.2%）/243.35亿元（-12.6%）</td><td>2026Q2</td><td>公司公告 Tier1</td><td></td></tr>
 <tr><td>联发科8月营收/前8月</td><td>641.83亿元（环比+32.41%、同比+44.08%，单月历史新高，超3月632.19亿元前纪录）/4139.91亿元（+5.76%）；7月484.75亿元（+12.16%）已替换</td><td>2026年8月（9月10日发布）</td><td>公司月营收公告经媒体转引 Tier2（双源数字一致，待官网PDF核验）</td><td>9月仅需395.42亿元即达Q3指引下限；驱动为新AI芯片业务（Q4为美国大云厂商量产ASIC）+天玑9600系9月15日发布前备货</td></tr>
+<tr><td>联发科9月营收/Q3累计</td><td>553.99亿元（环比-13.69%、同比约+2%）；Q3累计约1680.58亿元（超指引1522-1598亿元上限）；Q3法说会10月30日待开</td><td>2026年9月（10月10日发布）</td><td>公司月营收公告经媒体转引 Tier2</td><td>Q3超指引上限验证AI ASIC+旗舰备货逻辑；9月环比下降为季节性（8月基数过高）</td></tr>
+<tr><td>全志科技三季报预告</td><td>前三季度营收约28.1亿元（+30%）、归母6.40-6.70亿元（+129.85-140.62%）、扣非6.10-6.30亿元（+147.92-156.05%）</td><td>2026前三季度</td><td>巨潮10月12日预告 Tier1</td><td>正式三季报10月27日披露；延续H1高增态势</td></tr>
+<tr><td>晶晨股份三季报预告</td><td>前三季度营收70.80-71.80亿元（+39.61-41.59%）、归母12.6-13.1亿元（+80.58-87.74%）；Q3单季归母6.49-6.99亿元（+222.67-247.52%）</td><td>2026前三季度</td><td>巨潮10月8日预告 Tier1</td><td>正式三季报10月30日披露；Q3单季净利环比大幅增长验证TV SoC高端放量</td></tr>
 <tr><td>寒武纪H1营收/归母</td><td>59.96亿元（+108.13%）/23.11亿元（+122.61%）</td><td>2026H1</td><td>公司公告 Tier1</td><td></td></tr>
 <tr><td>瑞芯微H1营收/归母</td><td>28.77亿元（+40.60%）/8.59亿元（+61.73%）</td><td>2026H1</td><td>公司公告 Tier1</td><td></td></tr>
 <tr><td>乐鑫H1营收/归母</td><td>14.81亿元（+18.88%）/3.34亿元（+27.93%）</td><td>2026H1</td><td>公司公告 Tier1</td><td></td></tr>
@@ -724,7 +729,7 @@ note right of IP : 壁垒：BPU/工具链\n生态锁定
 
 <section id="ch3" class="chapter">
 <h2>三、市场空间与增长驱动 <span class="tier-badge t1">T1</span><span class="tier-badge t2">T2</span><span class="tier-badge t3">T3</span></h2>
-<p class="fold-summary"><strong>结论：总量双位数收缩，价值个位数增长，增量在汽车与可穿戴。</strong>2026年全球硬件锚约650–700亿美元；中国硬件210亿元（+38%）与系统8661亿元<strong>不可直接相减</strong>；截至2026-09-19 AI绝对值专项更新尚未发布。</p>
+<p class="fold-summary"><strong>结论：总量双位数收缩，价值个位数增长，增量在汽车与可穿戴。</strong>2026年全球硬件锚约650–700亿美元；中国硬件210亿元（+38%）与系统8661亿元<strong>不可直接相减</strong>；截至2026-10-17 AI绝对值专项更新尚未发布。</p>
 
 <section id="ch3-1" class="foldable" data-default="expanded">
 <h3>3.1 全球市场：2023–2030年分口径全景</h3>
@@ -773,15 +778,15 @@ note right of IP : 壁垒：BPU/工具链\n生态锁定
 
 <section id="ch3-3-1" class="foldable" data-default="collapsed">
 <h3>3.3.1 AI手机：从“功能叠加”到“智能体载体”</h3>
-<p class="fold-summary"><strong>结论：总量双位数收缩与渗透率上行并存，71–72%仅为机械换算。</strong>2026年全球总量~10.2亿部（-16.7%，历史最大降幅，H2 -27.2%）[IDC官网8-26 <span class="tier-badge t1">T1</span>]，Counterpoint -14.3%同向交叉（分差2.4pp）；AI绝对值7.22亿部按新分母机械换算约71–72%，<strong>不代表AI出货上修</strong>，截至2026-09-19专项更新尚未发布。</p>
+<p class="fold-summary"><strong>结论：总量双位数收缩与渗透率上行并存，71–72%仅为机械换算。</strong>2026年全球总量~10.2亿部（-16.7%，历史最大降幅，H2 -27.2%）[IDC官网8-26 <span class="tier-badge t1">T1</span>]，Counterpoint -14.3%同向交叉（分差2.4pp）；Q3实际-22.0%创纪录（IDC 10.14-15 <span class="tier-badge t1">T1</span>）、中国-15.4%；AI绝对值7.22亿部按新分母机械换算约71–72%，<strong>不代表AI出货上修</strong>，截至2026-10-17专项更新尚未发布。</p>
 <div id="fig-t09" class="chart" aria-label="T09 双轴折线：手机总量下行 vs 渗透率上行">
 <p class="chart-title">T09 · 总量（左轴，亿部）下行 vs 渗透率（右轴）上行——双轴<strong>不可比</strong></p>
 <div class="echart" id="ec-02" role="img" aria-label="手机总量与AI渗透率双轴折线" style="width:100%;height:320px"></div>
 <p class="footnote">旧10.88亿部（-13.9%版本）已替换，差值约0.8亿台；2027年再降1.1–1.4%、2028年+4.8–5.5%反弹、2030年回2024–2025水平（6G商用）[Counterpoint官网8-21 <span class="tier-badge t1">T1</span>]。IIM广义口径8.7亿部（55%）为方向参考；IDC“新一代AI手机”严格口径更贴近价值量。中国总量分母2.78亿部（-2.2%，1月预测）滞后，H1 -4.2%与H2约-20%预期下全年大概率低于2.78亿，53%需复核。</p>
 </div>
 <ul>
-<li><strong>分化是结构主线：</strong>Android 2026年-24.3%（份额掉7pct）、iOS仅-1.3%（份额升至23.6%历史高位）、HarmonyOS近三倍至5100万台；Q2三星6270万部（+8.1%）、苹果5580万部（+15.3%）为前五仅有正增长，小米/OPPO/vivo两位数下滑（小米-26.3%系主动缩低端保利润），华为全球+20.9%/中国22.6%居首；sub-$100机型Q2已-60%（去年1.73亿部），新兴市场-20%以上；折叠屏+12.6%至2290万部（苹果H2入场；2027年2700万部+18%，苹果1700万部/40%/457亿美元价值）。</li>
-<li><strong>BOM传导：</strong>单机+28–35美元中NPU/SoC约45%、<dfn class="term" data-term="HBM" title="高带宽内存，缺货环节；KV Cache压力下KVNAND无DRAM架构为替代路径">HBM</dfn>/存储约25%、散热/电源约15%；但2026年ASP单年+$126（581美元，+27.6%）远超AI增量，涨价主因是存储短缺而非AI价值；9-01后终端接受度待验证（小米/华为/荣耀+200–1000元、旗舰SoC+10–15%）。</li>
+<li><strong>分化是结构主线：</strong>Android 2026年-24.3%（份额掉7pct）、iOS仅-1.3%（份额升至23.6%历史高位）、HarmonyOS近三倍至5100万台；Q3三星5780万部（22.6%）、苹果5730万部（22.4%）为前二，小米3070万部（12.0%）/OPPO 2560万部（10.0%）/vivo 1910万部（7.5%）均两位数下滑，华为中国+17.3%逆势居首（21.1%）；sub-$100机型Q2已-60%（去年1.73亿部），新兴市场-20%以上；折叠屏+12.6%至2290万部（苹果H2入场；2027年2700万部+18%，苹果1700万部/40%/457亿美元价值）。</li>
+<li><strong>BOM传导：</strong>单机+28–35美元中NPU/SoC约45%、<dfn class="term" data-term="HBM" title="高带宽内存，缺货环节；KV Cache压力下KVNAND无DRAM架构为替代路径">HBM</dfn>/存储约25%、散热/电源约15%；但2026年ASP单年+$126（581美元，+27.6%）远超AI增量，涨价主因是存储短缺而非AI价值；9-01后终端接受度已验证但Q3出货-22.0%证伪传导效果（Counterpoint BOM分析：旗舰BOM+100–150美元，终端需+150–200美元才能覆盖）。</li>
 <li><strong>调用频次：</strong>日均端侧AI调用17次→35次（翻倍，IIM Tier2），2027年~50次、2030年~80次。</li>
 </ul>
 <details class="puml"><summary>T09原表保留备查</summary>
@@ -798,18 +803,18 @@ note right of IP : 壁垒：BPU/工具链\n生态锁定
 
 <section id="ch3-3-2" class="foldable" data-default="collapsed">
 <h3>3.3.2 AI PC：渗透率破关年</h3>
-<p class="fold-summary"><strong>结论：渗透率过半但总量双位数收缩，中国+3%为滞后口径待修订。</strong>全球-11.3%（Q4 -20%）[IDC官网6-2 <span class="tier-badge t1">T1</span>]与全球54.7%（约1.43亿台）/中国52%并存；中国+3%（Canalys 2025年9月口径）在修订前<strong>不得作为配置依据</strong>。</p>
+<p class="fold-summary"><strong>结论：渗透率过半但总量双位数收缩，中国+3%为滞后口径待修订。</strong>全球-11.3%（Q4 -20%）[IDC官网6-2 <span class="tier-badge t1">T1</span>]与全球54.7%（约1.43亿台）/中国52%并存；Q3实际-20.1%连降两季（IDC 10.8 <span class="tier-badge t1">T1</span>）；中国+3%（Canalys 2025年9月口径）在修订前<strong>不得作为配置依据</strong>。</p>
 <div id="fig-t10" class="chart" aria-label="T10 双轴折线：PC总量 vs AI渗透率">
 <p class="chart-title">T10 · 总量（左轴）下行 vs 渗透率（右轴）上行——双轴<strong>不可比</strong></p>
 <div class="echart" id="ec-03" role="img" aria-label="PC总量与AI渗透率双轴折线" style="width:100%;height:320px"></div>
 <p class="footnote">ASP +17–18.3%、收入+1.6%、2027持平、2028反弹；Q2联想-2.1%居首、苹果+10.1%唯一双位数增长、惠普-9%/戴尔-5%/其他-10.5%；MacBook Neo（599美元、Q1 110万台三周最佳首发）仅部分对冲。高算力AI笔记本（不含Apple）占比33.0%（2026年1–2月）→~45%；大中华区累计1.07亿台（至2029）[Canalys/IDC <span class="tier-badge t1">T1</span>]。</p>
 </div>
 <ul>
-<li><strong>判定：</strong>“结构升级而非总量爆发”的极端形态；IDC 7月已提示AI PC渗透率短期增速放缓（成本大幅上升、端侧工具尚不足以与云端竞争）。端侧7B推理仍是与手机差异化关键，但短期先验证Q4 -20%下渠道库存与2027年进一步提价接受度。</li>
+<li><strong>判定：</strong>“结构升级而非总量爆发”的极端形态；Q3实际-20.1%连降两季（IDC 10.8 <span class="tier-badge t1">T1</span>）确认提前采购透支+存储与零部件短缺+价格上涨+物流扰动四因素叠加；IDC 7月已提示AI PC渗透率短期增速放缓（成本大幅上升、端侧工具尚不足以与云端竞争）。端侧7B推理仍是与手机差异化关键，但短期先验证Q4 -20%下渠道库存与2027年进一步提价接受度。</li>
 </ul>
 <details class="puml"><summary>T10原表保留备查</summary>
 <table class="data-table"><thead><tr><th>指标</th><th>2024</th><th>2025Q2</th><th>2025全年</th><th>2026E</th><th>2029E</th><th>来源</th></tr></thead><tbody>
-<tr><td>全球PC出货</td><td>–</td><td>Q1 +3%/Q2 6820万台（-4.9%）</td><td>–</td><td>-11.3%（Q4 -20%）、ASP +17–18.3%、收入+1.6%、2027持平、2028反弹</td><td>–</td><td>Canalys Tier1 / IDC官网6-2 Tier1</td></tr>
+<tr><td>全球PC出货</td><td>–</td><td>Q1 +3%/Q2 6820万台（-4.9%）/Q3 6270万台（-20.1%）</td><td>–</td><td>-11.3%（Q4 -20%）、ASP +17–18.3%、收入+1.6%、2027持平、2028反弹</td><td>–</td><td>Canalys Tier1 / IDC官网6-2 Tier1</td></tr>
 <tr><td>中国PC出货（不含平板）</td><td>2.55亿台全球</td><td>1020万台（+12%）</td><td>+2%</td><td>+3%（滞后口径，待修订）</td><td>–</td><td>Canalys Tier1</td></tr>
 <tr><td>中国AI PC渗透率</td><td>15.6%</td><td>28%</td><td>34%</td><td>52%（待修订）</td><td>–</td><td>Canalys Tier1</td></tr>
 <tr><td>全球AI PC出货占比</td><td>15.6%</td><td>20%（Q3 2024）</td><td>31%</td><td>54.7%（1.43亿台）</td><td>–</td><td>IDC/智源 Tier1</td></tr>
@@ -880,17 +885,17 @@ note right of IP : 壁垒：BPU/工具链\n生态锁定
 
 <section id="ch3-4" class="foldable" data-default="collapsed">
 <h3>3.4 驱动因子与透支审计</h3>
-<p class="fold-summary"><strong>结论：四驱动上行，三透支兑现中——BOM已落地，库存与模型待验证。</strong>密度定律（100天翻一番）与&lt;10ms刚需、1/10–1/5成本、国产化补贴为驱动；9-01全链涨价与H2 -27.2%出货冲击为审计主线，下一验证窗为9-22骁龙峰会定价与Q4渠道库存。</p>
+<p class="fold-summary"><strong>结论：四驱动上行，三透支兑现中——BOM已落地并超调（Q3手机-22%），库存与模型待验证。</strong>密度定律（100天翻一番）与&lt;10ms刚需、1/10–1/5成本、国产化补贴为驱动；9-01全链涨价与Q3实际（手机-22.0%/PC -20.1%）出货冲击为审计主线，下一验证窗为高通Q4财报（11-04）与Q4渠道库存。</p>
 <ul>
 <li><strong>驱动1·模型轻量化（密度定律）：</strong>大模型能力密度约每100天翻一番（智源），旗舰70B→13B仍保持能力，端侧7B推理首token&lt;0.8秒（5W内）已商用。</li>
 <li><strong>驱动2·延迟与隐私刚需：</strong>实时翻译、DMS、工业质检要求&lt;10ms本地响应；欧盟AI法案（2025年10月生效）倒逼数据本地化。</li>
 <li><strong>驱动3·成本与能效：</strong>端侧推理成本仅云端1/10–1/5；<dfn class="term" data-term="存算一体" title="存内/近存计算架构，能效为传统3–5倍；分数字/模拟（忆阻器）两条路线">存算一体</dfn>能效达传统3–5倍。</li>
 <li><strong>驱动4·国产化与补贴：</strong>地方补贴覆盖芯片设计/算法/场景示范；18个国家/地区已出台端侧AI能效分级标准。</li>
 </ul>
-<div class="callout warn"><strong>透支一·BOM透支（已落地验证）：</strong>8月DRAM均价25美元（+4.2%）、NAND均价30.50美元（+1.4%）续创历史新高但涨幅收窄（TrendForce/集邦 <span class="tier-badge t2">T2</span>）；Q3常规DRAM合约+13–18%/NAND +10–15%（7-03原文，9-07转载确认；vs Q2常规DRAM +58–63%/NAND +70–75%，大幅收敛但仍上涨；移动DRAM Q3 +8–13%、Q4料高位盘整）、NAND Q4预估+5–10%（QLC外溢），即“绝对红灯、斜率放缓”。9-01传导落地：高通全系两位数涨价生效（旗舰10–15%/主流5–7%/低端0–2%，7-24函+9-22骁龙峰会定价Gen6/Pro约300美元）、联发科天玑9600 Pro约216美元（+8–20%，台积电<dfn class="term" data-term="2nm N2P" title="台积电2纳米性能增强版；天玑9600 Pro与骁龙Gen6 Pro均采用，晶圆约3万美元">2nm N2P</dfn>，vivo X500系9-21全球首发、OPPO Find X10系9-22跟进）、小米/华为/荣耀终端+200–1000元，苹果9-09跟进上调iPhone 16/17/Air/17e起售价+100美元（iPhone 17 256GB 899美元起）。若单机AI成本（+28–35美元）无法通过整机涨价传导（ASP已+126美元至581美元），H2全球-27.2%/中国约-20%/PC Q4 -20%将先冲击出货再反噬芯片订单（高通Q3手机-20%即为明证）。</div>
+<div class="callout warn"><strong>透支一·BOM透支（已落地验证并超调）：</strong>8月DRAM均价25美元（+4.2%）、NAND均价30.50美元（+1.4%）续创历史新高但涨幅收窄（TrendForce/集邦 <span class="tier-badge t2">T2</span>）；TrendForce 9月30日Q4预测常规DRAM合约+10–15%/NAND +15–20%（NAND上修，vs Q3常规DRAM +13–18%/NAND +10–15%）、含HBM整体DRAM +15–20%、企业级SSD ~+20%，即"绝对红灯延续、NAND斜率重新陡峭"。Counterpoint BOM分析（<span class="tier-badge t2">T2</span>）显示典型旗舰（16GB LPDDR5X+512GB UFS 4.1）BOM成本增加约100–150美元，部分高端旗舰终端售价可能上涨150–200美元才能覆盖。9月1日传导落地：高通全系两位数涨价生效（旗舰10–15%/主流5–7%/低端0–2%，7-24函+9-22骁龙峰会发布Gen6/Extreme Gen6）、联发科天玑9600 Pro约216–220美元（TrendForce 9-15报告$220，台积电<dfn class="term" data-term="2nm N2P" title="台积电2纳米性能增强版；天玑9600 Pro与骁龙Gen6 Pro均采用，晶圆约3万美元">2nm N2P</dfn>，vivo X500 Pro 9-21全球首发6499元、OPPO Find X10标准版9-22首发5499元）、小米18 Pro 9-23首发5999元（骁龙8 Elite Gen 6）、小米/华为/荣耀终端+200–1000元，苹果9-09跟进上调iPhone 16/17/Air/17e起售价+100美元。<strong>但Q3实际（IDC 10.14-15）全球手机-22.0%创纪录、PC -20.1%（IDC 10.8）证伪了传导效果——涨价已无法对冲存储成本冲击，终端需求弹性远超预期。</strong>若单机AI成本（+28–35美元）无法通过整机涨价传导（ASP已+126美元至581美元），Q4对存货的二次冲击风险显著上升。</div>
 <div class="callout warn"><strong>透支二·模型透支：</strong><dfn class="term" data-term="蒸馏/量化" title="大模型压缩：蒸馏用大模型教小模型，量化降精度（INT8/FP8）；损失>3%则体验不达标">蒸馏/量化</dfn>若精度损失&gt;3%致体验未达阈值，AI手机“35次日均调用”可能回落至20次以下；IDC 7月已提示端侧AI工具尚不足以与云端竞争是AI PC渗透率短期放缓原因之一。</div>
 <div class="callout warn"><strong>透支三·库存透支：</strong>寒武纪存货82.48亿元（占资产45%，原材料52.78亿+委托加工24.18亿超93%）、预付款29.14亿元（+291%），H2需交付约75亿元；乐鑫/瑞芯微亦战略性增库存（乐鑫+2.14亿元、中科蓝讯存货8.91亿元+28.66%）；渠道通用DRAM/NAND供给满足率已低于50%、现货溢价16–43%；若H2需求不及预期，跌价计提（寒武纪已计提3.97亿元）与抛货退货将同步放大。</div>
-<p class="footnote">下一验证窗：9-22–24骁龙峰会最终定价、vivo X500系9-21与OPPO Find X10系9-22销售兑现、Q4渠道库存；存储Q4（常规DRAM高位盘整、NAND +5–10%）斜率待验证。</p>
+<p class="footnote">下一验证窗：11-04高通Q4财报（涨价传导验证/毛利率企稳）、10-30联发科Q3法说会（Q4 ASIC量产/2027数据中心营收）、10-24寒武纪三季报（H2交付约75亿元进度）、Q4渠道库存；存储Q4（常规DRAM +10–15%/NAND +15–20%）待验证。</p>
 </section>
 </section>
 
@@ -1090,7 +1095,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <h3 id="ch6-1">6.1 国际龙头：平台化与生态锁定（T22 · 5家company-card）</h3>
 
 <div class="company-card"><header><span class="nm">高通</span><span class="code">QCOM</span><span class="badge mid">涨价验证期</span></header>
-<div class="grid5"><div><div class="k">核心产品</div><div class="v">骁龙8 Elite Gen5 / QCS6490 / SA8775；9-22骁龙峰会发Gen6/Pro</div></div><div><div class="k">制程</div><div class="v num">3/4/2nm</div></div><div><div class="k">算力</div><div class="v num">45 TOPS（INT8）</div></div><div><div class="k">生态</div><div class="v">AI Hub / Hexagon DSP / 车规</div></div><div><div class="k">营收2026</div><div class="v num">Q3 99.47亿美元；汽车+61%、IoT +9%、手机-20%</div></div></div>
+<div class="grid5"><div><div class="k">核心产品</div><div class="v">骁龙8 Elite Gen6 / 骁龙8 Elite Extreme Gen6（9-22-24骁龙峰会发布）/ QCS6490 / SA8775</div></div><div><div class="k">制程</div><div class="v num">3/4/2nm</div></div><div><div class="k">算力</div><div class="v num">45 TOPS（INT8）</div></div><div><div class="k">生态</div><div class="v">AI Hub / Hexagon DSP / 车规</div></div><div><div class="k">营收2026</div><div class="v num">Q3 99.47亿美元；汽车+61%、IoT +9%、手机-20%；9-01全系两位数涨价；小米18 Pro 9-23首发5999元</div></div></div>
 <footer>验证点：9-01全系两位数涨价已生效，Q4验证是否按新价提货。单颗Gen6 Pro或破300美元（2nm）。</footer></div>
 
 <div class="company-card"><header><span class="nm">联发科</span><span class="code">2454.TW</span><span class="badge info">三线协同</span></header>
@@ -1120,7 +1125,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <h3 id="ch6-2">6.2 国内阵营：分层与垂直突围（T23 · 10家分组卡片）</h3>
 <h4>平台型</h4>
 <div class="company-card"><header><span class="nm">华为海思</span><span class="code">未上市</span><span class="badge info">平台型</span></header>
-<div class="body">麒麟9030 / 麒麟X90 / 昇腾310B（边缘）/ Barong 6100（穿戴）；7nm/5nm；16–40 TOPS；华为手机Q2中国第一（22.6%，+19.4%），海思未单独披露。</div></div>
+<div class="body">麒麟9030（Mate 80）/ 麒麟9050 Pro（Mate XT 2）/ 昇腾310B（边缘）/ Barong 6100（穿戴）；7nm/5nm；16–40 TOPS；华为手机Q3中国21.1%份额居首（+17.3%逆势增长，IDC 10.14）；海思全球手机SoC份额约5%（Q2，Counterpoint）。</div></div>
 <div class="company-card"><header><span class="nm">寒武纪</span><span class="code">688256</span><span class="badge good">云端兑现</span></header>
 <div class="body">思元590（云端）/ MLU370（边缘）；7nm；256 TOPS；毛利率55.25%；H1营收59.96亿元（+108%）、净利23.11亿元。详见<a href="#ch7-3">7.3</a>。</div></div>
 <h4>智驾（车规）</h4>
@@ -1146,7 +1151,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <details><summary>T23原表折叠备查（10行7列）</summary><div class="pad scroll-x"><table class="data-table">
 <thead><tr><th>公司</th><th>定位</th><th>2026核心产品</th><th>制程</th><th class="n">算力</th><th class="n">毛利率/研发</th><th>出货/营收2026H1</th></tr></thead>
 <tbody>
-<tr><td>华为海思</td><td>平台型</td><td>麒麟9030/麒麟X90、昇腾310B、Barong 6100</td><td>7nm/5nm</td><td class="n">16–40 TOPS</td><td class="n">未披露</td><td>华为手机22.6%份额（Q2中国第一，+19.4%）</td></tr>
+<tr><td>华为海思</td><td>平台型</td><td>麒麟9030（Mate 80）/麒麟9050 Pro（Mate XT 2）、昇腾310B、Barong 6100</td><td>7nm/5nm</td><td class="n">16–40 TOPS</td><td class="n">未披露</td><td>华为手机Q3中国21.1%份额居首（+17.3%逆势增长，IDC 10.14）；海思全球手机SoC份额约5%（Q2，Counterpoint）</td></tr>
 <tr><td>寒武纪</td><td>训练+推理</td><td>思元590、MLU370</td><td>7nm</td><td class="n">256 TOPS</td><td class="n">55.25%/11.72%</td><td>H1营收59.96亿（+108%）、净利23.11亿</td></tr>
 <tr><td>地平线</td><td>智驾平台</td><td>征程6E/M/P、HSD城区NOA</td><td>7nm/16nm</td><td class="n">10–560 TOPS</td><td class="n">66.0%/超100%</td><td>H1 20.55亿（+32.9%）、经调亏16.71亿</td></tr>
 <tr><td>瑞芯微</td><td>AIoT主控+协处理器</td><td>RK3588、RK3576、RK182X</td><td>8nm/28nm</td><td class="n">6–12 TOPS</td><td class="n">45.79%/12.8%</td><td>H1 28.77亿（+40.6%）</td></tr>
@@ -1181,7 +1186,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <tr><td>IIM全球边缘算力芯片（2025，全口径）</td><td class="n">~49%</td><td class="n">~62%</td><td class="n">~79%</td><td>前三大合计62%（IIM 2026报告）</td><td>IIM Tier2（427亿美元市场）</td></tr>
 <tr><td>手机SoC单项（中国AI手机，Tier3估算）</td><td class="n">&gt;85%（高通+联发科）</td><td class="n">&gt;90%（含华为海思）</td><td class="n">~96%</td><td>华为海思在高端&gt;600美元份额占半</td><td>CINNO/IIM交叉 Tier3（未经本地验证，仅作方向）</td></tr>
 </tbody></table></div>
-<div class="callout warn"><strong>口径纪律（删除纪律注，全文保留）：</strong>截至2026-09-19，全球暂无单一机构发布“端侧AI芯片”统一CR的免费权威数据（IDC/Gartner付费报告未公开CR明细）。本报告采用“出货口径分层披露+双源交叉”替代单一CR，避免与储能电芯口径混用（此前储能SNE/InfoLink口径已整段删除）。后续跟踪以IIM物联网端侧、边缘算力、手机SoC三口径分层为准，<strong>不得与电化学储能口径混用</strong>。</div>
+<div class=”callout warn”><strong>口径纪律（删除纪律注，全文保留）：</strong>截至2026-10-17，全球暂无单一机构发布”端侧AI芯片”统一CR的免费权威数据（IDC/Gartner付费报告未公开CR明细）。本报告采用”出货口径分层披露+双源交叉”替代单一CR，避免与储能电芯口径混用（此前储能SNE/InfoLink口径已整段删除）。后续跟踪以IIM物联网端侧、边缘算力、手机SoC三口径分层为准，<strong>不得与电化学储能口径混用</strong>。</div>
 
 <h3 id="ch6-4">6.4 核心参数对比表（T25 · 11款，原表保留+散点图）</h3>
 <h4>11款 TOPS vs 功耗散点（SVG，精度分色；对数X轴示意）</h4>
@@ -1292,7 +1297,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <li>二季度实际销售收现42.93亿元（超营收约10亿元）是现金侧积极信号，但经营现金流/净利0.13的核心矛盾未解。</li>
 <li>第六代微架构与指令集仍在研；训练软件栈（GLM/DeepSeek/Qwen/Kimi/MiniMax适配）为阶段性进展。</li>
 </ul>
-<p class="footnote">截至2026-09-19，交付瓶颈无公开纪要 beyond 公司口径；待Q3验证去化与H2约75亿元交付。</p></div>
+<p class="footnote">截至2026-10-17，交付瓶颈无公开纪要 beyond 公司口径；三季报10-24待发，待Q3验证去化与H2约75亿元交付。</p></div>
 <footer>验证点：H2交付与晶圆产能 / 存货跌价是否超5亿元 / 经营现金流/净利能否回升。</footer></div>
 
 <h3 id="ch7-4"><a id="7.4" aria-hidden="true"></a>7.4 地平线机器人（9660.HK）：增收不增利，HSD规模化是关键</h3>
@@ -1353,9 +1358,9 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <li>Hugging Face旗下Pollen Robotics发布399美元双足机器人Microduck（RK3566主控，2020年中端SoC，1 TOPS NPU跑50Hz控制环+15电机）。</li>
 <li>24小时预售破260万美元、一周破500万美元/超1万台、交付排期4–6个月。</li>
 <li>8-31瑞芯微涨停至194.59元（市值823亿元，端侧AI概念集体跟涨）。</li>
-<li><strong>核实状态：供货关系依据为GitHub硬件清单与媒体报道（Tier3），截至9-19公司未就订单金额或客户身份发布公告或互动平台回应，不得计入订单能见度。</strong></li>
+<li><strong>核实状态：供货关系依据为GitHub硬件清单与媒体报道（Tier3），截至10-17公司未就订单金额或客户身份发布公告或互动平台回应，不得计入订单能见度。</strong></li>
 <li>实质仍是RK3588/RK3576/RV11高毛利平台与宇树/云深处/优必选/智元等既有客户出货。</li>
-<li>9-11半年度业绩说明会已过但截至9-19公开渠道未检索到纪要全文（官网/巨潮/上证路演均无收录），RK186X/RK1860命名差异仍待公司公告确认。</li>
+<li>9-11半年度业绩说明会已过但截至10-17公开渠道未检索到纪要全文（官网/巨潮/上证路演均无收录），RK186X/RK1860命名差异仍待公司公告确认。</li>
 </ul></div>
 </div>
 <footer>验证点：RK186X Q4推出与命名确认 / RK182X下半年放量 / 存储与基板保供。</footer></div>
@@ -1504,7 +1509,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <tr><td>高通</td><td class="n">-4.03%（Q3）</td><td class="n">-24.91%</td><td class="n">53.05%（-2.5pct）</td><td class="n">~18%</td><td>84亿（9月累计）</td><td>–</td><td>涨价修复中</td></tr>
 <tr><td>联发科</td><td class="n">+1.2%（Q2）</td><td class="n">-12.6%</td><td class="n">46.2%（-2.9pct）</td><td class="n">~26%</td><td>242亿（Q2）</td><td>984亿（+15% QoQ）</td><td>结构切换</td></tr>
 </tbody></table></div></details>
-<p class="footnote">时间锚：截至2026-09-19；瑞芯微9-11说明会无公开纪要；恒玄8-30以来无新增公告；BES6100送样、Q3去化、HSD交付待Q3验证。</p>
+<p class="footnote">时间锚：截至2026-10-17；瑞芯微9-11说明会无公开纪要；恒玄8-30以来无新增公告；BES6100送样、Q3去化、HSD交付待Q3验证。</p>
 </section>
 
 </div>
@@ -1528,7 +1533,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 -->
     <section id="ch8">
 <h2>八、财务与估值锚点</h2>
-<p class="footnote">口径锚：<dfn class="term" data-term="PS/TTM">PS/TTM</dfn>统一口径，截至2026-08-30收盘，Wind/公告口径；<span class="tier-badge t1">T1</span>为准。<dfn class="term" data-term="ASP">ASP</dfn>、<dfn class="term" data-term="NAND/DRAM">NAND/DRAM</dfn>、<dfn class="term" data-term="LPDDR">LPDDR</dfn>见术语。9月19日注记见8.1末，不重算表内锚。</p>
+<p class="footnote">口径锚：<dfn class="term" data-term="PS/TTM">PS/TTM</dfn>统一口径，截至2026-08-30收盘，Wind/公告口径；<span class="tier-badge t1">T1</span>为准。<dfn class="term" data-term="ASP">ASP</dfn>、<dfn class="term" data-term="NAND/DRAM">NAND/DRAM</dfn>、<dfn class="term" data-term="LPDDR">LPDDR</dfn>见术语。10月17日注记见8.1末，不重算表内锚。</p>
 
 <section id="ch8-1">
 <h3>8.1 行业PS/PE分位（T27）</h3>
@@ -1558,7 +1563,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <li>PE分位：高通19x处3年45%分位（合理）；瑞芯微51.7x/乐鑫80x/恒玄55x均处70%+高位，已计入2026–2027年AIoT放量；寒武纪TTM PE不可比（亏损/低基数），附录A.6年化142x处95%极高分位。</li>
 <li>PS与PE背离：地平线/黑芝麻PS 13–14x但PE为负，依赖PS与远期盈利拐点，风险高于已盈利龙头；证伪阈值已量化（见原表最右列）。</li>
 </ul>
-<div class="callout warn"><p><strong>9月19日注记（P2半年度口径，不重算表内锚）：</strong>8月31日Microduck情绪下瑞芯微涨停至194.59元（市值823亿元，较表内698亿元+18%）、乐鑫+8.47%/全志+9.39%跟涨，PS中枢同步上移约15–18%，进入P2-2估值红灯观察区（PS&gt;20x）；截至2026-09-19，9月11日业绩会无公开纪要、联发科8月营收超预期（见第七章）部分对冲情绪溢价，待Q3交付验证，不调整8月30日锚。</p></div>
+<div class="callout warn"><p><strong>10月17日注记（P2半年度口径，不重算表内锚）：</strong>8月31日Microduck情绪下瑞芯微涨停至194.59元（市值823亿元，较表内698亿元+18%）、乐鑫+8.47%/全志+9.39%跟涨，PS中枢同步上移约15–18%，进入P2-2估值红灯观察区（PS&gt;20x）；截至2026-10-17，9月11日业绩会无公开纪要、联发科9月营收553.99亿元（Q3累计约1680.58亿元超指引上限）部分对冲情绪溢价，待Q3交付验证，不调整8月30日锚。</p></div>
 <details><summary>T27原表折叠备查（9行9列）</summary>
 <table class="data-table sticky-first">
 <thead><tr><th>公司</th><th>股价/市值（约）</th><th>营收TTM（约）</th><th>归母TTM（约）</th><th>PS TTM</th><th>PE TTM</th><th>分位（近3年）</th><th>备注</th><th>证伪阈值</th></tr></thead>
@@ -1620,7 +1625,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <div class="callout method">
 <ul>
 <li><strong>TTM统一公式（A股）：</strong>营收TTM = 2025年报营收 + 2026H1营收 − 2025H1营收；归母TTM = 2025年报归母 + 2026H1归母 − 2025H1归母；寒武纪因2025年报数据在正文中未单列，以巨潮披露57.0亿元（<span class="tier-badge t1">T1</span>）估算，得TTM≈88亿元，PS≈85.5x（7539/88），与年化88.7x差异&lt;4%，验证收敛。</li>
-<li><strong>H股/美股/台股：</strong>高通FY2025Q4–2026Q3滚动，联发科新台币TTM 5326亿元、归母1090亿元（TTM，8月营收更新不改变TTM口径，待Q3纳入），地平线TTM≈2025 37.58亿 +2026H1 19.3–20.8亿年化折算；汇率统一：新台币1:0.214（2026H1均值31.6折算）、美元1:6.78、港元1:0.92（2026-08-30锚，2026-09-19复核波动不足1%不调整）。</li>
+<li><strong>H股/美股/台股：</strong>高通FY2025Q4–2026Q3滚动，联发科新台币TTM 5326亿元、归母1090亿元（TTM，9月营收更新不改变TTM口径，待Q3纳入），地平线TTM≈2025 37.58亿 +2026H1 19.3–20.8亿年化折算；汇率统一：新台币1:0.214（2026H1均值31.6折算）、美元1:6.78、港元1:0.92（2026-08-30锚，2026-10-17复核波动不足1%不调整）。</li>
 <li><strong>非经常性剔除：</strong>寒武纪扣非21.66亿元（剔除政府补助9172万元）、地平线<dfn class="term" data-term="经调亏损">经调亏损</dfn>剔除可转债公允价值（大众CARIAD 9.25亿美元）及D-Robotics终止并表收益，估值时以扣非/经调为分母；乐鑫已剔除股份支付（3.62亿 vs 3.34亿）。<dfn class="term" data-term="存货跌价">存货跌价</dfn>寒武纪已计提3.97亿，触发&gt;5亿则估值收敛至60x。</li>
 <li><strong>估值锚：</strong>成长型给予PS为主（AIoT 15x±5x为合理中枢，寒武纪85.5x需2028千亿兑现）、盈利稳定型给予PE为主（高通/联发科18–22x为锚）、未盈利给予PS+远期盈利折现（需&gt;30%增速兑现）；证伪阈值见8.1最右列，若触发则PS中枢下修20–30%。</li>
 </ul>
@@ -1651,12 +1656,12 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 </table>
 </section>
 <section id="ch9-2">
-<h3>股东与治理核查（research-reviewer:65，核查区间2026-02-28–2026-09-19）</h3>
+<h3>股东与治理核查（research-reviewer:65，核查区间2026-02-28–2026-10-17）</h3>
 <details open><summary>核查结论（全文保留，点击折叠附表口径）</summary>
 <ul>
-<li><strong>寒武纪（688256）：</strong>截至2026-09-19，未见控股股东/实际控制人大额减持公告；2026年限制性股票激励计划8月17日首次授予落地（400万股/944人/750元，摊销总费用20.20亿元其中2026年3.32亿元）及2023年计划预留归属561039股8月20日上市，考核目标135亿/405亿/1000亿不变；未见新增大比例质押或诉讼公告（以巨潮最终披露为准）。</li>
+<li><strong>寒武纪（688256）：</strong>截至2026-10-17，未见控股股东/实际控制人大额减持公告；2026年限制性股票激励计划8月17日首次授予落地（400万股/944人/750元，摊销总费用20.20亿元其中2026年3.32亿元）及2023年计划预留归属561039股8月20日上市，考核目标135亿/405亿/1000亿不变；未见新增大比例质押或诉讼公告（以巨潮最终披露为准）。</li>
 <li><strong>地平线（9660.HK）：</strong>未见控股股东减持；CARIAD可转债（9.25亿美元，2026-12-07强制转换）为主要治理变量，转股价3.99港元/股，正式中报确认公允价值收益52.406亿元+D-Robotics终止合并收益约21.69亿元后，转换对股本摊薄的测算待Q4更新；产品方案毛利率36.2%（−8pct，见7.4）；未见新增诉讼。</li>
-<li><strong>瑞芯微（603893）：</strong>未见控股股东励民/黄旭大额减持；2026年8月14日实施分红（每10股12元）；9月11日半年度业绩说明会已过但截至2026-09-19无公开纪要；Microduck供货关系截至2026-09-19无公司公告确认（Tier3情绪，不得计入治理变量）；未见质押率&gt;50%或限售解禁&gt;5%公告。</li>
+<li><strong>瑞芯微（603893）：</strong>未见控股股东励民/黄旭大额减持；2026年8月14日实施分红（每10股12元）；9月11日半年度业绩说明会已过但截至2026-10-17无公开纪要；Microduck供货关系截至2026-10-17无公司公告确认（Tier3情绪，不得计入治理变量）；未见质押率&gt;50%或限售解禁&gt;5%公告。</li>
 <li><strong>其他（乐鑫/恒玄/联发科/高通/全志/晶晨/中科蓝讯/黑芝麻）：</strong>恒玄截至2026-05-01有股东减持结果公告（减持完成），无新增大比例质押；乐鑫无密集减持，9月8日集体业绩会无治理事项；联发科/高通按SEC/公开资讯无异常质押或重大诉讼（高通与苹果基带份额纠纷为业务层面，已在第七章披露）；全志/晶晨/中科蓝讯正式中报无异常治理事项；黑芝麻正式中报披露亿智收购整合完成，无大额解禁公告。</li>
 <li><strong>结论：</strong>近6月核心公司未出现“大股东密集减持/高质押/大额解禁/重大诉讼”红灯，但CARIAD转债强制转换（地平线）与寒武纪股权激励高目标为持续观察点，若触发则按P1季度复盘更新。</li>
 </ul>
@@ -1673,7 +1678,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <div class="scenario-cards">
 <div id="ch10-base"><h3>基准情景（60%）</h3>
 <ul>
-<li>核心假设：存储Q3 +18–23%（涨幅收窄但绝对高位）、Q4高位震荡、2027持平2028反弹；手机H2 −27.2%/PC Q4 −20%兑现但不超调；9.1涨价部分传导；汽车<dfn class="term" data-term="HSD">HSD</dfn>与RK182X/A2000按期放量。</li>
+<li>核心假设：存储Q4常规DRAM +10–15%/NAND +15–20%（TrendForce 9.30，NAND上修）、2027持平2028反弹；手机Q3 −22.0%已兑现、Q4进一步下探；9.1涨价已落地但被Q3出货崩塌证伪；汽车<dfn class="term" data-term="HSD">HSD</dfn>与RK182X/A2000按期放量。</li>
 <li>全球手机总量：~10.2亿部（−16.7%）→2027E ~10.0亿（−1.1%至−1.4%）。</li>
 <li>全球PC总量：−11.3%（Q4 −20%）、<dfn class="term" data-term="ASP">ASP</dfn> +17–18.3%、收入+1.6%→2027持平。</li>
 <li>全球端侧AI芯片增速：+28–32%（与IIM一致）。</li>
@@ -1711,7 +1716,7 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <li>触发条件（不可折叠）：Q4存储再+10%、手机H2 −27.2%超调、存货周转&lt;2次。</li>
 </ul></div>
 </div>
-<div class="callout quote"><p><strong>情景切换的领先指标与A.4联动：</strong>存储现货周度报价（InfoLink/CINNO，A.4敏感性：Q4再涨10%则AIoT毛利率−1.0–1.8pct、手机SoC −2.8pct，基准→悲观）、联发科/高通Q4毛利率环比（±1.5pct为阈值）、瑞芯微Q3新品导入数（&gt;100家为乐观）、地平线Q3经调亏损环比（收敛为积极）。若P0-7存储红灯连续两月，则基准情景概率从60%下修至45%，悲观上修至30%（见第一章）。下一验证窗：2026-09-22–24骁龙峰会、2026-10-10月度P0复盘、2026-10-30三季报P1复盘。</p></div>
+<div class="callout quote"><p><strong>情景切换的领先指标与A.4联动：</strong>存储现货周度报价（InfoLink/CINNO，A.4敏感性：Q4再涨10%则AIoT毛利率−1.0–1.8pct、手机SoC −2.8pct，基准→悲观）、联发科/高通Q4毛利率环比（±1.5pct为阈值）、瑞芯微Q3新品导入数（&gt;100家为乐观）、地平线Q3经调亏损环比（收敛为积极）。若P0-7存储红灯连续两月，则基准情景概率从60%下修至45%，悲观上修至30%（见第一章）。<strong>10月17日注记：Q3实际（手机−22.0%/PC −20.1%）已大幅超原H2 −27.2%/PC Q4 −20%预期轨迹，存储成本冲击从"预测"变为"既成事实"，基准情景概率存在下修风险（若Q4存储NAND +15–20%兑现且手机/PC继续−20%级下降，基准→45%/悲观→30%触发条件已部分满足）。</strong>下一验证窗：11-04高通Q4财报、10-30联发科Q3法说会、10-24/10-27/10-30三季报P1复盘。</p></div>
 </section>
 
 <section id="ch11">
@@ -1730,9 +1735,9 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 <h3>11.2 具体跟踪指标（T32：14卡）</h3>
 <h4>P0（月度）</h4>
 <div class="kpi-strip">
-<div class="kpi-card"><span class="tier-badge t1">P0-1</span><strong>出货增速 +45%（Q1）</strong><span>阈值红线：跌破20%或连续两季&lt;25%为警报</span><span>IDC转引Tier3+官网Q2 Tier1</span></div>
+<div class="kpi-card"><span class="tier-badge t1">P0-1</span><strong>出货增速 +45%（Q1）</strong><span>阈值红线：跌破20%或连续两季&lt;25%为警报（已触发：Q3手机-22.0%）</span><span>IDC转引Tier3+官网Q3 Tier1</span></div>
 <div class="kpi-card"><span class="tier-badge t1">P0-2</span><strong>AI手机 1.47亿部/53%</strong><span>阈值：单月环比−15%或跌破45%</span><span>Q2中国6601万台(−4.3%)、H1 1.34亿部(−4.2%)</span></div>
-<div class="kpi-card"><span class="tier-badge t1">P0-3</span><strong>AI PC 52%</strong><span>阈值：跌破40%或连续两季&lt;50%</span><span>Canalys转引Tier3+IDC官网Tier1，待修订</span></div>
+<div class="kpi-card"><span class="tier-badge t1">P0-3</span><strong>AI PC 52%</strong><span>阈值：跌破40%或连续两季&lt;50%（已触发：Q3 PC -20.1%）</span><span>Canalys转引Tier3+IDC官网Tier1，待修订</span></div>
 <div class="kpi-card"><span class="tier-badge t1">P0-4</span><strong>单车算力 56 <dfn class="term" data-term="TOPS/W">TOPS</dfn></strong><span>阈值：&lt;40 TOPS或增速&lt;20%</span><span>IIM Tier2+公告Tier1；HSD/A2000验证中</span></div>
 <div class="kpi-card"><span class="tier-badge t1">P0-5</span><strong>存储 8月DRAM $25/NAND $30.5</strong><span>阈值：现货周度+2%连4周为红灯</span><span>公告Tier1/TrendForce·群智Tier2；Q3 PC DRAM +18–23%</span></div>
 </div>
@@ -1990,14 +1995,14 @@ T04–T18归宿：T04双栏对比卡/T05阶梯卡/T06 Tier徽章卡/T07分组柱
 </div>
 </section>
 <section id="appendix-b">
-<h3>附录B：补充核验备忘（2026-09-19，三行保留）</h3>
+<h3>附录B：补充核验备忘（2026-10-17，三行保留）</h3>
 <ul>
-<li>本报告所有财务数据均以沪深交易所巨潮资讯、港交所披露易、SEC EDGAR及公司官网投资者关系页为Tier1；未披露事项均作“截至2026-09-19尚未发布”处理，未作外推。</li>
+<li>本报告所有财务数据均以沪深交易所巨潮资讯、港交所披露易、SEC EDGAR及公司官网投资者关系页为Tier1；未披露事项均作”截至2026-10-17尚未发布”处理，未作外推。</li>
 <li>图表与表格均可由Markdown直接渲染，PlantUML可通过docs/绘图规范同款渲染器输出高清矢量图。</li>
-<li>下一更新节点：2026-09-22–24（骁龙峰会Gen6/Pro发布与小米18 Pro首发）/2026-09-21（vivo X500系定价）事件复盘、2026-10-10前（月度P0复盘）、2026-10-30（三季报P1复盘）。</li>
+<li>下一更新节点：2026-10-24（寒武纪三季报）/10-27（全志三季报）/10-30（联发科Q3法说会+晶晨三季报）/11-04（高通Q4 FY2026财报）P1复盘。</li>
 </ul>
-<div class="callout quote"><p><strong>Docs-First合规声明：</strong>本报告开始前已完整阅读docs/下全部文档（architecture.md、data_catalog.md、data_schema.md、view_definition.sql、usage.md、view_architecture.md等），遵守统一视图与数据怀疑论原则——关键数据均以公告/权威原文为准，未直接查询data/warehouse交易数据（行业研究不涉及个股时序），引用口径已在Tier评级中披露，未对data/目录执行全量扫描。</p>
-<p><strong>报告信息：</strong>撰写完成于2026年9月19日（2026年9月9日版的替换式更新），文件路径investigation/industry/端侧AI芯片行业深度研究报告_2026年9月19日.md，全文约1000行、约6万字，含22个主表（4表增行重算）、1个PlantUML产业链全景图、10项P0信号面板、14项跟踪指标、48条可追溯来源链接（Tier1 20条官方公告/权威原文、Tier2 10条行业咨询、Tier3 18条媒体转引/未验证），Tier1为准、双源交叉验证。</p></div>
+<div class=”callout quote”><p><strong>Docs-First合规声明：</strong>本报告开始前已完整阅读docs/下全部文档（architecture.md、data_catalog.md、data_schema.md、view_definition.sql、usage.md、view_architecture.md等），遵守统一视图与数据怀疑论原则——关键数据均以公告/权威原文为准，未直接查询data/warehouse交易数据（行业研究不涉及个股时序），引用口径已在Tier评级中披露，未对data/目录执行全量扫描。</p>
+<p><strong>报告信息：</strong>撰写完成于2026年9月19日（2026年9月9日版的替换式更新），10月17日按跟踪框架更新Q3实际数据与事件验证，文件路径investigation/industry/端侧AI芯片行业深度研究报告_2026年10月17日.md，全文约1000行、约6万字，含22个主表（4表增行重算）、1个PlantUML产业链全景图、10项P0信号面板、14项跟踪指标、58条可追溯来源链接（Tier1 30条官方公告/权威原文、Tier2 12条行业咨询、Tier3 16条媒体转引/未验证），Tier1为准、双源交叉验证。</p></div>
 </section>
 </section>
     <section id="glossary">
