@@ -1,8 +1,7 @@
 ---
 description: 公司跟踪更新子agent，执行 research-sync-intel 全流程（多维情报抓取、生存变量矩阵、全域扫描、级联更新、数值一致性与审查闭环），用于半年报/定期报告跟踪
 mode: subagent
-model: opencode-go/muse-spark-1.3-contributor
-temperature: 0.2
+temperature: 0
 permission:
   task: allow
   todowrite: allow

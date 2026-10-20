@@ -21,5 +21,7 @@
     "websearch": true,
     "webfetch": true
   },
-  "subagent_depth": 5
+  "experimental": {
+    "subagent_depth": 5
+  }
 }
