@@ -55,6 +55,45 @@ SOURCE_CNINFO = "cninfo"
 _COUNT_COLUMNS = ("holder_count", "prev_holder_count", "holder_change")
 
 
+def _normalize_source_code(values: pd.Series) -> pd.Series:
+    """把源接口的股票代码统一为 6 位纯数字字符串。"""
+    return (
+        values.astype("string")
+        .str.strip()
+        .str.replace(r"\.0$", "", regex=True)
+        .str.zfill(6)
+    )
+
+
+def _is_em_no_coverage_error(exc: Exception) -> bool:
+    """东财个股明细对无覆盖股票返回 None，akshare 触发 NoneType 下标异常。"""
+    marker = "'NoneType' object is not subscriptable"
+    return isinstance(exc, TypeError) and marker in str(exc)
+
+
+def _parse_list_date(value) -> date | None:
+    """解析 stocks.list_date（YYYYMMDD 或 YYYY-MM-DD）；无法解析返回 None。"""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    for fmt in ("%Y%m%d", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _filter_cninfo_symbol(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    """从巨潮全市场快照中预过滤目标股票，避免逐股归一化全市场行。"""
+    if frame is None or frame.empty or "证券代码" not in frame.columns:
+        return frame
+    matched = _normalize_source_code(frame["证券代码"]) == symbol
+    return frame.loc[matched].copy()
+
+
 def normalize_holder_detail(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
     """归一化东财个股股东户数明细为入库规范 (纯函数, 便于单测)。
 
@@ -75,13 +114,7 @@ def normalize_holder_detail(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
 
     normalized = frame.loc[:, list(_SOURCE_COLUMNS)].rename(columns=_SOURCE_COLUMNS)
     normalized = normalized.copy()
-    normalized["source_code"] = (
-        normalized["source_code"]
-        .astype("string")
-        .str.strip()
-        .str.replace(r"\.0$", "", regex=True)
-        .str.zfill(6)
-    )
+    normalized["source_code"] = _normalize_source_code(normalized["source_code"])
     mismatched = normalized["source_code"] != symbol
     if mismatched.any():
         logger.warning(
@@ -154,18 +187,12 @@ def normalize_cninfo_frame(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
         columns=_CNINFO_SOURCE_COLUMNS
     )
     normalized = normalized.copy()
-    normalized["source_code"] = (
-        normalized["source_code"]
-        .astype("string")
-        .str.strip()
-        .str.replace(r"\.0$", "", regex=True)
-        .str.zfill(6)
-    )
+    normalized["source_code"] = _normalize_source_code(normalized["source_code"])
     mismatched = normalized["source_code"] != symbol
     if mismatched.any():
-        logger.warning(
-            f"{symbol} 巨潮股东人数含 {int(mismatched.sum())} 行异码数据, 已丢弃"
-        )
+        # 巨潮接口返回全市场快照，其他股票行是正常输入而非异码异常，
+        # 仅记 debug，避免每季度数千条误导性告警。
+        logger.debug(f"{symbol} 巨潮快照过滤 {int(mismatched.sum())} 行非本股数据")
         normalized = normalized.loc[~mismatched].copy()
     if normalized.empty:
         return canonical
@@ -267,10 +294,11 @@ class HolderCollector:
     基于本地最大统计截止日的增量抓取。
     """
 
-    def __init__(self, fetcher=None, cninfo_fetcher=None):
+    def __init__(self, fetcher=None, cninfo_fetcher=None, list_date_fetcher=None):
         self.store = ParquetStore()
         self.fetcher = fetcher or ak.stock_zh_a_gdhs_detail_em
         self.cninfo_fetcher = cninfo_fetcher or ak.stock_hold_num_cninfo
+        self.list_date_fetcher = list_date_fetcher or self._fetch_stock_list_date
         self._cninfo_cache = {}
 
     def _get_local_max_stat_date(self, symbol: str) -> str:
@@ -296,6 +324,18 @@ class HolderCollector:
             return LOCAL_EPOCH
         except Exception:
             return LOCAL_EPOCH
+
+    def _fetch_stock_list_date(self, symbol: str) -> date | None:
+        """读取 stocks 表上市日期；缺失或读取异常时返回 None（不设补缺下界）。"""
+        try:
+            conn = db_manager.get_sqlite_conn()
+            row = conn.execute(
+                "SELECT list_date FROM stocks WHERE code = ?", (symbol,)
+            ).fetchone()
+        except Exception:
+            logger.debug(f"{symbol} 上市日期读取失败，巨潮补缺不设下界", exc_info=True)
+            return None
+        return _parse_list_date(row[0]) if row else None
 
     def _fetch_holder_detail(self, symbol: str) -> pd.DataFrame:
         """调用源接口获取单股全量历史明细"""
@@ -350,7 +390,10 @@ class HolderCollector:
             raw = self._fetch_cninfo_quarter(quarter)
             if raw is None or raw.empty:
                 continue
-            norm = normalize_cninfo_frame(raw, symbol)
+            target = _filter_cninfo_symbol(raw, symbol)
+            if target is None or target.empty:
+                continue
+            norm = normalize_cninfo_frame(target, symbol)
             frames.append(norm[norm["stat_date"].isin(wanted)])
         if not frames:
             return pd.DataFrame(columns=list(OUTPUT_COLUMNS))
@@ -376,10 +419,17 @@ class HolderCollector:
 
         # 1. 东财主源抓取并归一化
         df_em = pd.DataFrame(columns=list(OUTPUT_COLUMNS))
+        em_fetch_failed = False
         try:
             df_em = normalize_holder_detail(self._fetch_holder_detail(symbol), symbol)
-        except Exception:
-            logger.warning(f"{symbol} 东财明细缺失，尝试巨潮 fallback")
+        except Exception as exc:
+            if _is_em_no_coverage_error(exc):
+                logger.debug(f"{symbol} 东财明细无覆盖，使用巨潮 fallback")
+            else:
+                em_fetch_failed = True
+                logger.warning(
+                    f"{symbol} 东财明细获取失败，尝试巨潮 fallback", exc_info=True
+                )
 
         # 2. 过滤增量数据 (支持 YYYYMMDD 和 YYYY-MM-DD 格式)
         if isinstance(start_date, str):
@@ -401,17 +451,48 @@ class HolderCollector:
             merged_any = True
 
         # 3. 巨潮补缺：本地缺失的季度 (含尾部新增与中部缺口)，东财行优先。
+        #    下界为个股上市日期 (上市前季度不可能有 A 股披露数据)；
+        #    东财有覆盖且已跟上前一季度时，上界为最新统计日 (刚结束但未披露的
+        #    季度交给东财增量)；东财明显滞后或完全无覆盖 (A+B/A+H/CDR 等) 时，
+        #    上界放宽到最近完整季度，避免源滞后把巨潮可补的数据挡掉。
         #    已落盘与本次东财全量中出现过的日期都不再拉取；显式 --start-date
-        #    不约束补缺下界。空季度已在 _fetch_cninfo_quarter 内归一化为空帧；
+        #    不约束补缺窗口。空季度已在 _fetch_cninfo_quarter 内归一化为空帧；
         #    此处再判一次仅作纵深防御 (未来新增抛点时不会把空季度当失败)。
+        local_has_data = False
         try:
             known_dates = self._local_stat_dates(symbol)
+            local_has_data = bool(known_dates)
             if not df_em.empty:
                 known_dates |= set(df_em["stat_date"])
+            cninfo_quarters = _required_cninfo_quarters(date(1990, 1, 1))
+            required_quarters = cninfo_quarters
+            try:
+                list_date = self.list_date_fetcher(symbol)
+            except Exception:
+                logger.debug(
+                    f"{symbol} 上市日期读取失败，巨潮补缺不设下界", exc_info=True
+                )
+                list_date = None
+            if list_date is not None:
+                cninfo_quarters = [
+                    q for q in cninfo_quarters if _parse_quarter(q) >= list_date
+                ]
+            if not df_em.empty and known_dates and len(required_quarters) >= 2:
+                # 仅当个股已跟上最近一个已结束季度的前一季度时，才把“刚结束但
+                # 尚未披露”的季度交给东财增量；若东财明显滞后，则仍用巨潮追平。
+                latest_known = max(known_dates)
+                latest_completed = _parse_quarter(required_quarters[-1])
+                prior_completed = _parse_quarter(required_quarters[-2])
+                upper = (
+                    latest_known
+                    if latest_known >= prior_completed
+                    else latest_completed
+                )
+                cninfo_quarters = [
+                    q for q in cninfo_quarters if _parse_quarter(q) <= upper
+                ]
             needed = [
-                q
-                for q in _required_cninfo_quarters(date(1990, 1, 1))
-                if _parse_quarter(q) not in known_dates
+                q for q in cninfo_quarters if _parse_quarter(q) not in known_dates
             ]
             df_cn = self._collect_cninfo_quarters(symbol, needed)
         except ValueError as exc:
@@ -436,9 +517,19 @@ class HolderCollector:
             self._save_incremental(df_cn, symbol)
             merged_any = True
 
-        # 4. 两边皆空不记成功 (下次重跑补抓)，但不计失败：
-        #    源缺数≠同步失败，计失败会导致无数据股票使 sync-all 永久 RETRYABLE。
+        # 4. 无新增数据 ≠ 无数据：本地已有数据时仍记成功 (避免同日重跑重复抓取)；
+        #    只有本地无数据且两源皆空才不记成功；东财临时异常且巨潮无新增也不记成功，
+        #    留待下次重跑补抓。不计失败，避免源缺数股票使 sync-all 永久 RETRYABLE。
         if not merged_any:
+            if local_has_data:
+                if em_fetch_failed:
+                    logger.warning(
+                        f"{symbol} 东财获取失败且巨潮无新增，保留本地数据，留待下次重跑"
+                    )
+                    return
+                logger.debug(f"{symbol} 股东人数无新增数据")
+                record_sync_success(DATASET_HOLDER_NUMBER, symbol, date.today())
+                return
             logger.warning(f"{symbol} 股东人数无可用数据，留待下次重跑")
             return
         record_sync_success(DATASET_HOLDER_NUMBER, symbol, date.today())

@@ -108,11 +108,19 @@ def test_local_max_reads_tmp_partition(tmp_path, monkeypatch):
     assert collector._get_local_max_stat_date("600519") == "2025-03-31"
 
 
-def _isolated_collector(tmp_path, monkeypatch, fetcher, cninfo_fetcher=None):
+def _isolated_collector(
+    tmp_path,
+    monkeypatch,
+    fetcher,
+    cninfo_fetcher=None,
+    list_date_fetcher=None,
+):
     import storage.file_store.parquet_store as store_mod
+    import utils.retry as retry_mod
 
     monkeypatch.setattr(store_mod, "WAREHOUSE_DIR", str(tmp_path))
     monkeypatch.setattr(holder_mod, "_sleep_between_cninfo_fetches", lambda: None)
+    monkeypatch.setattr(retry_mod.time, "sleep", lambda _: None)
     statuses = []
     monkeypatch.setattr(
         holder_mod, "record_sync_success", lambda *args: statuses.append(args)
@@ -121,6 +129,7 @@ def _isolated_collector(tmp_path, monkeypatch, fetcher, cninfo_fetcher=None):
         HolderCollector(
             fetcher=fetcher,
             cninfo_fetcher=cninfo_fetcher or (lambda quarter: pd.DataFrame()),
+            list_date_fetcher=list_date_fetcher or (lambda symbol: None),
         ),
         statuses,
     )
@@ -258,6 +267,36 @@ def _cninfo_frame(rows):
     )
 
 
+def _em_frame(rows, symbol="601899"):
+    """构造东财个股明细源格式的行: (stat_date, holder_count, prev, announce)。"""
+    return pd.DataFrame(
+        {
+            "股东户数统计截止日": [r[0] for r in rows],
+            "股东户数-本次": [r[1] for r in rows],
+            "股东户数-上次": [r[2] for r in rows],
+            "股东户数-增减": [r[1] - r[2] for r in rows],
+            "股东户数-增减比例": [0.0] * len(rows),
+            "股东户数公告日期": [r[3] for r in rows],
+            "代码": [symbol] * len(rows),
+        }
+    )
+
+
+def _local_holder_frame(stat_date="2025-06-30", symbol="601899"):
+    """构造本地已落盘的单行股东人数分区。"""
+    return pd.DataFrame(
+        {
+            "stat_date": [pd.Timestamp(stat_date).date()],
+            "holder_count": [323841],
+            "prev_holder_count": [203606],
+            "holder_change": [120235],
+            "holder_change_pct": [59.05],
+            "announce_date": [pd.Timestamp("2025-08-30").date()],
+            "symbol": [symbol],
+        }
+    )
+
+
 def test_normalize_cninfo_frame_maps_and_marks_source():
     normalized = normalize_cninfo_frame(
         _cninfo_frame([("601899", "2025-06-30", 335659, 369956.0, -9.27)]),
@@ -310,6 +349,33 @@ def test_normalize_cninfo_drops_mismatched_and_missing():
     normalized = normalize_cninfo_frame(frame, "601899")
     assert len(normalized) == 1
     assert normalized.iloc[0]["holder_count"] == 335659
+
+
+def test_normalize_cninfo_market_snapshot_does_not_warn(caplog):
+    """巨潮全市场快照的其他股票行不是异码异常，不应产生 WARNING。"""
+    import logging
+
+    frame = _cninfo_frame(
+        [
+            ("601899", "2025-06-30", 335659, 369956.0, -9.27),
+            ("000001", "2025-06-30", 100, 90.0, 1.0),
+        ]
+    )
+    with caplog.at_level(logging.WARNING):
+        normalized = normalize_cninfo_frame(frame, "601899")
+    assert len(normalized) == 1
+    assert not any("异码" in record.getMessage() for record in caplog.records)
+
+
+def test_filter_cninfo_symbol_keeps_only_target_code():
+    frame = _cninfo_frame(
+        [
+            ("601899", "2025-06-30", 335659, 369956.0, -9.27),
+            ("000001", "2025-06-30", 100, 90.0, 1.0),
+        ]
+    )
+    filtered = holder_mod._filter_cninfo_symbol(frame, "601899")
+    assert filtered["证券代码"].tolist() == ["601899"]
 
 
 def test_required_cninfo_quarters_boundaries():
@@ -395,6 +461,145 @@ def test_collect_skips_cninfo_fetch_when_history_complete(tmp_path, monkeypatch)
     collector.collect_holder_number("600519")
     assert calls == []
     assert statuses and statuses[0][0:2] == ("holder_number", "600519")
+
+
+def test_collect_skips_cninfo_quarters_before_listing(tmp_path, monkeypatch):
+    """上市前季度不可能有 A 股披露数据，不应请求巨潮。"""
+    calls = []
+
+    def cninfo(quarter):
+        calls.append(quarter)
+        date_text = f"{quarter[:4]}-{quarter[4:6]}-{quarter[6:]}"
+        return _cninfo_frame([("601899", date_text, 100, 90.0, 1.0)])
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: _em_frame(
+            [("2025-06-30", 323841, 203606, "2025-08-30")]
+        ),
+        cninfo_fetcher=cninfo,
+        list_date_fetcher=lambda symbol: pd.Timestamp("2025-01-01").date(),
+    )
+    monkeypatch.setattr(
+        holder_mod,
+        "_required_cninfo_quarters",
+        lambda after: ["20241231", "20250331", "20250630"],
+    )
+    collector.collect_holder_number("601899")
+
+    assert calls == ["20250331"]
+    assert statuses and statuses[0][0:2] == ("holder_number", "601899")
+
+
+def test_collect_skips_undisclosed_latest_quarter_when_em_has_data(
+    tmp_path, monkeypatch
+):
+    """东财有覆盖时，刚结束但尚未披露的季度交给东财增量，不白拉巨潮快照。"""
+    calls = []
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: _em_frame(
+            [("2025-03-31", 203606, 199192, "2025-04-26")]
+        ),
+        cninfo_fetcher=lambda quarter: calls.append(quarter) or pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        holder_mod,
+        "_required_cninfo_quarters",
+        lambda after: ["20250331", "20250630"],
+    )
+    collector.collect_holder_number("601899")
+
+    assert calls == []
+    assert statuses and statuses[0][0:2] == ("holder_number", "601899")
+
+
+def test_collect_catches_up_stale_em_from_cninfo(tmp_path, monkeypatch):
+    """东财明显滞后时仍用巨潮追平，不因“未披露季度”规则被挡掉。"""
+    calls = []
+
+    def cninfo(quarter):
+        calls.append(quarter)
+        date_text = f"{quarter[:4]}-{quarter[4:6]}-{quarter[6:]}"
+        return _cninfo_frame([("601899", date_text, 100, 90.0, 1.0)])
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: _em_frame(
+            [("2025-03-31", 203606, 199192, "2025-04-26")]
+        ),
+        cninfo_fetcher=cninfo,
+    )
+    monkeypatch.setattr(
+        holder_mod,
+        "_required_cninfo_quarters",
+        lambda after: ["20250630", "20250930"],
+    )
+    collector.collect_holder_number("601899")
+
+    assert calls == ["20250630", "20250930"]
+    assert statuses and statuses[0][0:2] == ("holder_number", "601899")
+
+
+def test_collect_no_new_rows_with_local_data_records_success(
+    tmp_path, monkeypatch, caplog
+):
+    """本地已有数据且无新增行：记成功、不报“无可用数据”。"""
+    import logging
+
+    collector, statuses = _isolated_collector(
+        tmp_path,
+        monkeypatch,
+        fetcher=lambda symbol: _em_frame(
+            [("2025-06-30", 323841, 203606, "2025-08-30")]
+        ),
+    )
+    collector.store.save_partition(_local_holder_frame(), "holder_number", "601899")
+    monkeypatch.setattr(
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20250630"]
+    )
+    with caplog.at_level(logging.WARNING):
+        collector.collect_holder_number("601899")
+
+    assert statuses and statuses[0][0:2] == ("holder_number", "601899")
+    assert not any("无可用数据" in record.getMessage() for record in caplog.records)
+
+
+def test_collect_transient_em_failure_with_local_data_does_not_record_success(
+    tmp_path, monkeypatch
+):
+    """东财临时异常且巨潮无新增：保留本地数据，不记成功，留待下次重跑。"""
+
+    def boom(symbol):
+        raise RuntimeError("接口异常")
+
+    collector, statuses = _isolated_collector(tmp_path, monkeypatch, fetcher=boom)
+    collector.store.save_partition(_local_holder_frame(), "holder_number", "601899")
+    monkeypatch.setattr(holder_mod, "_required_cninfo_quarters", lambda after: [])
+    collector.collect_holder_number("601899")
+
+    assert statuses == []
+
+
+def test_collect_no_coverage_em_with_local_data_records_success(tmp_path, monkeypatch):
+    """东财对 A+B 等无覆盖股票返回 None，属已知无覆盖，不阻断当日成功记录。"""
+
+    def no_coverage(symbol):
+        raise TypeError("'NoneType' object is not subscriptable")
+
+    collector, statuses = _isolated_collector(
+        tmp_path, monkeypatch, fetcher=no_coverage
+    )
+    collector.store.save_partition(
+        _local_holder_frame(symbol="000011"), "holder_number", "000011"
+    )
+    monkeypatch.setattr(holder_mod, "_required_cninfo_quarters", lambda after: [])
+    collector.collect_holder_number("000011")
+
+    assert statuses and statuses[0][0:2] == ("holder_number", "000011")
 
 
 def test_collect_fills_middle_quarter_hole_from_cninfo(tmp_path, monkeypatch):
@@ -705,14 +910,14 @@ def test_collect_keeps_em_rows_when_cninfo_quarter_empty(
         fetcher=lambda symbol: _raw_frame(),
         cninfo_fetcher=empty_records,
     )
-    # 东财全量只含 2025-03-31/2025-06-30, 补缺仍需 2025-12-31 这一空季度
+    # 东财全量只含 2025-03-31/2025-06-30, 补缺仍需 2024-12-31 这一空季度
     monkeypatch.setattr(
-        holder_mod, "_required_cninfo_quarters", lambda after: ["20251231"]
+        holder_mod, "_required_cninfo_quarters", lambda after: ["20241231"]
     )
     collector.collect_holder_number("002594")
 
     # 巨潮路径确实被激活, 且空季度未使东财增量丢失
-    assert calls == ["20251231"]
+    assert calls == ["20241231"]
     saved = pd.read_parquet(
         tmp_path / "holder_number" / "symbol=002594" / "data.parquet"
     )
@@ -770,3 +975,62 @@ def test_collect_raises_when_cninfo_expected_axis_nonzero(tmp_path, monkeypatch)
         collector.collect_holder_number("601899")
     assert statuses == []
     assert collector._cninfo_cache == {}
+
+
+# === 审查复核补齐：四 helper 直测 (无网络/无数据库) ===
+
+
+def test_parse_list_date_variants():
+    """list_date 解析：YYYYMMDD、YYYY-MM-DD、空/None 边界。"""
+    from datetime import date
+
+    from data_ingestion.collectors.holder_collector import _parse_list_date
+
+    assert _parse_list_date("20250630") == date(2025, 6, 30)
+    assert _parse_list_date("2025-06-30") == date(2025, 6, 30)
+    assert _parse_list_date(" 20250630 ") == date(2025, 6, 30)
+    assert _parse_list_date("") is None
+    assert _parse_list_date("   ") is None
+    assert _parse_list_date(None) is None
+    assert _parse_list_date("2025/06/30") is None
+    assert _parse_list_date("2025-06-30 00:00:00") is None
+
+
+def test_normalize_source_code_variants():
+    """代码归一化：截断码、浮点尾缀、空格、NA 均一致为 6 位。"""
+    from data_ingestion.collectors.holder_collector import _normalize_source_code
+
+    s = pd.Series(["2594", "2594.0", " 002594 ", "601899", "000001.0"])
+    out = _normalize_source_code(s)
+    assert out.tolist() == ["002594", "002594", "002594", "601899", "000001"]
+    s2 = pd.Series(["002594", pd.NA], dtype="string")
+    out2 = _normalize_source_code(s2)
+    assert out2.iloc[0] == "002594"
+    # pd.NA 归一化后为 <NA>，与目标码不等 (比较结果为 <NA>，用 isna 断言)
+    assert pd.isna(out2.iloc[1])
+
+
+def test_is_em_no_coverage_error_variants():
+    """无覆盖判别：仅 TypeError + 特定 marker 为真。"""
+    from data_ingestion.collectors.holder_collector import _is_em_no_coverage_error
+
+    assert (
+        _is_em_no_coverage_error(TypeError("'NoneType' object is not subscriptable"))
+        is True
+    )
+    assert _is_em_no_coverage_error(TypeError("other")) is False
+    assert (
+        _is_em_no_coverage_error(RuntimeError("'NoneType' object is not subscriptable"))
+        is False
+    )
+
+
+def test_filter_cninfo_symbol_missing_code_column_returns_frame_unchanged():
+    """缺列时原样透传；空帧与 None 均安全。"""
+    from data_ingestion.collectors.holder_collector import _filter_cninfo_symbol
+
+    frame_no_code = pd.DataFrame({"变动日期": ["2025-06-30"], "本期股东人数": [100]})
+    out = _filter_cninfo_symbol(frame_no_code, "601899")
+    assert out.equals(frame_no_code)
+    assert _filter_cninfo_symbol(pd.DataFrame(), "601899").empty
+    assert _filter_cninfo_symbol(None, "601899") is None
