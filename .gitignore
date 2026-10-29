@@ -12,7 +12,7 @@ logs/*
 .python-version
 
 # Secrets
-config/exa_keys.json
+config/*keys*.json
 
 # IDE
 .idea/
