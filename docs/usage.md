@@ -280,6 +280,8 @@ uv run main.py diagnose-factor-liquidity-capacity \
 
 ### 3.4 定时调度 (每周六凌晨 03:00 sync-all)
 
+> **当前状态：已停用（2026-11-06）。** 已对 `com.quantpylab.sync-all` 执行 `launchctl bootout` 并在 launchd 中标记为 disabled，不再每周六 03:00 自动触发。需要恢复时，先运行 `launchctl enable gui/$(id -u)/com.quantpylab.sync-all`，再执行下文「安装」命令。
+
 基于 **launchd LaunchAgent** 实现每周六自动同步（`StartCalendarInterval` 的 `Weekday=6`，launchd 星期约定 0=周日、1..6=周一..周六），入口脚本为 `tools/schedule_sync_all.py`，调度配置模板为 `config/launchd/com.quantpylab.sync-all.plist`（含机器绝对路径，换机/重建 venv 需同步修改）。若周六凌晨机器睡眠，launchd 会在唤醒后补跑错过的触发；若周六处于关机/断电状态，launchd 不承诺补触发，本周留空，数据由下周六的增量同步自动覆盖整周缺失区间。
 
 **触发与判定逻辑**（每周六 03:00 触发一次 wrapper）：
